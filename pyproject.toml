@@ -1,0 +1,10 @@
+[project]
+name = "pjk"
+version = "0.1.0"
+description = "Composable data pipeline CLI"
+authors = [{ name = "Mike Schultz" }]
+requires-python = ">=3.8"
+dependencies = []
+
+[project.scripts]
+pjk = "djk.main:main"

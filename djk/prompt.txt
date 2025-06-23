@@ -1,0 +1,9 @@
+i'm building a file processor in python called djk.
+I want to base it on a postfix language, so a simple stack design. There are 3 main base classes: source, pipe, sink.  A source is a source of records.  A pipe is a processor of records.  A sink is a receiver of records.  Sources and Pipes both implement the next() method which returns the next record available or None if there are no more.  Sink implements the drain() method which calls next on its input and sinks the records based on its implementation.
+
+Djk expressions can be tokenized by white space. Djk has a simple postfix language so the expression parser is based on a stack. After an expression is tokenized, the parse works left to right, instantiating the appropriate objects. 
+
+Consider the simple expression 'djk car.json mv:color:hue out.json'.  The expression parser should recognize that a token ending in .json in non-final position in the expression must be a source so it instantiates a JsonSource object (inheriting from base Source) with car.json (which is json lines) and pushes it onto the operand stack. It recognizes mv as a 'pipe' instantiates it with the list of arguments, (color, hue). upon seeing that it is of arity 1, it pops the operand off the stack and hands it to the pipe, and pushes it back onto the stack.  It sees that out.json is the last token of the expression so it must be a sink, it instantiates a JsonSink object, pops the operand stack and gives it to the Sink object.  It then calls drain() on the sink and exits.
+
+discuss the approach give me the all the classes you will implement and their signatures first before we code
+

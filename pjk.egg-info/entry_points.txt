@@ -1,0 +1,2 @@
+[console_scripts]
+pjk = djk.main:main
