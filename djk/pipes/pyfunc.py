@@ -25,7 +25,7 @@ class PythonFunctionPipe(Pipe):
         self._delegate = pipe_cls(arg_string)
 
     def set_sources(self, inputs: list[Source]):
-        self._delegate.set_source(inputs)
+        self._delegate.set_sources(inputs)
 
     def arity(self) -> int:
         return self._delegate.arity()

@@ -9,6 +9,7 @@ from djk.sinks.sinks import JsonSink, StdoutYamlSink
 from djk.sinks.devnull import DevNullSink
 from djk.sinks.graph import GraphSink
 from djk.sinks.csv import CSVSink
+from djk.sinks.ddb import DDBSink
 
 def expand_macros(tokens: List[str]) -> List[str]:
     expanded = []
@@ -79,6 +80,10 @@ class DjkExpressionParser:
         elif token.startswith("graph:"):
             kind = token.split(":", 1)[1]
             return lambda src: GraphSink(src, kind)
+        elif token.startswith('ddb:'):
+            instance = token.split(":", 1)[1]
+            return lambda src: DDBSink(src, instance)
+
 
         else:
             raise SyntaxError("Expression must end in a sink (e.g. '.', 'json:out.json')")

@@ -1,25 +1,21 @@
-from typing import Optional
-from djk.base import Source, Report
+from typing import Iterable
+from djk.base import Source
 
 class SourceListSource(Source):
-    def __init__(self):
-        self.sources = None
-        self.curr_source = None
+    def __init__(self, source_iter: Iterable[Source]):
+        self.sources = source_iter
+        self.current = None
 
-    def set_sources(self, items):
-        self.index = 0
-        self.sources = items if items else []
-    
-    def next(self) -> Optional[dict]:
-        if self.curr_source is None:
-            if len(self.sources) == 0:
-                return None
-            self.curr_source = self.sources.pop()
+    def next(self):
+        while True:
+            if self.current is None:
+                try:
+                    self.current = next(self.sources)
+                except StopIteration:
+                    return None
 
-        rec = self.curr_source.next()
-        if not rec:
-            self.curr_source = None
-            return self.next()
-
-        return rec
-    
+            record = self.current.next()
+            if record is not None:
+                return record
+            else:
+                self.current = None
