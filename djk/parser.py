@@ -1,15 +1,11 @@
 from typing import Any, List, Callable
 import os
-
+import shlex
 from djk.base import Source, Sink, Pipe, IdentitySource
 from djk.pipes.factory import PipeFactory
+from djk.sinks.factory import SinkFactory
 from djk.pipes.common import add_operator
 from djk.sources.factory import SourceFactory
-from djk.sinks.sinks import JsonSink, StdoutYamlSink
-from djk.sinks.devnull import DevNullSink
-from djk.sinks.graph import GraphSink
-from djk.sinks.csv import CSVSink
-from djk.sinks.ddb import DDBSink
 
 def expand_macros(tokens: List[str]) -> List[str]:
     expanded = []
@@ -19,15 +15,20 @@ def expand_macros(tokens: List[str]) -> List[str]:
                 raise FileNotFoundError(f"Macro file not found: {token}")
             with open(token, "r") as f:
                 lines = f.readlines()
-            stripped = [
-                line.split("#", 1)[0].strip()
-                for line in lines
-            ]
-            joined = " ".join(stripped)
-            expanded += joined.split()
+
+            # Remove comments outside quotes, then split
+            stripped = []
+            for line in lines:
+                try:
+                    parts = shlex.split(line, comments=True, posix=True)
+                    stripped.extend(parts)
+                except ValueError as e:
+                    raise SyntaxError(f"Error parsing {token}: {e}")
+            expanded.extend(stripped)
         else:
             expanded.append(token)
     return expanded
+
 
 class DjkExpressionParser:
     def __init__(self, tokens: List[str]):
@@ -43,7 +44,6 @@ class DjkExpressionParser:
         sink_token = self.tokens[-1] # sink
 
         for token in copies:
-
             source = SourceFactory.create(token)
             if source:
                 add_operator(source, self.stack)
@@ -63,27 +63,9 @@ class DjkExpressionParser:
         
         penult = self.stack.pop()
         if not isinstance(penult, Source):
-            raise RuntimeError("Penultimate element is not a source")
+            raise RuntimeError("Penultimate component is not a source")
 
-        sink_factory = self._resolve_sink(sink_token)
-        return sink_factory(penult)
+        sink = SinkFactory.create(sink_token, penult)
+        return sink
 
-    def _resolve_sink(self, token: str) -> Callable[[Source], Sink]:
-        if token == "-":
-            return StdoutYamlSink
-        elif token.endswith(".json") or token.endswith(".json.gz"):
-            return lambda src: JsonSink(src, token)
-        elif token.endswith(".csv"):
-            return lambda src: CSVSink(src, token)        
-        elif token == "devnull":
-            return lambda src: DevNullSink(src)
-        elif token.startswith("graph:"):
-            kind = token.split(":", 1)[1]
-            return lambda src: GraphSink(src, kind)
-        elif token.startswith('ddb:'):
-            instance = token.split(":", 1)[1]
-            return lambda src: DDBSink(src, instance)
-
-
-        else:
-            raise SyntaxError("Expression must end in a sink (e.g. '.', 'json:out.json')")
+    

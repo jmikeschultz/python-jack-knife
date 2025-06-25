@@ -24,6 +24,8 @@ class GraphSink(Sink):
             self._scatter()
         elif self.kind == "hist":
             self._hist()
+        elif self.kind == "cumlative":
+            self._cumulative()
         else:
             raise PipeSyntaxError(f"Unsupported graph type: {self.kind}")
 
@@ -117,6 +119,60 @@ class GraphSink(Sink):
         plt.xlabel(self.x_field)
         plt.ylabel(ylabel)
         plt.text(1.0, 1.0, f"Histogram of {self.x_field}", transform=plt.gca().transAxes,
+                ha='right', va='top', fontsize=10, color='gray')
+        plt.text(1.0, 0.95, f"{count} data points", transform=plt.gca().transAxes,
+                ha='right', va='top', fontsize=10, color='gray')
+        plt.grid(True, linestyle='--', alpha=0.6)
+        plt.tight_layout()
+        plt.show()
+
+    def _cumulative(self):
+        if not (self.x_field and self.y_field):
+            print("x and y fields are required for cumulative plot.")
+            return
+
+        # Filter and sort records by x
+        records = [
+            r for r in self.records
+            if self.x_field in r and self.y_field in r
+        ]
+        try:
+            sorted_records = sorted(records, key=lambda r: r[self.x_field])
+        except TypeError:
+            print(f"⚠️ Unable to sort records by '{self.x_field}' — incompatible types.")
+            return
+
+        x_vals = []
+        y_vals = []
+        total = 0
+        count = 0
+        for r in sorted_records:
+            try:
+                x = r[self.x_field]
+                y = r[self.y_field]
+                total += y
+                x_vals.append(x)
+                y_vals.append(total)
+                count += 1
+            except Exception:
+                pass  # silently skip bad records
+
+        if not x_vals:
+            print(f"⚠️ No valid '{self.x_field}' and '{self.y_field}' data for cumulative plot.")
+            return
+
+        plt.figure()
+        plt.plot(x_vals, y_vals, marker='o', linestyle='-', label='Cumulative')
+
+        # Apply user-specified styling functions (e.g. title, xlabel, etc.)
+        for name, val in self.args_dict.items():
+            fn = getattr(plt, name, None)
+            if fn and callable(fn):
+                fn(val)
+
+        plt.xlabel(self.x_field)
+        plt.ylabel(f"cumulative({self.y_field})")
+        plt.text(1.0, 1.0, f"Cumulative {self.y_field} over {self.x_field}", transform=plt.gca().transAxes,
                 ha='right', va='top', fontsize=10, color='gray')
         plt.text(1.0, 0.95, f"{count} data points", transform=plt.gca().transAxes,
                 ha='right', va='top', fontsize=10, color='gray')

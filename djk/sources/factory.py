@@ -26,7 +26,7 @@ class SourceFactory:
         return s3factory.create()
 
     @classmethod
-    def get_local_source(cls, path, parms):
+    def get_dir_source(cls, path, parms):
         files = [os.path.join(path, f) for f in os.listdir(path) if os.path.isfile(os.path.join(path, f))]
         sources = []
         for file in files:
@@ -59,7 +59,7 @@ class SourceFactory:
             return cls.get_s3_source(path, parms)
 
         elif os.path.isdir(path):
-            return cls.get_local_source(path, parms)
+            return cls.get_dir_source(path, parms)
 
         # individual file
         source_class = cls._resolve(path, parms)

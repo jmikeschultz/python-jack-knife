@@ -4,16 +4,6 @@ from typing import Optional
 from djk.base import Pipe, PipeSyntaxError
 import re
 
-FIELD_RE = re.compile(r'\bf\.(\w+)')
-
-
-class FieldProxy:
-    def __init__(self, record):
-        self._record = record
-    def __getattr__(self, name):
-        return self._record[name]
-
-
 def parse_args(token: str):
     pattern = re.compile(
         r'^'                            # beginning of string
@@ -28,8 +18,19 @@ def parse_args(token: str):
         raise ValueError(f"Invalid token syntax: {token!r}")
     return match.groupdict()
 
+FIELD_RE = re.compile(r'\bf\.(\w+)')
 
-def eval_expression(expr: str, record: dict, acc=None, op: Optional[str] = None):
+class FieldProxy:
+    def __init__(self, record):
+        self._record = record
+    def __getattr__(self, name):
+        return self._record[name]
+
+def eval_regular(expr: str, record: dict):
+    env = {'f': FieldProxy(record)}
+    return do_eval(expr, env)
+
+def eval_accumulating(expr: str, record: dict, op: str, acc=None):
     env = {'f': FieldProxy(record)}
 
     # Handle list.append(...) reducer
@@ -66,8 +67,23 @@ def eval_expression(expr: str, record: dict, acc=None, op: Optional[str] = None)
         if op in ('-=', '*=', '/=') and 'acc' not in expr:
             expr = f'acc {op[0]} ({expr})'
 
-    return eval(expr, {}, env)
+    return do_eval(expr, env)
 
+def do_eval(expr, env):
+    try:
+        return eval(expr, {}, env)
+    except SyntaxError as e:
+        lineno = e.lineno or 1
+        offset = e.offset or 0
+
+        # Build caret line for error pointer
+        lines = expr.splitlines()
+        error_line = lines[lineno - 1] if lineno - 1 < len(lines) else expr
+
+        error_msg = (
+            f"SyntaxError in expression: {error_line}"
+        )
+        raise SyntaxError(error_msg) from None
 
 class AddField(Pipe):
     def __init__(self, arg_string: str = ""):
@@ -120,15 +136,15 @@ class AddField(Pipe):
             return None
         self.count += 1
 
-        return self.reducing_next(record) if self.is_accumulating else self.child_next(record)
+        return self.reducing_next(record) if self.is_accumulating else self.regular_next(record)
 
-    def child_next(self, record):
-        field_value = self.rest if ':' in self.op else eval_expression(self.rest, record)
+    def regular_next(self, record):
+        field_value = self.rest if ':' in self.op else eval_regular(self.rest, record)
         record[self.field] = field_value
         return record
 
     def reducing_next(self, record):
         if ':' in self.op:
             raise PipeSyntaxError("Literal assignment to parent makes no sense")
-        self.accum_value = eval_expression(self.rest, record, self.accum_value, self.op)
+        self.accum_value = eval_accumulating(self.rest, record, self.op, self.accum_value)
         return record
