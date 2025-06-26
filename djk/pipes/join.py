@@ -4,6 +4,8 @@ from typing import Optional
 from djk.base import Pipe, PipeSyntaxError, KeyedSource
 
 class JoinPipe(Pipe):
+    arity = 2
+
     def __init__(self, arg_string: str = ""):
         super().__init__(arg_string)
 
@@ -18,9 +20,6 @@ class JoinPipe(Pipe):
         self.pending_left = []
         self.right_lookup = None
         self.key_field = None
-
-    def arity(self) -> int:
-        return 2
 
     def _load_right(self):
         right = self.inputs[1]

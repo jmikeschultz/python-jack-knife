@@ -3,7 +3,7 @@
 from djk.base import Sink, Source
 
 class DevNullSink(Sink):
-    def __init__(self, input_source: Source):
+    def __init__(self, input_source: Source, arg_str: str = ""):
         super().__init__(input_source)
         self.count = 0
 

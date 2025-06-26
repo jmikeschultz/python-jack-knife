@@ -1,6 +1,9 @@
 from abc import ABC, abstractmethod
 from typing import Any, Optional, List
 
+from abc import ABC
+from typing import List, Optional
+
 class KeyedSource(ABC):
     @abstractmethod
     def get_keyed_field(self) -> str:
@@ -12,6 +15,9 @@ class KeyedSource(ABC):
         """Return the record associated with the given key, or None."""
         pass
 
+    def get_strand(self):
+        return None
+
 class Source(ABC):
     @abstractmethod
     def next(self) -> Optional[Any]:
@@ -20,25 +26,44 @@ class Source(ABC):
     def report(self) -> "Report":
         return make_report(self)
     
+    def get_strand():
+        return None
+    
 class Pipe(Source):
+    strandable = True
+    arity: int = 1
+
     def __init__(self, arg_string: str = ""):
         self.arg_string = arg_string
         self.inputs: List[Source] = []
 
     def set_sources(self, inputs: List[Source]) -> None:
-        expected = self.arity()
-        if len(inputs) != expected:
+        if len(inputs) != type(self).arity:
             raise ValueError(
-                f"{self.__class__.__name__} expects {expected} input(s), got {len(inputs)}"
+                f"{self.__class__.__name__} expects {type(self).arity} input(s), got {len(inputs)}"
             )
         self.inputs = inputs
         self.reset()
 
     def reset(self):
-        pass # implemented in subclass
+        pass  # optional hook
 
-    def arity(self) -> int:
-        return 1  # default for unary pipes
+    def get_strand(self) -> Optional["Pipe"]:
+        if not self.strandable:
+            return None
+        if not self.inputs:
+            raise RuntimeError(f"{self.__class__.__name__} has no inputs set")
+
+        cloned_inputs = []
+        for inp in self.inputs:
+            strand = inp.get_strand()
+            if strand is None:
+                return None
+            cloned_inputs.append(strand)
+
+        clone = self.__class__(arg_string=self.arg_string)
+        clone.set_sources(cloned_inputs)
+        return clone
 
 class Sink(ABC):
     def __init__(self, input_source: Source):
@@ -46,8 +71,6 @@ class Sink(ABC):
 
     def drain(self):
         self.process()
-        if not getattr(self, "suppress_report", False):
-            self.render_report()
         
     @abstractmethod
     def process(self) -> None:
@@ -60,11 +83,16 @@ class Sink(ABC):
         )
 
     def render_report(self):
+        if getattr(self, "suppress_report", False):
+            return
+        
         print("\n┌─Execution Report\n│")
         report = self.report()
         render_report_tree(report)
         print()
 
+    def get_strand(self):
+        return None
 
 class PipeSyntaxError(ValueError):
     def __init__(self, message: str, details: dict = None):
