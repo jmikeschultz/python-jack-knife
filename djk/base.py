@@ -15,7 +15,7 @@ class KeyedSource(ABC):
         """Return the record associated with the given key, or None."""
         pass
 
-    def get_strand(self):
+    def deep_copy(self):
         return None
 
 class Source(ABC):
@@ -26,11 +26,11 @@ class Source(ABC):
     def report(self) -> "Report":
         return make_report(self)
     
-    def get_strand():
+    def deep_copy():
         return None
     
 class Pipe(Source):
-    strandable = True
+    deep_copyable = True
     arity: int = 1
 
     def __init__(self, arg_string: str = ""):
@@ -48,15 +48,15 @@ class Pipe(Source):
     def reset(self):
         pass  # optional hook
 
-    def get_strand(self) -> Optional["Pipe"]:
-        if not self.strandable:
+    def deep_copy(self) -> Optional["Pipe"]:
+        if not self.deep_copyable:
             return None
         if not self.inputs:
             raise RuntimeError(f"{self.__class__.__name__} has no inputs set")
 
         cloned_inputs = []
         for inp in self.inputs:
-            strand = inp.get_strand()
+            strand = inp.deep_copy()
             if strand is None:
                 return None
             cloned_inputs.append(strand)
@@ -91,7 +91,7 @@ class Sink(ABC):
         render_report_tree(report)
         print()
 
-    def get_strand(self):
+    def deep_copy(self):
         return None
 
 class PipeSyntaxError(ValueError):

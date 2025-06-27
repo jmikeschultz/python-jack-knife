@@ -2,7 +2,7 @@ from typing import Any, List, Callable
 import os
 from djk.base import Source, Pipe, Sink
 from djk.sinks.sinks import StdoutYamlSink
-from djk.sinks.json_sink import JsonSink
+from djk.sinks.json_sink import JsonSink, JsonGzSink
 from djk.sinks.devnull import DevNullSink
 from djk.sinks.graph import GraphSink
 from djk.sinks.csv import CSVSink
@@ -14,20 +14,22 @@ from djk.sources.lazy_file_local import LazyFileLocal
 
 class SinkFactory:
     file_formats = {'json': JsonSink,
-                    'json.gz': JsonSink,
+                    'json.gz': JsonGzSink,
                     'csv': CSVSink}
 
     @classmethod
     def _resolve_file_sinks(cls, token: str):
         clazz = cls.file_formats.get(token, None)
         if clazz:
-            return clazz
+            return None, clazz
 
         # for file paths        
-        for k, v in cls.file_formats.items():
-            if token.endswith(f'.{k}'):
-                return v
-        return None
+        for ext, sink_class in cls.file_formats.items():
+            if token.endswith(f'.{ext}'):
+                path_no_ext = token.removesuffix(f'.{ext}')
+                return path_no_ext, sink_class
+
+        return None, None
     
     @classmethod
     def _create_dir_sinks(cls, source, main, parms):
@@ -36,11 +38,16 @@ class SinkFactory:
             return None
 
         filesys, format, path = parts
-        sink_class = cls._resolve_file_sinks(format)
+        _, sink_class = cls._resolve_file_sinks(format)
+        if not sink_class:
+            raise SyntaxError(f'No such format:{format}')
 
         if 'dir' in filesys:
             os.makedirs(path, exist_ok=True)
             return DirSink(source, path, sink_class, parms)
+        
+#        if 's3' in filesys:
+#            retu
         
         return None
 
@@ -59,9 +66,9 @@ class SinkFactory:
             return sink
 
         # when main is file path with format
-        sink_class = cls._resolve_file_sinks(main)
+        path_no_ext, sink_class = cls._resolve_file_sinks(main)
         if sink_class:
-            return sink_class(source, main)
+            return sink_class(source, path_no_ext)
 
         if token == "-":
             return StdoutYamlSink(source, token)

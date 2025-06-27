@@ -13,11 +13,17 @@ class JsonSource(Source):
         if self.file is None:  # lazy init
             self.file = self.lazy_file.open()
 
-        line = self.file.readline()
-        if not line:
-            self.file.close()
-            self.file = None
-            return None
-        else:
-            self.num_recs += 1
-            return json.loads(line)
+        while True:
+            line = self.file.readline()
+            if not line:
+                self.file.close()
+                self.file = None
+                return None
+            else:
+                self.num_recs += 1
+                try:
+                    return json.loads(line)
+                except json.JSONDecodeError as e:
+                    print(f'Skipping json line with format error: {line}')
+                    continue
+
