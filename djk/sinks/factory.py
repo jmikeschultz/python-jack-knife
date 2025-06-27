@@ -59,17 +59,6 @@ class SinkFactory:
         main = parts[0]
         parms = parts[1] if len(parts) > 1 else ""
 
-        # filesystem:format:path e.g.
-        # dir:json:path, s3:json:path
-        sink = cls._create_dir_sinks(source, main, parms)
-        if sink:
-            return sink
-
-        # when main is file path with format
-        path_no_ext, sink_class = cls._resolve_file_sinks(main)
-        if sink_class:
-            return sink_class(source, path_no_ext)
-
         if token == "-":
             return StdoutYamlSink(source, token)
         elif token == "devnull":
@@ -80,6 +69,17 @@ class SinkFactory:
         elif token.startswith('ddb:'):
             table = token.split(":", 1)[1]
             return DDBSink(source, table)
+
+        # filesystem:format:path e.g.
+        # dir:json:path, s3:json:path
+        sink = cls._create_dir_sinks(source, main, parms)
+        if sink:
+            return sink
+
+        # when main is file path with format
+        path_no_ext, sink_class = cls._resolve_file_sinks(main)
+        if sink_class:
+            return sink_class(source, path_no_ext)
 
         else:
             raise SyntaxError("Expression must end in a sink (e.g. '-', 'out.json')")

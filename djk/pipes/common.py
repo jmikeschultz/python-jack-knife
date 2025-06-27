@@ -19,7 +19,7 @@ def add_operator(op, stack):
 
     # order matters, sources are pipes
     if isinstance(op, Pipe):
-        arity = type(op).arity # class level attribute
+        arity = op.arity # class level attribute
         if len(stack) < arity:
             raise SyntaxError(f"'{op}' requires {arity} input(s)")
         op.set_sources([stack.pop() for _ in range(arity)][::-1])
