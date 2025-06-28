@@ -1,4 +1,4 @@
-from djk.base import Source, Pipe, PipeSyntaxError
+from djk.base import Source, Pipe, SyntaxError
 
 def add_operator(op, stack):
     # checking methods avoids circular deps 

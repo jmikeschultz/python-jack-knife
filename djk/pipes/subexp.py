@@ -1,7 +1,7 @@
 # djk/pipes/subexp.py
 from djk.pipes.common import add_operator
 from typing import Optional, Any, List
-from djk.base import Pipe, Source, PipeSyntaxError
+from djk.base import Pipe, Source, SyntaxError
 
 class ListSource(Source):
     def __init__(self):

@@ -1,4 +1,4 @@
-from djk.base import Sink, Source, PipeSyntaxError
+from djk.base import Sink, Source, SyntaxError
 import matplotlib.pyplot as plt
 import numpy as np
 import matplotlib.pyplot as plt
@@ -27,7 +27,7 @@ class GraphSink(Sink):
         elif self.kind == "cumlative":
             self._cumulative()
         else:
-            raise PipeSyntaxError(f"Unsupported graph type: {self.kind}")
+            raise SyntaxError(f"Unsupported graph type: {self.kind}")
 
     def _scatter(self):
         x_field = self.args_dict.get('x')
@@ -38,7 +38,7 @@ class GraphSink(Sink):
         y_vals = [r[self.y_field] for r in valid_records]
 
         if not x_vals or not y_vals:
-            print(f"⚠️ No valid '{self.x_field}' and '{self.y_field}' data for scatter plot.")
+            print(f"No valid '{self.x_field}' and '{self.y_field}' data for scatter plot.")
             return
 
         correlation = np.corrcoef(x_vals, y_vals)[0, 1]
@@ -139,7 +139,7 @@ class GraphSink(Sink):
         try:
             sorted_records = sorted(records, key=lambda r: r[self.x_field])
         except TypeError:
-            print(f"⚠️ Unable to sort records by '{self.x_field}' — incompatible types.")
+            print(f"Unable to sort records by '{self.x_field}' — incompatible types.")
             return
 
         x_vals = []
@@ -158,7 +158,7 @@ class GraphSink(Sink):
                 pass  # silently skip bad records
 
         if not x_vals:
-            print(f"⚠️ No valid '{self.x_field}' and '{self.y_field}' data for cumulative plot.")
+            print(f"No valid '{self.x_field}' and '{self.y_field}' data for cumulative plot.")
             return
 
         plt.figure()

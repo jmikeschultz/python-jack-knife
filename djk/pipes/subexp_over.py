@@ -1,6 +1,6 @@
 # djk/pipes/move_field.py
 from typing import Optional
-from djk.base import Pipe, Source, PipeSyntaxError
+from djk.base import Pipe, Source, SyntaxError
 
 class SubExpressionOver(Pipe):
     def __init__(self, arg_string: str = ""):

@@ -1,5 +1,5 @@
 # djk/pipes/factory.py
-from djk.base import Source, Pipe, PipeSyntaxError
+from djk.base import Source, Pipe, SyntaxError
 from djk.pipes.move_field import MoveField
 from djk.pipes.remove_field import RemoveField
 from djk.pipes.add_field import AddField
@@ -12,9 +12,9 @@ from djk.pipes.join import JoinPipe
 from djk.pipes.select import SelectFields
 from djk.pipes.subexp import SubExpression
 from djk.pipes.subexp_over import SubExpressionOver
-from djk.pipes.pyfunc import PythonFunctionPipe
 from djk.pipes.denorm import DenormPipe
 from djk.pipes.group import GroupPipe
+from djk.pipes.user_pipe_factory import UserPipeFactory
 
 class PipeFactory:
     PIPE_OPERATORS = {
@@ -37,7 +37,7 @@ class PipeFactory:
     @classmethod
     def create(cls, token) -> Pipe:
         if token.endswith('.py'):
-             return cls.create_pypipe(token)
+            return UserPipeFactory.create(token)
 
         parts = token.split(':', 1)
         pipe_cls = cls.PIPE_OPERATORS.get(parts[0])
@@ -50,10 +50,6 @@ class PipeFactory:
         return pipe
 
     @classmethod
-    def create_pypipe(cls, token):
-        return PythonFunctionPipe(token, "")
-
-    @classmethod
     def instantiate_pipe(cls, token: str, input_source: Source) -> Pipe:
         parts = token.split(':', 1)
         op_name = parts[0]
@@ -61,5 +57,5 @@ class PipeFactory:
         pipe_cls = cls.PIPE_OPERATORS[op_name]
         try:
             return pipe_cls(input_source, arg_string)
-        except PipeSyntaxError as e:
+        except SyntaxError as e:
             raise SyntaxError(f"Invalid syntax for operator '{op_name}': {e}") from e

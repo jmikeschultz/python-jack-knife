@@ -1,7 +1,7 @@
 # djk/pipes/tail.py
 
 from typing import Optional
-from djk.base import Pipe, PipeSyntaxError
+from djk.base import Pipe, SyntaxError
 
 class TailPipe(Pipe):
     def __init__(self, arg_string: str = ""):
@@ -11,7 +11,7 @@ class TailPipe(Pipe):
             if self.limit < 0:
                 raise ValueError()
         except ValueError:
-            raise PipeSyntaxError("tail:N expects a non-negative integer")
+            raise SyntaxError("tail:N expects a non-negative integer")
 
         self.buffer = []
         self.index = 0

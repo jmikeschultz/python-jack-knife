@@ -1,7 +1,7 @@
 # djk/pipes/add_field.py
 
 from typing import Optional
-from djk.base import Pipe, PipeSyntaxError
+from djk.base import Pipe, SyntaxError
 import re
 
 def parse_args(token: str):
@@ -62,7 +62,7 @@ def eval_accumulating(expr: str, record: dict, op: str, acc=None):
             elif isinstance(value, list):
                 return (acc or []) + value
             else:
-                raise PipeSyntaxError(f"Don't know how to += value of type {type(value)}")
+                raise SyntaxError(f"Don't know how to += value of type {type(value)}")
 
         if op in ('-=', '*=', '/=') and 'acc' not in expr:
             expr = f'acc {op[0]} ({expr})'
@@ -145,6 +145,6 @@ class AddField(Pipe):
 
     def reducing_next(self, record):
         if ':' in self.op:
-            raise PipeSyntaxError("Literal assignment to parent makes no sense")
+            raise SyntaxError("Literal assignment to parent makes no sense")
         self.accum_value = eval_accumulating(self.rest, record, self.op, self.accum_value)
         return record

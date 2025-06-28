@@ -2,7 +2,7 @@
 
 import re
 from typing import Optional
-from djk.base import Pipe, PipeSyntaxError
+from djk.base import Pipe, SyntaxError
 
 import operator
 
@@ -40,11 +40,11 @@ class GrepPipe(Pipe):
                 self.pattern = None
                 self.op = ops[op_str]
                 if not self.op:
-                    raise PipeSyntaxError(f'bad operator: {op_str}')
+                    raise SyntaxError(f'bad operator: {op_str}')
                 self.number = int(self.rhs)
                 
         except Exception:
-            raise PipeSyntaxError("grep:field:regex requires a valid field and regex (fixme)")
+            raise SyntaxError("grep:field:regex requires a valid field and regex (fixme)")
 
     def next(self) -> Optional[dict]:
         while True:

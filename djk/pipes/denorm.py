@@ -1,7 +1,7 @@
 # djk/pipes/denorm.py
 
 from typing import Optional
-from djk.base import Pipe, Source, PipeSyntaxError
+from djk.base import Pipe, Source, SyntaxError
 
 class Denormer:
     def __init__(self, record, field):
@@ -19,7 +19,7 @@ class Denormer:
             subrec_list = [data]
 
         else:
-            raise PipeSyntaxError("can only denorm sub-records")
+            raise SyntaxError("can only denorm sub-records")
 
     def next(self):
         if len(self.subrec_list) == 0:
@@ -35,7 +35,7 @@ class DenormPipe(Pipe):
 
         self.field = arg_string # field to denorm
         if not self.field:
-            raise PipeSyntaxError("select must include at least one valid field name")
+            raise SyntaxError("select must include at least one valid field name")
 
         self.denormer = None
 

@@ -94,7 +94,7 @@ class Sink(ABC):
     def deep_copy(self):
         return None
 
-class PipeSyntaxError(ValueError):
+class SyntaxError(ValueError):
     def __init__(self, message: str, details: dict = None):
         super().__init__(message)
         self.details = details or {}

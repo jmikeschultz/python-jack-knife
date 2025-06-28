@@ -1,6 +1,6 @@
 import os
 import queue
-from djk.base import Source, Pipe, PipeSyntaxError
+from djk.base import Source, Pipe, SyntaxError
 from djk.sources.json_source import JsonSource
 from djk.sources.csv_source import CSVSource
 from djk.sources.s3_source import S3Source

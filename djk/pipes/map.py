@@ -1,13 +1,13 @@
 # djk/pipes/map.py
 
 from typing import Optional
-from djk.base import Pipe, KeyedSource, PipeSyntaxError
+from djk.base import Pipe, KeyedSource, SyntaxError
 
 class MapPipe(Pipe, KeyedSource):
     def __init__(self, arg_string: str = ""):
         super().__init__(arg_string)
         if not arg_string or ":" in arg_string:
-            raise PipeSyntaxError("map:fieldname expects a single field name")
+            raise SyntaxError("map:fieldname expects a single field name")
         self.field = arg_string
         self.map = {}
         self.keys = []
