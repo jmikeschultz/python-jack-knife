@@ -4,8 +4,9 @@ from djk.base import Source
 from djk.sources.lazy_file import LazyFile
 
 class CSVSource(Source):
-    def __init__(self, lazy_file: LazyFile):
+    def __init__(self, lazy_file: LazyFile, delimiter: str = ","):
         self.lazy_file = lazy_file
+        self.delimiter = delimiter
         self.file = None
         self.reader = None
         self.num_recs = 0
@@ -13,7 +14,7 @@ class CSVSource(Source):
     def next(self) -> Optional[dict]:
         if self.reader is None:
             self.file = self.lazy_file.open()
-            self.reader = csv.DictReader(self.file)
+            self.reader = csv.DictReader(self.file, delimiter=self.delimiter)
 
         try:
             row = next(self.reader)

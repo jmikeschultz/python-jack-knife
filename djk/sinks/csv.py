@@ -1,12 +1,11 @@
-import sys
 import csv
-import json
 from djk.base import Sink, Source
 
 class CSVSink(Sink):
-    def __init__(self, input_source: Source, path: str):
+    def __init__(self, input_source: Source, path_no_ext: str, delimiter: str = ",", ext: str = 'csv'):
         super().__init__(input_source)
-        self.path = path
+        self.path = f'{path_no_ext}.{ext}'
+        self.delimiter = delimiter
 
     def process(self) -> None:
         with open(self.path, 'w', newline='') as f:
@@ -18,8 +17,7 @@ class CSVSink(Sink):
                     break
 
                 if writer is None:
-                    # Initialize writer with fieldnames from the first record
-                    writer = csv.DictWriter(f, fieldnames=record.keys())
+                    writer = csv.DictWriter(f, fieldnames=record.keys(), delimiter=self.delimiter)
                     writer.writeheader()
 
                 writer.writerow(record)

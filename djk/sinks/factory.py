@@ -6,6 +6,7 @@ from djk.sinks.json_sink import JsonSink, JsonGzSink
 from djk.sinks.devnull import DevNullSink
 from djk.sinks.graph import GraphSink
 from djk.sinks.csv import CSVSink
+from djk.sinks.tsv import TSVSink
 from djk.sinks.ddb import DDBSink
 from djk.sinks.dir_sink import DirSink
 
@@ -15,8 +16,9 @@ from djk.sources.lazy_file_local import LazyFileLocal
 class SinkFactory:
     file_formats = {'json': JsonSink,
                     'json.gz': JsonGzSink,
-                    'csv': CSVSink}
-
+                    'csv': CSVSink,
+                    'tsv': TSVSink}
+    
     @classmethod
     def _resolve_file_sinks(cls, token: str):
         clazz = cls.file_formats.get(token, None)

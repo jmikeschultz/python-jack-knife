@@ -3,6 +3,7 @@ import queue
 from djk.base import Source, Pipe, SyntaxError
 from djk.sources.json_source import JsonSource
 from djk.sources.csv_source import CSVSource
+from djk.sources.tsv_source import TSVSource
 from djk.sources.s3_source import S3Source
 from djk.sources.source_list import SourceListSource
 from djk.sources.inline_source import InlineSource
@@ -19,6 +20,8 @@ class SourceFactory:
             return JsonSource
         if name.endswith(".csv") or name.endswith(".csv.gz") or 'format=csv' in parms:
             return CSVSource
+        if name.endswith(".tsv") or name.endswith(".tsv.gz") or 'format=tsv' in parms:
+            return TSVSource        
             
         return None
 
