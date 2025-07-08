@@ -1,4 +1,4 @@
-from djk.sinks.csv import CSVSink
+from djk.sinks.csv_sink import CSVSink
 from djk.base import Source
 
 class TSVSink(CSVSink):

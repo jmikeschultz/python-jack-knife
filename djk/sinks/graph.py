@@ -3,6 +3,11 @@ import matplotlib.pyplot as plt
 import numpy as np
 import matplotlib.pyplot as plt
 
+from djk.sinks.graph_cumulative import graph_cumulative
+from djk.sinks.graph_hist import graph_hist
+from djk.sinks.graph_scatter import graph_scatter
+from djk.sinks.graph_bar_line import graph_bar_line
+
 class GraphSink(Sink):
     def __init__(self, input_source: Source, arg_str: str):
         super().__init__(input_source)
@@ -21,162 +26,21 @@ class GraphSink(Sink):
             self.records.append(record)
 
         if self.kind == "scatter":
-            self._scatter()
+            graph_scatter(self)
+
         elif self.kind == "hist":
-            self._hist()
-        elif self.kind == "cumlative":
-            self._cumulative()
+            graph_hist(self)
+
+        elif self.kind == "cumulative":
+            graph_cumulative(self)
+
+        elif self.kind == "bar":
+            graph_bar_line(self, 'bar')
+
+        elif self.kind == "line":
+            graph_bar_line(self, 'line')
+
         else:
             raise SyntaxError(f"Unsupported graph type: {self.kind}")
 
-    def _scatter(self):
-        x_field = self.args_dict.get('x')
-        y_field = self.args_dict.get('y')
-
-        valid_records = [r for r in self.records if self.x_field in r and self.y_field in r]
-        x_vals = [r[self.x_field] for r in valid_records]
-        y_vals = [r[self.y_field] for r in valid_records]
-
-        if not x_vals or not y_vals:
-            print(f"No valid '{self.x_field}' and '{self.y_field}' data for scatter plot.")
-            return
-
-        correlation = np.corrcoef(x_vals, y_vals)[0, 1]
-        slope, intercept = np.polyfit(x_vals, y_vals, 1)
-        regression_line = [slope * x + intercept for x in x_vals]
-
-        plt.figure()
-        plt.scatter(x_vals, y_vals, label="Data")
-        plt.plot(x_vals, regression_line, color="red", label=f"{self.y_field} = {slope:.2f}*{self.x_field} + {intercept:.2f}")
-        plt.xlabel(self.x_field)
-        plt.ylabel(self.y_field)
-        plt.title(f"Scatter Plot\nCorrelation: {correlation:.3f}")
-        plt.legend()
-        plt.grid(True)
-        plt.tight_layout()
-        plt.show()
-
-    def _hist(self):
-        if not self.x_field:
-            print("No x field specified.")
-            return
-
-        if self.y_field:
-            # Sum mode: aggregate y_field values per x_field bucket
-            from collections import defaultdict
-
-            agg = defaultdict(float)
-            count = 0
-            for r in self.records:
-                if self.x_field in r and self.y_field in r:
-                    try:
-                        agg[r[self.x_field]] += r[self.y_field]
-                        count += 1
-                    except Exception:
-                        pass  # skip malformed record
-
-            if not agg:
-                print(f"No valid '{self.x_field}' and '{self.y_field}' data for bar chart.")
-                return
-
-            x_vals = sorted(agg)
-            y_vals = [agg[x] for x in x_vals]
-
-            plt.figure()
-            plt.bar(x_vals, y_vals, edgecolor='black')
-
-            ylabel = f"sum({self.y_field})"
-        else:
-            # Count mode: standard histogram
-            x_vals = [r[self.x_field] for r in self.records if self.x_field in r]
-            count = len(x_vals)
-
-            if not x_vals:
-                print(f"No valid '{self.x_field}' data for histogram.")
-                return
-
-            bin_width = 1
-            min_val = min(x_vals)
-            max_val = max(x_vals)
-            bins = np.arange(min_val, max_val + bin_width, bin_width)
-
-            plt.figure()
-            plt.hist(
-                x_vals,
-                bins=bins,
-                edgecolor='black',
-                rwidth=0.8,
-                align='mid'
-            )
-
-            ylabel = "count"
-
-        for name, val in self.args_dict.items():
-            fn = getattr(plt, name, None)
-            if fn and callable(fn):
-                fn(val)
-
-        plt.xlabel(self.x_field)
-        plt.ylabel(ylabel)
-        plt.text(1.0, 1.0, f"Histogram of {self.x_field}", transform=plt.gca().transAxes,
-                ha='right', va='top', fontsize=10, color='gray')
-        plt.text(1.0, 0.95, f"{count} data points", transform=plt.gca().transAxes,
-                ha='right', va='top', fontsize=10, color='gray')
-        plt.grid(True, linestyle='--', alpha=0.6)
-        plt.tight_layout()
-        plt.show()
-
-    def _cumulative(self):
-        if not (self.x_field and self.y_field):
-            print("x and y fields are required for cumulative plot.")
-            return
-
-        # Filter and sort records by x
-        records = [
-            r for r in self.records
-            if self.x_field in r and self.y_field in r
-        ]
-        try:
-            sorted_records = sorted(records, key=lambda r: r[self.x_field])
-        except TypeError:
-            print(f"Unable to sort records by '{self.x_field}' — incompatible types.")
-            return
-
-        x_vals = []
-        y_vals = []
-        total = 0
-        count = 0
-        for r in sorted_records:
-            try:
-                x = r[self.x_field]
-                y = r[self.y_field]
-                total += y
-                x_vals.append(x)
-                y_vals.append(total)
-                count += 1
-            except Exception:
-                pass  # silently skip bad records
-
-        if not x_vals:
-            print(f"No valid '{self.x_field}' and '{self.y_field}' data for cumulative plot.")
-            return
-
-        plt.figure()
-        plt.plot(x_vals, y_vals, marker='o', linestyle='-', label='Cumulative')
-
-        # Apply user-specified styling functions (e.g. title, xlabel, etc.)
-        for name, val in self.args_dict.items():
-            fn = getattr(plt, name, None)
-            if fn and callable(fn):
-                fn(val)
-
-        plt.xlabel(self.x_field)
-        plt.ylabel(f"cumulative({self.y_field})")
-        plt.text(1.0, 1.0, f"Cumulative {self.y_field} over {self.x_field}", transform=plt.gca().transAxes,
-                ha='right', va='top', fontsize=10, color='gray')
-        plt.text(1.0, 0.95, f"{count} data points", transform=plt.gca().transAxes,
-                ha='right', va='top', fontsize=10, color='gray')
-        plt.grid(True, linestyle='--', alpha=0.6)
-        plt.tight_layout()
-        plt.show()
-
+    

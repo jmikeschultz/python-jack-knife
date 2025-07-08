@@ -5,11 +5,11 @@ from djk.sinks.sinks import StdoutYamlSink
 from djk.sinks.json_sink import JsonSink, JsonGzSink
 from djk.sinks.devnull import DevNullSink
 from djk.sinks.graph import GraphSink
-from djk.sinks.csv import CSVSink
-from djk.sinks.tsv import TSVSink
+from djk.sinks.csv_sink import CSVSink
+from djk.sinks.tsv_sink import TSVSink
 from djk.sinks.ddb import DDBSink
 from djk.sinks.dir_sink import DirSink
-
+from djk.sinks.user_sink_factory import UserSinkFactory
 from djk.sources.lazy_file import LazyFile
 from djk.sources.lazy_file_local import LazyFileLocal
 
@@ -60,6 +60,11 @@ class SinkFactory:
         parts = token.split(',', 1) # the separator for optional params
         main = parts[0]
         parms = parts[1] if len(parts) > 1 else ""
+
+        if main.endswith('.py'):
+            sink = UserSinkFactory.create(main, source, parms)
+            if sink:
+                return sink
 
         if token == "-":
             return StdoutYamlSink(source, token)

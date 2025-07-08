@@ -3,6 +3,7 @@ from typing import Iterable
 from djk.base import Source
 from queue import Queue, Empty
 from djk.sources.lazy_file_local import LazyFileLocal
+from djk.log import logger
 
 class DirSource(Source):
     def __init__(self, source_queue: Queue, in_source: Source = None):
@@ -14,6 +15,7 @@ class DirSource(Source):
             if self.current is None:
                 try:
                     self.current = self.source_queue.get_nowait()
+                    logger.debug(f'next source={self.current}')
                 except Empty:
                     return None
 
@@ -28,6 +30,7 @@ class DirSource(Source):
             return None # leave for original DirSource
         try:
             next_source = self.source_queue.get_nowait()
+            logger.debug(f'deep_copy next_source={next_source}')
         except Empty:
             return None
 

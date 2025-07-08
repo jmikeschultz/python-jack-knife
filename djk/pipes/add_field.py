@@ -139,9 +139,27 @@ class AddField(Pipe):
         return self.reducing_next(record) if self.is_accumulating else self.regular_next(record)
 
     def regular_next(self, record):
-        field_value = self.rest if ':' in self.op else eval_regular(self.rest, record)
-        record[self.field] = field_value
-        return record
+        if isinstance(record, dict):
+            field_value = self.rest if ':' in self.op else eval_regular(self.rest, record)
+            record[self.field] = field_value
+            return record
+        
+        # scalar, this can for [ over:foo where foo = list[int,etc] OR pjk '[0, 1]' where records are scalars
+        else: 
+            scalar = record
+            # special syntax where _ means 'the scalar'
+            # e.g. add:foo:_ --> returns {foo: <the_scalar>}
+            # e.g. add:foo=f._ + 10 ...
+            if '_' not in self.rest:
+                raise('Only add:name:_ or add:name:f._ +,-,/,* 100 allowed')
+
+            if ':' not in self.op:
+                rec = {f'_': scalar} # 
+                field_value = eval_regular(self.rest, rec)
+                return {self.field: field_value}
+
+            else:
+                return {self.field: scalar}
 
     def reducing_next(self, record):
         if ':' in self.op:

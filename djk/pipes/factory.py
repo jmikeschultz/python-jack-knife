@@ -9,6 +9,7 @@ from djk.pipes.sort import SortPipe
 from djk.pipes.grep import GrepPipe
 from djk.pipes.map import MapPipe
 from djk.pipes.join import JoinPipe
+from djk.pipes.filter import FilterPipe
 from djk.pipes.select import SelectFields
 from djk.pipes.subexp import SubExpression
 from djk.pipes.subexp_over import SubExpressionOver
@@ -18,16 +19,17 @@ from djk.pipes.user_pipe_factory import UserPipeFactory
 
 class PipeFactory:
     PIPE_OPERATORS = {
-        'join': JoinPipe,                
+        'join': JoinPipe,
+        'filter': FilterPipe,
         'map': MapPipe,        
         'mv': MoveField,
         'rm': RemoveField,        
-        'add': AddField,
+        'col': AddField, # i.e. column
         'head': HeadPipe,
         'tail': TailPipe,
         'sort': SortPipe,
         'grep': GrepPipe,
-        'select': SelectFields,
+        'sel': SelectFields,
         'denorm': DenormPipe,
         'group': GroupPipe,
         '[': SubExpression,
@@ -35,9 +37,11 @@ class PipeFactory:
     }
 
     @classmethod
-    def create(cls, token) -> Pipe:
-        if token.endswith('.py'):
-            return UserPipeFactory.create(token)
+    def create(cls, token: str) -> Pipe:
+        if token.endswith('.py') or '.py:' in token:
+            pipe = UserPipeFactory.create(token)
+            if pipe:
+                return pipe # else keep looking
 
         parts = token.split(':', 1)
         pipe_cls = cls.PIPE_OPERATORS.get(parts[0])

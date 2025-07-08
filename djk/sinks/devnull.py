@@ -17,3 +17,11 @@ class DevNullSink(Sink):
 
     def display_info(self):
         return {"count": self.count}
+    
+    def deep_copy(self):
+        return None # until we can synchronize well across threads
+        source_clone = self.input.deep_copy()
+        if not source_clone:
+            return None
+        
+        return DevNullSink(source_clone)

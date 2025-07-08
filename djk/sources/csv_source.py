@@ -1,7 +1,10 @@
+import sys
 import csv
 from typing import Optional
 from djk.base import Source
 from djk.sources.lazy_file import LazyFile
+
+csv.field_size_limit(sys.maxsize)
 
 class CSVSource(Source):
     def __init__(self, lazy_file: LazyFile, delimiter: str = ","):

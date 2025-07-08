@@ -1,5 +1,6 @@
 import os
 from djk.base import Source, Sink
+from djk.log import logger
 
 class DirSink(Sink):
     def __init__(self, source: Source, path: str, sink_class: str, parms: str, fileno: int = 0):
@@ -10,15 +11,17 @@ class DirSink(Sink):
         self.fileno = fileno
 
     def process(self):
-        fileSink = self.sink_class(self.source, os.path.join(self.dir_path, f'file-{self.fileno:04d}'))
+        file = os.path.join(self.dir_path, f'file-{self.fileno:04d}')
+        fileSink = self.sink_class(self.source, file)
+        logger.debug(f'in process sinking to: {file}')
         fileSink.process()
 
     def deep_copy(self):
-        return None
-        #source_clone = self.source.deep_copy()
-        #f not source_clone:
-        #    return None
+        source_clone = self.source.deep_copy()
+        if not source_clone:
+            return None
         
-        #return DirSink(source_clone, self.dir_path, self.sink_class, self.parms, self.fileno + 1)
+        self.fileno += 1
+        return DirSink(source_clone, self.dir_path, self.sink_class, self.parms, self.fileno)
 
         

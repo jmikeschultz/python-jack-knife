@@ -24,6 +24,6 @@ class JsonSource(Source):
                 try:
                     return json.loads(line)
                 except json.JSONDecodeError as e:
-                    print(f'Skipping json line with format error: {line}')
+                    print(f'Skipping json line {self.num_recs} with format error: {line}')
                     continue
 

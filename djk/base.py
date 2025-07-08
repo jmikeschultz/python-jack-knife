@@ -30,7 +30,7 @@ class Source(ABC):
         return None
     
 class Pipe(Source):
-    deep_copyable = True
+    deep_copyable: bool = False # default to false
     arity: int = 1
 
     def __init__(self, arg_string: str = ""):
@@ -98,6 +98,28 @@ class SyntaxError(ValueError):
     def __init__(self, message: str, details: dict = None):
         super().__init__(message)
         self.details = details or {}
+
+class ParsedToken:
+    def __init__(self, token: str):
+        self.tokenstr = token
+        p1s = token.split(',', 1)  # Separate params
+        self._parms = p1s[1] if len(p1s) > 1 else ""
+        p2s = p1s[0].split(':')
+        self._main = p2s[0]
+        self._args = p2s[1:] if len(p2s) > 1 else []
+
+    @property
+    def main(self):
+        return self._main
+
+    @property
+    def args(self):
+        return self._args
+
+    @property
+    def parms(self):
+        return self._parms
+
 
 class Report:
     def __init__(

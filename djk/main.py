@@ -1,7 +1,8 @@
 #!/usr/bin/env python
 import sys
+import signal
 from djk.parser import DjkExpressionParser
-
+from djk.log import init as init_logging
 import sys
 import os
 from datetime import datetime, timezone
@@ -15,13 +16,6 @@ def write_history(tokens):
         f.write(f"{timestamp}\tpjk {command}\n")
 
 def execute_threaded(sinks):
-    max_threads = os.cpu_count()
-    for _ in range(max_threads - 1):
-        clone = sinks[0].deep_copy()
-        if not clone:
-            break
-        sinks.append(clone)
-
     # Choose a max thread limit (explicitly)
     max_workers = min(32, len(sinks))  # or set a fixed cap like 8
 
@@ -39,10 +33,12 @@ def execute_threaded(sinks):
                 print(e)
 
 def main():
+    signal.signal(signal.SIGINT, lambda s, f: sys.exit(0))
     if len(sys.argv) < 2:
         print("Usage: pjk <token1> <token2> ...")
         return
 
+    init_logging()
     tokens = sys.argv[1:]
     parser = DjkExpressionParser(tokens)
 
@@ -50,13 +46,18 @@ def main():
         # Build initial sink
         sink = parser.parse()
 
-        clone = sink.deep_copy()
-        if clone:
-            sinks = [sink]
+        sinks = [sink]
+        max_threads = os.cpu_count()
+        while len(sinks) < max_threads:
+            clone = sink.deep_copy()
+            if not clone:
+                break
             sinks.append(clone)
-            execute_threaded(sinks)
 
-        sink.drain()
+        if len(sinks) > 1:
+            execute_threaded(sinks)
+        else:
+            sink.drain() # run single in main thread
 
     except SyntaxError as e:
          print(e)
