@@ -1,15 +1,14 @@
 # djk/pipes/group.py
 
 from typing import Optional
-from djk.base import Pipe
+from djk.base import ParsedToken, Pipe
 from datetime import datetime
 
 ''' exhausts source to group them by argument fields'''
 class GroupPipe(Pipe):
-    def __init__(self, arg_string: str = ""):
-        super().__init__(arg_string)
-        self.field = arg_string
-        self.fields = arg_string.split(',')
+    def __init__(self, ptok: ParsedToken):
+        super().__init__(ptok)
+        self.fields = ptok.get_arg(0).split(',')
         self.out_recs = None
 
     def load(self):

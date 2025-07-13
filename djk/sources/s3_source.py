@@ -46,7 +46,7 @@ class S3Source(Source):
                 key = obj["Key"]
                 source_cls = source_class_getter(key, parms)
                 if source_cls:
-                    lazy_file = LazyFileS3(s3, bucket, key)
+                    lazy_file = LazyFileS3(bucket, key)
                     source_queue.put(source_cls(lazy_file))
                 else:
                     print(f"fix me in source factory: {key}")

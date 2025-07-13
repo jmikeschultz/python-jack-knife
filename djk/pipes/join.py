@@ -1,13 +1,15 @@
 # djk/pipes/join.py
 
 from typing import Optional
-from djk.base import Pipe, SyntaxError, KeyedSource
+from djk.base import Pipe, SyntaxError, ParsedToken, KeyedSource
 
 class JoinPipe(Pipe):
     arity = 2
 
-    def __init__(self, arg_string: str = ""):
-        super().__init__(arg_string)
+    def __init__(self, ptok: ParsedToken):
+        super().__init__(ptok)
+
+        arg_string = ptok.get_arg(0)
 
         allowed_modes = {"left", "inner", "outer"}
         if arg_string not in allowed_modes:

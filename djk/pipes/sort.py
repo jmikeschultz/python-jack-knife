@@ -1,11 +1,13 @@
 # djk/pipes/sort.py
 
 from typing import Optional
-from djk.base import Pipe, SyntaxError
+from djk.base import Pipe, ParsedToken, SyntaxError
 
 class SortPipe(Pipe):
-    def __init__(self, arg_string: str = ""):
-        super().__init__(arg_string)
+    def __init__(self, ptok: ParsedToken):
+        super().__init__(ptok)
+
+        arg_string = ptok.get_arg(0)
 
         if not arg_string:
             raise SyntaxError("sort:[+-]<field> requires direction and field name")

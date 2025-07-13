@@ -2,7 +2,7 @@
 
 import re
 from typing import Optional
-from djk.base import Pipe, SyntaxError
+from djk.base import Pipe, ParsedToken, SyntaxError
 
 import operator
 
@@ -27,8 +27,10 @@ def split_on_operator(s):
         raise ValueError(f"Invalid expression: {s}")
 
 class GrepPipe(Pipe):
-    def __init__(self, arg_string: str = ""):
-        super().__init__(arg_string)
+    def __init__(self, ptok: ParsedToken):
+        super().__init__(ptok)
+
+        arg_string = ptok.whole_token.split(':')[-1]
         try:
             self.field, op_str, self.rhs = split_on_operator(arg_string)
             

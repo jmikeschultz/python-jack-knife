@@ -9,6 +9,7 @@ class DirSink(Sink):
         self.sink_class = sink_class
         self.parms = parms
         self.fileno = fileno
+        self.num_files = 1
 
     def process(self):
         file = os.path.join(self.dir_path, f'file-{self.fileno:04d}')
@@ -21,7 +22,7 @@ class DirSink(Sink):
         if not source_clone:
             return None
         
-        self.fileno += 1
-        return DirSink(source_clone, self.dir_path, self.sink_class, self.parms, self.fileno)
+        self.num_files += 1
+        return DirSink(source_clone, self.dir_path, self.sink_class, self.parms, self.num_files-1)
 
         

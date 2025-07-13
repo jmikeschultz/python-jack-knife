@@ -1,11 +1,13 @@
 # djk/select_pipe.py
 
 from typing import Optional
-from djk.base import Pipe, Source, SyntaxError
+from djk.base import Pipe, Source, ParsedToken,SyntaxError
 
 class SelectFields(Pipe):
-    def __init__(self, arg_string: str = ""):
-        super().__init__(arg_string)
+    def __init__(self, ptok: ParsedToken):
+        super().__init__(ptok)
+
+        arg_string = ptok.get_arg(0)
 
         if not arg_string:
             raise SyntaxError("select:<f1,f2,...> requires at least one field")

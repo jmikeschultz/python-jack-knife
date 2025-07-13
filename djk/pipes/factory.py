@@ -1,5 +1,5 @@
 # djk/pipes/factory.py
-from djk.base import Source, Pipe, SyntaxError
+from djk.base import Source, Pipe, ParsedToken, SyntaxError
 from djk.pipes.move_field import MoveField
 from djk.pipes.remove_field import RemoveField
 from djk.pipes.add_field import AddField
@@ -38,21 +38,22 @@ class PipeFactory:
 
     @classmethod
     def create(cls, token: str) -> Pipe:
-        if token.endswith('.py') or '.py:' in token:
-            pipe = UserPipeFactory.create(token)
+
+        ptok = ParsedToken(token)
+        if ptok.main.endswith('.py'):
+            pipe = UserPipeFactory.create(ptok)
             if pipe:
                 return pipe # else keep looking
 
-        parts = token.split(':', 1)
-        pipe_cls = cls.PIPE_OPERATORS.get(parts[0])
+        pipe_cls = cls.PIPE_OPERATORS.get(ptok.main)
 
         if not pipe_cls:
             return None
         
-        arg_string = "" if len(parts) == 1 else parts[1]
-        pipe = pipe_cls(arg_string)
+        pipe = pipe_cls(ptok)
         return pipe
 
+    '''
     @classmethod
     def instantiate_pipe(cls, token: str, input_source: Source) -> Pipe:
         parts = token.split(':', 1)
@@ -63,3 +64,4 @@ class PipeFactory:
             return pipe_cls(input_source, arg_string)
         except SyntaxError as e:
             raise SyntaxError(f"Invalid syntax for operator '{op_name}': {e}") from e
+    '''

@@ -1,6 +1,6 @@
 from typing import Any, List, Callable
 import os
-from djk.base import Source, Pipe, Sink
+from djk.base import Source, Sink, ParsedToken
 from djk.sinks.sinks import StdoutYamlSink
 from djk.sinks.json_sink import JsonSink, JsonGzSink
 from djk.sinks.devnull import DevNullSink
@@ -61,8 +61,10 @@ class SinkFactory:
         main = parts[0]
         parms = parts[1] if len(parts) > 1 else ""
 
-        if main.endswith('.py'):
-            sink = UserSinkFactory.create(main, source, parms)
+        ptok = ParsedToken(token)
+
+        if ptok.main.endswith('.py'):
+            sink = UserSinkFactory.create(ptok, source)
             if sink:
                 return sink
 

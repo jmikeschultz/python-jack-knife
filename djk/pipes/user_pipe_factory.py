@@ -1,13 +1,10 @@
 import importlib.util
-from djk.base import Pipe, Sink, SyntaxError
+from djk.base import Pipe, Sink, ParsedToken, SyntaxError
 
 class UserPipeFactory:
     @staticmethod
-    def create(token: str) -> Pipe | None:
-        parts = token.split(':', 1)
-        script_path = parts[0] if len(parts) > 1 else token
-        args = parts[1] if len(parts) > 1 else ''
-
+    def create(ptok: ParsedToken) -> Pipe | None:
+        script_path = ptok.main
         try:
             spec = importlib.util.spec_from_file_location("user_pipe", script_path)
             if spec is None or spec.loader is None:
@@ -26,6 +23,6 @@ class UserPipeFactory:
                 and value is not Pipe
                 and value.__module__ == module.__name__  # ← Key line
             ):
-                return value(args)
+                return value(ptok)
 
         return None

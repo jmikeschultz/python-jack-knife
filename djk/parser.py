@@ -59,11 +59,11 @@ class DjkExpressionParser:
         
         #
         if len(self.stack) != 1:
-            raise RuntimeError("This is bad, need syntax error")
+            raise SyntaxError("This is bad, need syntax error")
         
         penult = self.stack.pop()
         if not isinstance(penult, Source):
-            raise RuntimeError("Penultimate component is not a source")
+            raise SyntaxError("Penultimate component is not a source")
 
         sink = SinkFactory.create(sink_token, penult)
         return sink

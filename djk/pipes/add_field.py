@@ -1,7 +1,7 @@
 # djk/pipes/add_field.py
 
 from typing import Optional
-from djk.base import Pipe, SyntaxError
+from djk.base import Pipe, ParsedToken, SyntaxError
 import re
 
 def parse_args(token: str):
@@ -86,8 +86,13 @@ def do_eval(expr, env):
         raise SyntaxError(error_msg) from None
 
 class AddField(Pipe):
-    def __init__(self, arg_string: str = ""):
-        super().__init__(arg_string)
+    def __init__(self, ptok: ParsedToken):
+        super().__init__(ptok)
+
+        # non standard from other pipes, we parse everything
+        arg_string = ptok.whole_token.split(':', 1)[-1]
+        print(arg_string, 'fooo')
+
         args = parse_args(arg_string)
         self.field = args.get('field')
         self.op = args.get('op')

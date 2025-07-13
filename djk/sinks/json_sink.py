@@ -9,10 +9,10 @@ class JsonSink(Sink):
         self.gz = gz
 
     def process(self) -> None:
-        path = self.path_no_ext + '.json' if not self.gz else path + '.json.gz'
+        path = self.path_no_ext + ('.json.gz' if self.gz else '.json')
         open_func = gzip.open if self.gz else open
 
-        with open_func(path, 'wt') as f:
+        with open_func(path, 'wt', encoding='utf-8') as f:
             while True:
                 record = self.input.next()
                 if record is None:
@@ -20,5 +20,5 @@ class JsonSink(Sink):
                 f.write(json.dumps(record) + '\n')
 
 class JsonGzSink(JsonSink):
-    def __init__(self, input_source: Source, path_no_ext: str, gz=True):
-        super().__init__(input_source, path_no_ext)
+    def __init__(self, input_source: Source, path_no_ext: str):
+        super().__init__(input_source, path_no_ext, gz=True)

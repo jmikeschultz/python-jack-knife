@@ -1,13 +1,13 @@
 # djk/pipes/head.py
 
 from typing import Optional
-from djk.base import Pipe, SyntaxError
+from djk.base import Pipe, ParsedToken, SyntaxError
 
 class HeadPipe(Pipe):
-    def __init__(self, arg_string: str = ""):
-        super().__init__(arg_string)
+    def __init__(self, ptok: ParsedToken):
+        super().__init__(ptok)
         try:
-            self.limit = int(arg_string)
+            self.limit = int(ptok.get_arg(0))
             if self.limit < 0:
                 raise ValueError()
         except ValueError:

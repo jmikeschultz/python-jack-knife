@@ -1,12 +1,14 @@
 from typing import Optional
-from djk.base import Pipe, SyntaxError, KeyedSource
+from djk.base import Pipe, SyntaxError, ParsedToken, KeyedSource
 
 class FilterPipe(Pipe):
     arity = 2  # left = record stream, right = keyed source
 
-    def __init__(self, arg_string: str = ""):
-        super().__init__(arg_string)
+    def __init__(self, ptok: ParsedToken):
+        super().__init__(ptok)
 
+        # not regular parsing
+        arg_string = ptok.whole_token.split(':')[-1]
         if arg_string not in ("+", "-"):
             raise SyntaxError("filter:<arg> must be '+' or '-'")
 

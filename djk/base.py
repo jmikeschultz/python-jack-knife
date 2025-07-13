@@ -4,6 +4,32 @@ from typing import Any, Optional, List
 from abc import ABC
 from typing import List, Optional
 
+class ParsedToken:
+    def __init__(self, token: str):
+        self.token = token
+        p1s = token.split('@', 1)  # Separate params off
+        if len(p1s) > 1:
+            self._params = dict(item.split('=') for item in p1s[1].split(',') if '=' in item)
+
+        # args
+        p2s = p1s[0].split(':')
+        self._main = p2s[0]
+        self._args = p2s[1:] if len(p2s) > 1 else []
+
+    @property
+    def main(self):
+        return self._main
+    
+    @property
+    def whole_token(self):
+        return self.token
+    
+    def get_arg(self, arg_no: int):
+        return self._args[arg_no] if arg_no < len(self._args) else None
+
+    def get_param(self, name: str):
+        return self._params.get(name, None)
+
 class KeyedSource(ABC):
     @abstractmethod
     def get_keyed_field(self) -> str:
@@ -33,8 +59,8 @@ class Pipe(Source):
     deep_copyable: bool = False # default to false
     arity: int = 1
 
-    def __init__(self, arg_string: str = ""):
-        self.arg_string = arg_string
+    def __init__(self, ptok: ParsedToken):
+        self.ptok = ptok
         self.inputs: List[Source] = []
 
     def set_sources(self, inputs: List[Source]) -> None:
@@ -98,28 +124,6 @@ class SyntaxError(ValueError):
     def __init__(self, message: str, details: dict = None):
         super().__init__(message)
         self.details = details or {}
-
-class ParsedToken:
-    def __init__(self, token: str):
-        self.tokenstr = token
-        p1s = token.split(',', 1)  # Separate params
-        self._parms = p1s[1] if len(p1s) > 1 else ""
-        p2s = p1s[0].split(':')
-        self._main = p2s[0]
-        self._args = p2s[1:] if len(p2s) > 1 else []
-
-    @property
-    def main(self):
-        return self._main
-
-    @property
-    def args(self):
-        return self._args
-
-    @property
-    def parms(self):
-        return self._parms
-
 
 class Report:
     def __init__(

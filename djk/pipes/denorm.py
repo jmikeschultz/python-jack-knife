@@ -1,7 +1,7 @@
 # djk/pipes/denorm.py
 
 from typing import Optional
-from djk.base import Pipe, Source, SyntaxError
+from djk.base import Pipe, ParsedToken, SyntaxError
 
 class Denormer:
     def __init__(self, record, field):
@@ -30,10 +30,10 @@ class Denormer:
         return out
 
 class DenormPipe(Pipe):
-    def __init__(self, arg_string: str = ""):
-        super().__init__(arg_string)
+    def __init__(self, ptok: ParsedToken):
+        super().__init__(ptok)
 
-        self.field = arg_string # field to denorm
+        self.field = ptok.get_arg(0)
         if not self.field:
             raise SyntaxError("select must include at least one valid field name")
 

@@ -1,9 +1,10 @@
 import importlib.util
-from djk.base import Source, Sink, SyntaxError
+from djk.base import Source, Sink, SyntaxError, ParsedToken
 
 class UserSinkFactory:
     @staticmethod
-    def create_from_path(script_path: str, input_source, arg_string: str = "") -> Sink | None:
+    def create_from_path(ptok: ParsedToken, input_source) -> Sink | None:
+        script_path = ptok.main
         try:
             spec = importlib.util.spec_from_file_location("user_sink", script_path)
             if spec is None or spec.loader is None:
@@ -21,14 +22,14 @@ class UserSinkFactory:
                 and value is not Sink
                 and value.__module__ == module.__name__
             ):
-                return value(input_source, arg_string)
+                return value(ptok, input_source)
 
         return None
 
     @classmethod
-    def create(cls, main: str, source: Source, parms: str) -> Sink:
-        if main.endswith('.py'):
-            sink = cls.create_from_path(main, source, parms)
+    def create(cls, ptok: ParsedToken, source: Source) -> Sink:
+        if ptok.main.endswith('.py'):
+            sink = cls.create_from_path(ptok, source)
             if sink:
                 return sink
 

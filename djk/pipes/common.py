@@ -1,15 +1,16 @@
 from djk.base import Source, Pipe, SyntaxError
 
 def add_operator(op, stack):
-    # checking methods avoids circular deps 
+    # checking methods avoids circular deps
+    # LEADS TO PROBLEMNS IS METHOD NAMES CHANGE
     if len(stack) > 0 and isinstance(stack[-1], Pipe):
         target = stack[-1]
         add_subop = getattr(target, "add_subop", None)
         if callable(add_subop): # means target = subexp = [
-            get_over = getattr(op, 'get_over_field', None)
+            get_over = getattr(op, 'get_over_arg', None)
             if callable(get_over): # means op = subexp_over
                 subexp_begin = stack.pop()
-                subexp_begin.set_over_field(get_over())
+                subexp_begin.set_over_arg(get_over())
                 op.set_sources([subexp_begin])
                 stack.append(op)
                 return
