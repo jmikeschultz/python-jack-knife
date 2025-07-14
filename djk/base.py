@@ -4,9 +4,26 @@ from typing import Any, Optional, List
 from abc import ABC
 from typing import List, Optional
 
+class TokenError(ValueError):
+    def __init__(self, bad_token: str, token_syntax: str, usage_notes: list[str]):
+        super().__init__(token_syntax)
+        self.bad_token = bad_token
+        self.token_syntax = token_syntax
+        self.usage_notes = usage_notes
+
+    def __str__(self):
+        lines = []
+        lines.append(f'Token error: {self.bad_token}')
+        lines.append('')
+        lines.append(f'syntax:')
+        lines.append(f' {self.token_syntax}')
+        lines.extend(f"{note}" for note in self.usage_notes)
+        return "\n".join(lines)
+
 class ParsedToken:
     def __init__(self, token: str):
         self.token = token
+        self._params = {}
         p1s = token.split('@', 1)  # Separate params off
         if len(p1s) > 1:
             self._params = dict(item.split('=') for item in p1s[1].split(',') if '=' in item)
@@ -24,11 +41,67 @@ class ParsedToken:
     def whole_token(self):
         return self.token
     
+    # args are mandatory
     def get_arg(self, arg_no: int):
         return self._args[arg_no] if arg_no < len(self._args) else None
 
+    # params are optional
+    def get_params(self):
+        return self._params.items()
+    
+class Usage:
+    def __init__(self, name: str, description: str):
+        self.name = name
+        self.description = description
+        self.args = {}
+        self.params = {}
+
+        self.arg_defs = []
+        self.param_usages = {}
+
+    def def_arg(self, name: str, usage: str):
+        self.arg_defs.append((name, usage))
+
+    def def_param(self, name:str, usage: str):
+        self.param_usages[name] = usage
+
+    def get_arg(self, name: str):
+        return self.args.get(name, None)
+
     def get_param(self, name: str):
-        return self._params.get(name, None)
+        return self.params.get(name, None)
+    
+    def get_token_syntax(self):
+        token = f'{self.name}'
+        for name, usage in self.arg_defs:
+            token += f':<{name}>'
+        for name, usage in self.param_usages.items():
+            token += f'@<{name}>={name}'
+        return token
+    
+    def get_usage_notes(self):
+        notes = []
+        notes.append('mandatory args:')
+        for name, usage in self.arg_defs:
+            notes.append(f'  {name} = {usage}')
+        notes.append('optional params:')
+        for name, usage in self.param_usages.items():
+            notes.append(f'  {name} = {usage}')
+        return notes
+
+    def set(self, ptok: ParsedToken):
+        for i, adef in enumerate(self.arg_defs):
+            name, usage = adef
+            arg_val = ptok.get_arg(i)
+            if not arg_val:
+                raise TokenError(ptok.whole_token, self.get_token_syntax(), self.get_usage_notes())
+            self.args[name] = arg_val
+            
+        for name, value in ptok.get_params():
+            usage = self.param_usages.get(name, None)
+            if not usage:
+                raise TokenError(ptok.whole_token, self.get_token_syntax(), self.get_usage_notes())
+            self.params[name] = value
 
 class KeyedSource(ABC):
     @abstractmethod

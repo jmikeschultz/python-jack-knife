@@ -2,6 +2,7 @@
 
 from typing import Optional
 from djk.base import Pipe, ParsedToken, SyntaxError
+from djk.pipes.common import SafeNamespace
 import re
 
 def parse_args(token: str):
@@ -27,11 +28,11 @@ class FieldProxy:
         return self._record[name]
 
 def eval_regular(expr: str, record: dict):
-    env = {'f': FieldProxy(record)}
+    env = {'f': SafeNamespace(record)}
     return do_eval(expr, env)
 
 def eval_accumulating(expr: str, record: dict, op: str, acc=None):
-    env = {'f': FieldProxy(record)}
+    env = {'f': SafeNamespace(record)}
 
     # Handle list.append(...) reducer
     if expr.startswith('list.append(') and expr.endswith(')'):
@@ -91,7 +92,6 @@ class AddField(Pipe):
 
         # non standard from other pipes, we parse everything
         arg_string = ptok.whole_token.split(':', 1)[-1]
-        print(arg_string, 'fooo')
 
         args = parse_args(arg_string)
         self.field = args.get('field')

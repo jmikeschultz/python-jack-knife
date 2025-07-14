@@ -24,7 +24,7 @@ class PipeFactory:
         'map': MapPipe,        
         'mv': MoveField,
         'rm': RemoveField,        
-        'col': AddField, # i.e. column
+        'let': AddField, # i.e. let a column 
         'head': HeadPipe,
         'tail': TailPipe,
         'sort': SortPipe,
