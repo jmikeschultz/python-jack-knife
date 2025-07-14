@@ -24,6 +24,6 @@ class UserSourceFactory:
                 and value is not Source
                 and value.__module__ == module.__name__  # 🧠 only user-defined classes
             ):
-                return value(ptok.parms)
+                return value(ptok)
 
         return None
