@@ -2,6 +2,7 @@
 import sys
 import signal
 from djk.parser import DjkExpressionParser
+from djk.base import TokenError
 from djk.log import init as init_logging
 import sys
 import os
@@ -59,8 +60,9 @@ def main():
         else:
             sink.drain() # run single in main thread
 
-    except SyntaxError as e:
-         print(e)
+    except TokenError as e:
+        print(e, file=sys.stderr)
+        sys.exit(2)  # Exit with a non-zero code, but no traceback
       
     write_history(sys.argv[1:])
 

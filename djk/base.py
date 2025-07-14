@@ -16,7 +16,7 @@ class TokenError(ValueError):
         lines.append(f'Token error: {self.bad_token}')
         lines.append('')
         lines.append(f'syntax:')
-        lines.append(f' {self.token_syntax}')
+        lines.append(f'  {self.token_syntax}')
         lines.extend(f"{note}" for note in self.usage_notes)
         return "\n".join(lines)
 
@@ -84,9 +84,10 @@ class Usage:
         notes.append('mandatory args:')
         for name, usage in self.arg_defs:
             notes.append(f'  {name} = {usage}')
-        notes.append('optional params:')
-        for name, usage in self.param_usages.items():
-            notes.append(f'  {name} = {usage}')
+        if self.param_usages:
+            notes.append('optional params:')
+            for name, usage in self.param_usages.items():
+                notes.append(f'  {name} = {usage}')
         return notes
 
     def set(self, ptok: ParsedToken):
