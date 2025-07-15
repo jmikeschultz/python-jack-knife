@@ -31,16 +31,24 @@ class UsageError(ValueError):
 
     def __str__(self):
         lines = []
-        lines.append('pjk ' + ' '.join(self.tokens))
-        lines.append(self._get_underline())
+        token_copies = [self._quote(t) for t in self.tokens]
+        lines.append('pjk ' + ' '.join(token_copies))
+        lines.append(self._get_underline(token_copies))
         lines.append(self.message)
         lines.append('')
         lines.append(self.token_error.__str__())
         return '\n'.join(lines)
     
-    def _get_underline(self, marker='^') -> str:
-        offset = 4 + sum(len(t) + 1 for t in self.tokens[:self.token_no])  # +1 for space, 4 for pjk
-        underline = ' ' * offset + marker * len(self.tokens[self.token_no])
+    # quote json inline 
+    def _quote(self, token):
+        if token.startswith('[') or token.startswith('{'):
+            return '"' + token + '"'
+        else:
+            return token
+
+    def _get_underline(self, tokens: List, marker='^') -> str:
+        offset = 4 + sum(len(t) + 1 for t in tokens[:self.token_no])  # +1 for space, 4 for pjk
+        underline = ' ' * offset + marker * len(tokens[self.token_no])
         return underline
 
 
@@ -84,8 +92,8 @@ class Usage:
         self.arg_defs = []
         self.param_usages = {}
 
-    def def_arg(self, name: str, usage: str):
-        self.arg_defs.append((name, usage))
+    def def_arg(self, name: str, usage: str, is_num: bool = False): # default as str
+        self.arg_defs.append((name, usage, is_num))
 
     def def_param(self, name:str, usage: str):
         self.param_usages[name] = usage
@@ -98,7 +106,7 @@ class Usage:
     
     def get_token_syntax(self):
         token = f'{self.name}'
-        for name, usage in self.arg_defs:
+        for name, usage, is_num in self.arg_defs:
             token += f':<{name}>'
         for name, usage in self.param_usages.items():
             token += f'@<{name}>={name}'
@@ -107,7 +115,7 @@ class Usage:
     def get_usage_notes(self):
         notes = []
         notes.append('mandatory args:')
-        for name, usage in self.arg_defs:
+        for name, usage, is_num in self.arg_defs:
             notes.append(f'  {name} = {usage}')
         if self.param_usages:
             notes.append('optional params:')
@@ -117,17 +125,30 @@ class Usage:
 
     def set(self, ptok: ParsedToken):
         for i, adef in enumerate(self.arg_defs):
-            name, usage = adef
-            arg_val = ptok.get_arg(i)
-            if not arg_val:
+            name, usage, is_num = adef
+
+            try:
+                val_str = ptok.get_arg(i)
+                self.args[name] = self._get_val(val_str, is_num)
+            except (ValueError, TypeError) as e:
                 raise TokenError(ptok.whole_token, self.get_token_syntax(), self.get_usage_notes())
-            self.args[name] = arg_val
             
         for name, value in ptok.get_params():
             usage = self.param_usages.get(name, None)
             if not usage:
                 raise TokenError(ptok.whole_token, self.get_token_syntax(), self.get_usage_notes())
             self.params[name] = value
+
+    def _get_val(self, val_str: str, is_num: bool):
+        if not val_str:
+            raise ValueError('missing value')
+        if not is_num:
+            return val_str
+        else: # is_num
+            try:
+                return int(val_str)
+            except ValueError as e: # coud be a float that errors, but is ok
+                return float(val_str)
 
 class KeyedSource(ABC):
     @abstractmethod

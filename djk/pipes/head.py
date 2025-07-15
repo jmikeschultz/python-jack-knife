@@ -10,12 +10,12 @@ class HeadPipe(Pipe):
             name='head',
             desc='take first records of source (when single-threadedE)'
         )
-        usage.def_arg(name='limit', usage='number of records')
+        usage.def_arg(name='limit', usage='number of records', is_num=True)
         return usage
 
     def __init__(self, ptok: ParsedToken, usage: Usage):
         super().__init__(ptok)
-        self.limit = int(usage.get_arg('limit'))
+        self.limit = usage.get_arg('limit')
         self.count = 0
 
     def next(self) -> Optional[dict]:
