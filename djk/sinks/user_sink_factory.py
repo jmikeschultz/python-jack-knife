@@ -1,5 +1,5 @@
 import importlib.util
-from djk.base import Source, Sink, SyntaxError, ParsedToken
+from djk.base import Source, Sink, UsageError, ParsedToken
 
 class UserSinkFactory:
     @staticmethod
@@ -8,12 +8,12 @@ class UserSinkFactory:
         try:
             spec = importlib.util.spec_from_file_location("user_sink", script_path)
             if spec is None or spec.loader is None:
-                raise SyntaxError(f"Could not load Python file: {script_path}")
+                raise UsageError(f"Could not load Python file: {script_path}")
 
             module = importlib.util.module_from_spec(spec)
             spec.loader.exec_module(module)
         except Exception as e:
-            raise SyntaxError(f"Failed to import {script_path}: {e}")
+            raise UsageError(f"Failed to import {script_path}: {e}")
 
         for value in vars(module).values():
             if (

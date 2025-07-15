@@ -1,4 +1,4 @@
-from djk.base import Sink, Source, SyntaxError
+from djk.base import Sink, Source, UsageError
 import matplotlib.pyplot as plt
 import numpy as np
 import matplotlib.pyplot as plt
@@ -41,6 +41,6 @@ class GraphSink(Sink):
             graph_bar_line(self, 'line')
 
         else:
-            raise SyntaxError(f"Unsupported graph type: {self.kind}")
+            raise UsageError(f"Unsupported graph type: {self.kind}")
 
     

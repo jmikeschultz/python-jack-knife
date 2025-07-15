@@ -18,7 +18,19 @@ class TokenError(ValueError):
         lines.append(f'syntax:')
         lines.append(f'  {self.token_syntax}')
         lines.extend(f"{note}" for note in self.usage_notes)
-        return "\n".join(lines)
+        return '\n'.join(lines)
+    
+class UsageError(ValueError):
+    def __init__(self, message: str, token_error: TokenError = None):
+        super().__init__(message)
+        self.message = message
+        self.token_error = token_error
+
+    def __str__(self):
+        lines = []
+        lines.append(self.message)
+        lines.append(self.token_error.__str__())
+        return '\n'.join(lines)
 
 class ParsedToken:
     def __init__(self, token: str):
@@ -193,11 +205,6 @@ class Sink(ABC):
 
     def deep_copy(self):
         return None
-
-class SyntaxError(ValueError):
-    def __init__(self, message: str, details: dict = None):
-        super().__init__(message)
-        self.details = details or {}
 
 class Report:
     def __init__(

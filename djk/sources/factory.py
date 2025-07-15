@@ -1,6 +1,6 @@
 import os
 import queue
-from djk.base import Source, ParsedToken, SyntaxError
+from djk.base import Source, ParsedToken, UsageError
 from djk.sources.json_source import JsonSource
 from djk.sources.csv_source import CSVSource
 from djk.sources.tsv_source import TSVSource

@@ -1,6 +1,6 @@
 from typing import Any, List, Callable
 import os
-from djk.base import Source, Sink, ParsedToken
+from djk.base import Source, Sink, ParsedToken, UsageError
 from djk.sinks.sinks import StdoutYamlSink
 from djk.sinks.json_sink import JsonSink, JsonGzSink
 from djk.sinks.devnull import DevNullSink
@@ -42,7 +42,7 @@ class SinkFactory:
         filesys, format, path = parts
         _, sink_class = cls._resolve_file_sinks(format)
         if not sink_class:
-            raise SyntaxError(f'No such format:{format}')
+            raise UsageError(f'No such format:{format}')
 
         if 'dir' in filesys:
             os.makedirs(path, exist_ok=True)
@@ -91,5 +91,5 @@ class SinkFactory:
             return sink_class(source, path_no_ext)
 
         else:
-            raise SyntaxError("Expression must end in a sink (e.g. '-', 'out.json')")
+            raise UsageError(f"Expression must end in a sink (e.g. '-', 'out.json')")
 

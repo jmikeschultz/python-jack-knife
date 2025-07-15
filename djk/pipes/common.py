@@ -1,4 +1,4 @@
-from djk.base import Source, Pipe, SyntaxError
+from djk.base import Source, Pipe, UsageError
 
 def add_operator(op, stack):
     # checking methods avoids circular deps
@@ -22,7 +22,7 @@ def add_operator(op, stack):
     if isinstance(op, Pipe):
         arity = op.arity # class level attribute
         if len(stack) < arity:
-            raise SyntaxError(f"'{op}' requires {arity} input(s)")
+            raise UsageError(f"'{op}' requires {arity} input(s)")
         op.set_sources([stack.pop() for _ in range(arity)][::-1])
         stack.append(op)
         return

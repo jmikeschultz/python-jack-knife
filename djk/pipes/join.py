@@ -1,7 +1,7 @@
 # djk/pipes/join.py
 
 from typing import Optional
-from djk.base import Pipe, SyntaxError, ParsedToken, KeyedSource
+from djk.base import Pipe, UsageError, ParsedToken, KeyedSource
 
 class JoinPipe(Pipe):
     arity = 2
@@ -13,7 +13,7 @@ class JoinPipe(Pipe):
 
         allowed_modes = {"left", "inner", "outer"}
         if arg_string not in allowed_modes:
-            raise SyntaxError(
+            raise UsageError(
                 "join:<mode> must be one of 'left', 'inner', or 'outer'",
                 details={"received": arg_string}
             )
@@ -26,7 +26,7 @@ class JoinPipe(Pipe):
     def _load_right(self):
         right = self.inputs[1]
         if not isinstance(right, KeyedSource):
-            raise SyntaxError("right input to join must be a KeyedSource")
+            raise UsageError("right input to join must be a KeyedSource")
         self.right_lookup = right
         self.key_field = right.get_keyed_field()
 

@@ -1,6 +1,6 @@
 # djk/pipes/move_field.py
 from typing import Optional
-from djk.base import Pipe, Source, ParsedToken, SyntaxError
+from djk.base import Pipe, Source, ParsedToken, UsageError
 
 class MoveField(Pipe):
     def __init__(self, ptok: ParsedToken):
@@ -11,7 +11,7 @@ class MoveField(Pipe):
 
         '''
         if len(parts) != 2:
-            raise SyntaxError(
+            raise UsageError(
                 "mv requires exactly two fields separated by a colon",
                 details={"expected": "src_field:dst_field", "received": arg_string}
             )

@@ -1,7 +1,7 @@
 # djk/pipes/remove_field.py
 
 from typing import Optional
-from djk.base import Pipe, ParsedToken, SyntaxError
+from djk.base import Pipe, ParsedToken, UsageError
 
 class RemoveField(Pipe):
     def __init__(self, ptok: ParsedToken):
@@ -11,7 +11,7 @@ class RemoveField(Pipe):
 
         self.fields = [f.strip() for f in arg_string.split(',') if f.strip()]
         if not self.fields:
-            raise SyntaxError("rm must include at least one valid field name")
+            raise UsageError("rm must include at least one valid field name")
         self.count = 0
 
     def next(self) -> Optional[dict]:

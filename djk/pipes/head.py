@@ -1,7 +1,7 @@
 # djk/pipes/head.py
 
 from typing import Optional
-from djk.base import Pipe, ParsedToken, SyntaxError
+from djk.base import Pipe, ParsedToken, UsageError
 
 class HeadPipe(Pipe):
     def __init__(self, ptok: ParsedToken):
@@ -11,7 +11,7 @@ class HeadPipe(Pipe):
             if self.limit < 0:
                 raise ValueError()
         except ValueError:
-            raise SyntaxError("head:N expects a non-negative integer")
+            raise UsageError("head:N expects a non-negative integer")
         self.count = 0
 
     def next(self) -> Optional[dict]:

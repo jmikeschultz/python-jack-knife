@@ -1,5 +1,5 @@
 # djk/pipes/factory.py
-from djk.base import Source, Pipe, ParsedToken, SyntaxError
+from djk.base import Source, Pipe, ParsedToken
 from djk.pipes.move_field import MoveField
 from djk.pipes.remove_field import RemoveField
 from djk.pipes.add_field import AddField
@@ -62,6 +62,6 @@ class PipeFactory:
         pipe_cls = cls.PIPE_OPERATORS[op_name]
         try:
             return pipe_cls(input_source, arg_string)
-        except SyntaxError as e:
-            raise SyntaxError(f"Invalid syntax for operator '{op_name}': {e}") from e
+        except UsageError as e:
+            raise UsageError(f"Invalid syntax for operator '{op_name}': {e}") from e
     '''

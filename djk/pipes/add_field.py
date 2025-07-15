@@ -1,7 +1,7 @@
 # djk/pipes/add_field.py
 
 from typing import Optional
-from djk.base import Pipe, ParsedToken, SyntaxError
+from djk.base import Pipe, ParsedToken, UsageError
 from djk.pipes.common import SafeNamespace
 import re
 
@@ -63,7 +63,7 @@ def eval_accumulating(expr: str, record: dict, op: str, acc=None):
             elif isinstance(value, list):
                 return (acc or []) + value
             else:
-                raise SyntaxError(f"Don't know how to += value of type {type(value)}")
+                raise UsageError(f"Don't know how to += value of type {type(value)}")
 
         if op in ('-=', '*=', '/=') and 'acc' not in expr:
             expr = f'acc {op[0]} ({expr})'
@@ -73,7 +73,7 @@ def eval_accumulating(expr: str, record: dict, op: str, acc=None):
 def do_eval(expr, env):
     try:
         return eval(expr, {}, env)
-    except SyntaxError as e:
+    except UsageError as e:
         lineno = e.lineno or 1
         offset = e.offset or 0
 
@@ -82,9 +82,9 @@ def do_eval(expr, env):
         error_line = lines[lineno - 1] if lineno - 1 < len(lines) else expr
 
         error_msg = (
-            f"SyntaxError in expression: {error_line}"
+            f"UsageError in expression: {error_line}"
         )
-        raise SyntaxError(error_msg) from None
+        raise UsageError(error_msg) from None
 
 class AddField(Pipe):
     def __init__(self, ptok: ParsedToken):
@@ -168,6 +168,6 @@ class AddField(Pipe):
 
     def reducing_next(self, record):
         if ':' in self.op:
-            raise SyntaxError("Literal assignment to parent makes no sense")
+            raise UsageError("Literal assignment to parent makes no sense")
         self.accum_value = eval_accumulating(self.rest, record, self.op, self.accum_value)
         return record

@@ -1,7 +1,7 @@
 # djk/pipes/subexp.py
 from djk.pipes.common import add_operator
 from typing import Optional, Any, List
-from djk.base import Pipe, ParsedToken, Source, SyntaxError
+from djk.base import Pipe, ParsedToken, Source, UsageError
 from djk.pipes.user_pipe_factory import UserPipeFactory
 
 # special upstream source put in subexp stack for flexibility

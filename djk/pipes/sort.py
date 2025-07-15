@@ -1,7 +1,7 @@
 # djk/pipes/sort.py
 
 from typing import Optional
-from djk.base import Pipe, ParsedToken, SyntaxError
+from djk.base import Pipe, ParsedToken, UsageError
 
 class SortPipe(Pipe):
     def __init__(self, ptok: ParsedToken):
@@ -10,7 +10,7 @@ class SortPipe(Pipe):
         arg_string = ptok.get_arg(0)
 
         if not arg_string:
-            raise SyntaxError("sort:[+-]<field> requires direction and field name")
+            raise UsageError("sort:[+-]<field> requires direction and field name")
 
         if arg_string.startswith("-"):
             self.field = arg_string[1:]
@@ -19,7 +19,7 @@ class SortPipe(Pipe):
             self.field = arg_string[1:]
             self.reverse = False
         else:
-            raise SyntaxError("sort:[+-]<field> requires direction and field name")
+            raise UsageError("sort:[+-]<field> requires direction and field name")
 
         self._buffer = None
         self._index = 0

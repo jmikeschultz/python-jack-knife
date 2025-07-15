@@ -1,4 +1,4 @@
-from djk.base import Sink, Source, SyntaxError
+from djk.base import Sink, Source, UsageError
 import boto3
 from decimal import Decimal
 

@@ -1,8 +1,8 @@
 #!/usr/bin/env python
 import sys
 import signal
-from djk.parser import DjkExpressionParser
-from djk.base import TokenError
+from djk.parser import ExpressionParser
+from djk.base import TokenError, UsageError
 from djk.log import init as init_logging
 import sys
 import os
@@ -36,12 +36,12 @@ def execute_threaded(sinks):
 def main():
     signal.signal(signal.SIGINT, lambda s, f: sys.exit(0))
     if len(sys.argv) < 2:
-        print("Usage: pjk <token1> <token2> ...")
+        print("Usage: pjk <source> [<pipe> ...] <sink>")
         return
 
     init_logging()
     tokens = sys.argv[1:]
-    parser = DjkExpressionParser(tokens)
+    parser = ExpressionParser(tokens)
 
     try:
         # Build initial sink
@@ -60,10 +60,10 @@ def main():
         else:
             sink.drain() # run single in main thread
 
-    except TokenError as e:
+    except UsageError as e:
         print(e, file=sys.stderr)
         sys.exit(2)  # Exit with a non-zero code, but no traceback
-      
+
     write_history(sys.argv[1:])
 
 if __name__ == "__main__":

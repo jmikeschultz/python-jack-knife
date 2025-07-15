@@ -1,7 +1,7 @@
 import re
 from typing import Optional
 from types import SimpleNamespace
-from djk.base import Pipe, ParsedToken, SyntaxError
+from djk.base import Pipe, ParsedToken, UsageError
 from djk.pipes.common import SafeNamespace
 
 class GrepPipe(Pipe):
@@ -13,7 +13,7 @@ class GrepPipe(Pipe):
         try:
             self.code = compile(self.expr, '<grep>', 'eval')
         except Exception as e:
-            raise SyntaxError(f"Invalid grep expression: {self.expr}") from e
+            raise UsageError(f"Invalid grep expression: {self.expr}") from e
 
     def next(self) -> Optional[dict]:
         while True:

@@ -46,7 +46,7 @@ class DirSource(Source):
                 lazy_file = LazyFileLocal(file)
                 source_queue.put(source_class(lazy_file))
             else:
-                raise SyntaxError(f'No format for file:{file}')
+                raise UsageError(f'No format for file:{file}')
             
         if source_queue.empty():
             return None
