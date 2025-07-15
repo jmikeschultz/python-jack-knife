@@ -19,28 +19,27 @@ class InlineSource(Source):
     def __init__(self, inline_expr):
         self.file = None
         self.num_recs = 0
+        usage = []
+        usage.append('hson lines are more forgiving that regular json')
+        usage.append('field names do not require quotes, string values require single quotes')
+        usage.append('the shell requires double quotes on the entire expression')
+        usage.append('e.g.')
+        usage.append('\"{hello: \'world\'}\"')
+        usage.append('\"{price: 34.5}\"')
+        usage.append('\"[{id: 14}, {id: 1}]\"')
 
         # hjson doesn't require strings be quoted
         try:
             obj = hjson.loads(inline_expr)
         except HjsonDecodeError as e:
-            usage = []
-            usage.append('hson lines are more forgiving that regular json')
-            usage.append('field names do not require quotes, string values require single quotes')
-            usage.append('however, the shell does require double quotes on the entire expression')
-            usage.append('e.g.')
-            usage.append('\"{hello: \'world\'}\"')
-            usage.append('\"{price: 34.5}\"')
-            usage.append('\"[{id: 14}, {id: 1}]\"')
-
-
-
             raise TokenError('"' + inline_expr +'"', '<hjson line>', usage)
 
         if isinstance(obj, dict):
             self.records = [obj]
         elif isinstance(obj, list):
             self.records = obj
+        else:
+            raise TokenError('"' + inline_expr +'"', '<hjson line>', usage)
 
     @classmethod
     def is_inline(cls, token):

@@ -1,6 +1,6 @@
 from typing import Any, List, Callable
 import os
-from djk.base import Source, Sink, ParsedToken, UsageError
+from djk.base import Source, Sink, ParsedToken, TokenError
 from djk.sinks.sinks import StdoutYamlSink
 from djk.sinks.json_sink import JsonSink, JsonGzSink
 from djk.sinks.devnull import DevNullSink
@@ -10,8 +10,6 @@ from djk.sinks.tsv_sink import TSVSink
 from djk.sinks.ddb import DDBSink
 from djk.sinks.dir_sink import DirSink
 from djk.sinks.user_sink_factory import UserSinkFactory
-from djk.sources.lazy_file import LazyFile
-from djk.sources.lazy_file_local import LazyFileLocal
 
 class SinkFactory:
     file_formats = {'json': JsonSink,
@@ -91,5 +89,6 @@ class SinkFactory:
             return sink_class(source, path_no_ext)
 
         else:
-            raise UsageError(f"Expression must end in a sink (e.g. '-', 'out.json')")
+            raise TokenError(token, 'pjk <source> [<pipe> ...] <sink>', ["Expression must end in a sink (e.g. '-', 'out.json')"])
+
 

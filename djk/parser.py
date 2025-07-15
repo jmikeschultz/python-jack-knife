@@ -43,6 +43,7 @@ class ExpressionParser:
     def parse(self) -> Sink:
         copies = self.tokens[:-1] # exclude sink
         sink_token = self.tokens[-1] # sink
+        usage_error_message = "You've got a problem here."
 
         for pos, token in enumerate(copies):
             try:
@@ -56,21 +57,28 @@ class ExpressionParser:
                     add_operator(pipe, self.stack)
                     continue
 
-                else:
-                    raise UsageError(f"Unrecognized token: {token}", self.tokens, 0)
+                else: # unrecognized token
+                    raise TokenError(token, None, ['unrecognized token'])
             
             except TokenError as e:
-                raise UsageError("You've got a problem here", self.tokens, pos, e)
+                raise UsageError(usage_error_message, self.tokens, pos, e)
             
         if len(self.stack) != 1:
-            raise UsageError("This is bad, need syntax error", self.tokens, 0)
+            te = TokenError(sink_token, None, ['A sink can only consume one source.'])
+            pos = len(self.tokens) - 1
+            raise UsageError(usage_error_message, self.tokens, pos, te)
             
         penult = self.stack.pop()
         if not isinstance(penult, Source):
-            raise UsageError("Penultimate component is not a source", self.tokens, 0)
+            te = TokenError(token, None, ['Penultimate component must be a source of records'])
+            raise UsageError(usage_error_message, self.tokens, len(self.tokens)-1, te)
 
-        sink = SinkFactory.create(sink_token, penult)
-        return sink
+        try:
+            sink = SinkFactory.create(sink_token, penult)
+            return sink
+        except TokenError as e:
+            raise UsageError(usage_error_message, self.tokens, len(self.tokens)-1, e)
+        
         
         
             

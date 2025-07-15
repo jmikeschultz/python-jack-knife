@@ -13,8 +13,9 @@ class TokenError(ValueError):
     def __str__(self):
         lines = []
         lines.append(f'Token error: {self.bad_token}')
-        lines.append(f'syntax:')
-        lines.append(f'  {self.token_syntax}')
+        if self.token_syntax:
+            lines.append(f'syntax:')
+            lines.append(f'  {self.token_syntax}')
         lines.extend(f"{note}" for note in self.usage_notes)
         return '\n'.join(lines)
     
