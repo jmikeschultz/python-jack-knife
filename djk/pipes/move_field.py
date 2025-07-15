@@ -1,9 +1,9 @@
 # djk/pipes/move_field.py
 from typing import Optional
-from djk.base import Pipe, Source, ParsedToken, UsageError
+from djk.base import Pipe, Source, ParsedToken, Usage
 
 class MoveField(Pipe):
-    def __init__(self, ptok: ParsedToken):
+    def __init__(self, ptok: ParsedToken, bound_usage: Usage):
         super().__init__(ptok)
 
         self.src = ptok.get_arg(0)

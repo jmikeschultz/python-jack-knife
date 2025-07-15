@@ -1,6 +1,5 @@
 from abc import ABC, abstractmethod
 from typing import Any, Optional, List
-
 from abc import ABC
 from typing import List, Optional
 
@@ -14,23 +13,37 @@ class TokenError(ValueError):
     def __str__(self):
         lines = []
         lines.append(f'Token error: {self.bad_token}')
-        lines.append('')
         lines.append(f'syntax:')
         lines.append(f'  {self.token_syntax}')
         lines.extend(f"{note}" for note in self.usage_notes)
         return '\n'.join(lines)
     
 class UsageError(ValueError):
-    def __init__(self, message: str, token_error: TokenError = None):
+    def __init__(self, message: str,
+                 tokens: List[str] = None,
+                 token_no: int = 0,
+                 token_error: TokenError = None):
         super().__init__(message)
         self.message = message
+        self.tokens = tokens
+        self.token_no = token_no
         self.token_error = token_error
 
     def __str__(self):
         lines = []
+        lines.append('pjk ' + ' '.join(self.tokens))
+        lines.append(self._get_underline())
         lines.append(self.message)
+        lines.append('')
         lines.append(self.token_error.__str__())
         return '\n'.join(lines)
+    
+    def _get_underline(self, marker='^') -> str:
+        offset = 4 + sum(len(t) + 1 for t in self.tokens[:self.token_no])  # +1 for space, 4 for pjk
+        underline = ' ' * offset + marker * len(self.tokens[self.token_no])
+        return underline
+
+
 
 class ParsedToken:
     def __init__(self, token: str):
@@ -62,9 +75,9 @@ class ParsedToken:
         return self._params.items()
     
 class Usage:
-    def __init__(self, name: str, description: str):
+    def __init__(self, name: str, desc: str):
         self.name = name
-        self.description = description
+        self.desc = desc
         self.args = {}
         self.params = {}
 
@@ -144,8 +157,15 @@ class Source(ABC):
 class Pipe(Source):
     deep_copyable: bool = False # default to false
     arity: int = 1
+    
+    @classmethod
+    def define_usage(cls):
+        return Usage(
+            name=cls.__name__,
+            desc=f"{cls.__name__} component"
+        )
 
-    def __init__(self, ptok: ParsedToken):
+    def __init__(self, ptok: ParsedToken, usage: Usage = None):
         self.ptok = ptok
         self.inputs: List[Source] = []
 

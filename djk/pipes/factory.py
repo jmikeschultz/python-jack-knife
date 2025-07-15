@@ -1,5 +1,5 @@
 # djk/pipes/factory.py
-from djk.base import Source, Pipe, ParsedToken
+from djk.base import Usage, Pipe, ParsedToken
 from djk.pipes.move_field import MoveField
 from djk.pipes.remove_field import RemoveField
 from djk.pipes.add_field import AddField
@@ -50,18 +50,8 @@ class PipeFactory:
         if not pipe_cls:
             return None
         
-        pipe = pipe_cls(ptok)
+        usage = pipe_cls.define_usage()
+        usage.set(ptok)
+        
+        pipe = pipe_cls(ptok, usage)
         return pipe
-
-    '''
-    @classmethod
-    def instantiate_pipe(cls, token: str, input_source: Source) -> Pipe:
-        parts = token.split(':', 1)
-        op_name = parts[0]
-        arg_string = parts[1] if len(parts) > 1 else ''
-        pipe_cls = cls.PIPE_OPERATORS[op_name]
-        try:
-            return pipe_cls(input_source, arg_string)
-        except UsageError as e:
-            raise UsageError(f"Invalid syntax for operator '{op_name}': {e}") from e
-    '''

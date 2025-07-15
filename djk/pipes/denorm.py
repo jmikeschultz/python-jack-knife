@@ -1,7 +1,7 @@
 # djk/pipes/denorm.py
 
 from typing import Optional
-from djk.base import Pipe, ParsedToken, UsageError
+from djk.base import Pipe, ParsedToken, Usage, UsageError
 
 class Denormer:
     def __init__(self, record, field):
@@ -30,7 +30,7 @@ class Denormer:
         return out
 
 class DenormPipe(Pipe):
-    def __init__(self, ptok: ParsedToken):
+    def __init__(self, ptok: ParsedToken, bound_usage: Usage):
         super().__init__(ptok)
 
         self.field = ptok.get_arg(0)

@@ -1,12 +1,12 @@
 # djk/pipes/group.py
 
 from typing import Optional
-from djk.base import ParsedToken, Pipe
+from djk.base import ParsedToken, Usage, Pipe
 from datetime import datetime
 
 ''' exhausts source to group them by argument fields'''
 class GroupPipe(Pipe):
-    def __init__(self, ptok: ParsedToken):
+    def __init__(self, ptok: ParsedToken, bound_usage: Usage):
         super().__init__(ptok)
         self.fields = ptok.get_arg(0).split(',')
         self.out_recs = None

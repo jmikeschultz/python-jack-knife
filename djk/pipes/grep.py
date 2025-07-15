@@ -1,11 +1,11 @@
 import re
 from typing import Optional
 from types import SimpleNamespace
-from djk.base import Pipe, ParsedToken, UsageError
+from djk.base import Pipe, ParsedToken, Usage, UsageError
 from djk.pipes.common import SafeNamespace
 
 class GrepPipe(Pipe):
-    def __init__(self, ptok: ParsedToken):
+    def __init__(self, ptok: ParsedToken, bound_usage: Usage):
         super().__init__(ptok)
 
         arg_string = ptok.whole_token.split(':', 1)[-1]

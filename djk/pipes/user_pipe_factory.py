@@ -23,6 +23,7 @@ class UserPipeFactory:
                 and value is not Pipe
                 and value.__module__ == module.__name__  # ← Key line
             ):
-                return value(ptok)
-
+                usage = value.define_usage()
+                usage.set(ptok)
+                return value(ptok, usage)
         return None

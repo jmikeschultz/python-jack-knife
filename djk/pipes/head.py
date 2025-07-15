@@ -1,17 +1,21 @@
 # djk/pipes/head.py
 
 from typing import Optional
-from djk.base import Pipe, ParsedToken, UsageError
+from djk.base import Pipe, ParsedToken, Usage, UsageError
 
 class HeadPipe(Pipe):
-    def __init__(self, ptok: ParsedToken):
+    @classmethod
+    def define_usage(cls):
+        usage = Usage(
+            name='head',
+            desc='take first records of source (when single-threadedE)'
+        )
+        usage.def_arg(name='limit', usage='number of records')
+        return usage
+
+    def __init__(self, ptok: ParsedToken, usage: Usage):
         super().__init__(ptok)
-        try:
-            self.limit = int(ptok.get_arg(0))
-            if self.limit < 0:
-                raise ValueError()
-        except ValueError:
-            raise UsageError("head:N expects a non-negative integer")
+        self.limit = int(usage.get_arg('limit'))
         self.count = 0
 
     def next(self) -> Optional[dict]:

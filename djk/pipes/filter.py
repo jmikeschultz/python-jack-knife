@@ -1,10 +1,10 @@
 from typing import Optional
-from djk.base import Pipe, UsageError, ParsedToken, KeyedSource
+from djk.base import Pipe, Usage, UsageError, ParsedToken, KeyedSource
 
 class FilterPipe(Pipe):
     arity = 2  # left = record stream, right = keyed source
 
-    def __init__(self, ptok: ParsedToken):
+    def __init__(self, ptok: ParsedToken, bound_usage: Usage):
         super().__init__(ptok)
 
         # not regular parsing

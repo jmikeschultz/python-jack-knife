@@ -1,7 +1,7 @@
 # djk/pipes/subexp.py
 from djk.pipes.common import add_operator
 from typing import Optional, Any, List
-from djk.base import Pipe, ParsedToken, Source, UsageError
+from djk.base import Pipe, ParsedToken, Source, Usage
 from djk.pipes.user_pipe_factory import UserPipeFactory
 
 # special upstream source put in subexp stack for flexibility
@@ -36,7 +36,7 @@ class UpstreamSource(Source):
         return item
     
 class SubExpression(Pipe):
-    def __init__(self, ptok: ParsedToken):
+    def __init__(self, ptok: ParsedToken, bound_usage: Usage):
         super().__init__(ptok)
         self.upstream_source = UpstreamSource()
         self.over_arg = None # set by method

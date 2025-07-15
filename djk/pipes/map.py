@@ -1,10 +1,10 @@
 # djk/pipes/map.py
 
 from typing import Optional
-from djk.base import Pipe, KeyedSource, ParsedToken, UsageError
+from djk.base import Pipe, KeyedSource, ParsedToken, Usage
 
 class MapPipe(Pipe, KeyedSource):
-    def __init__(self, ptok: ParsedToken):
+    def __init__(self, ptok: ParsedToken, bound_usage: Usage):
         super().__init__(ptok)
 
         self.field = ptok.get_arg(0)

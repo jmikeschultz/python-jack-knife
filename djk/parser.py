@@ -41,11 +41,11 @@ class ExpressionParser:
         self.stack: List[Any] = []
 
     def parse(self) -> Sink:
-        try:
-            copies = self.tokens[:-1] # exclude sink
-            sink_token = self.tokens[-1] # sink
+        copies = self.tokens[:-1] # exclude sink
+        sink_token = self.tokens[-1] # sink
 
-            for token in copies:
+        for pos, token in enumerate(copies):
+            try:
                 source = SourceFactory.create(token)
                 if source:
                     add_operator(source, self.stack)
@@ -57,23 +57,22 @@ class ExpressionParser:
                     continue
 
                 else:
-                    raise UsageError(f"Unrecognized token: {token}")
+                    raise UsageError(f"Unrecognized token: {token}", self.tokens, 0)
             
-            #
-            if len(self.stack) != 1:
-                raise UsageError("This is bad, need syntax error")
+            except TokenError as e:
+                raise UsageError("You've got a problem here", self.tokens, pos, e)
             
-            penult = self.stack.pop()
-            if not isinstance(penult, Source):
-                raise UsageError("Penultimate component is not a source")
+        if len(self.stack) != 1:
+            raise UsageError("This is bad, need syntax error", self.tokens, 0)
+            
+        penult = self.stack.pop()
+        if not isinstance(penult, Source):
+            raise UsageError("Penultimate component is not a source", self.tokens, 0)
 
-            sink = SinkFactory.create(sink_token, penult)
-            return sink
+        sink = SinkFactory.create(sink_token, penult)
+        return sink
         
-        except TokenError as e:
-            #print(e, file=sys.stderr)
-            #sys.exit(2)  # Exit with a non-zero code, but no traceback
-            raise UsageError('message goes here', e)
+        
             
         
 

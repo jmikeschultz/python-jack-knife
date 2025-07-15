@@ -1,10 +1,10 @@
 # djk/pipes/sort.py
 
 from typing import Optional
-from djk.base import Pipe, ParsedToken, UsageError
+from djk.base import Pipe, ParsedToken, Usage, UsageError
 
 class SortPipe(Pipe):
-    def __init__(self, ptok: ParsedToken):
+    def __init__(self, ptok: ParsedToken, bound_usage: Usage):
         super().__init__(ptok)
 
         arg_string = ptok.get_arg(0)

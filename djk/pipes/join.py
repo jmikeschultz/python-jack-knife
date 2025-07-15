@@ -1,12 +1,12 @@
 # djk/pipes/join.py
 
 from typing import Optional
-from djk.base import Pipe, UsageError, ParsedToken, KeyedSource
+from djk.base import Pipe, Usage, UsageError, ParsedToken, KeyedSource
 
 class JoinPipe(Pipe):
     arity = 2
 
-    def __init__(self, ptok: ParsedToken):
+    def __init__(self, ptok: ParsedToken, bound_usage: Usage):
         super().__init__(ptok)
 
         arg_string = ptok.get_arg(0)
