@@ -1,8 +1,9 @@
 # djk/sources/inline_source
 import hjson
+from hjson import HjsonDecodeError
 import gzip
 from typing import Optional
-from djk.base import Source, Report
+from djk.base import Source, TokenError
 from collections import OrderedDict
 
 def to_builtin(obj):
@@ -20,7 +21,21 @@ class InlineSource(Source):
         self.num_recs = 0
 
         # hjson doesn't require strings be quoted
-        obj = hjson.loads(inline_expr)
+        try:
+            obj = hjson.loads(inline_expr)
+        except HjsonDecodeError as e:
+            usage = []
+            usage.append('hson lines are more forgiving that regular json')
+            usage.append('field names do not require quotes, string values require single quotes')
+            usage.append('however, the shell does require double quotes on the entire expression')
+            usage.append('e.g.')
+            usage.append('\"{hello: \'world\'}\"')
+            usage.append('\"{price: 34.5}\"')
+            usage.append('\"[{id: 14}, {id: 1}]\"')
+
+
+
+            raise TokenError('"' + inline_expr +'"', '<hjson line>', usage)
 
         if isinstance(obj, dict):
             self.records = [obj]
