@@ -1,14 +1,14 @@
 # djk/pipes/head.py
 
 from typing import Optional
-from djk.base import Pipe, ParsedToken, Usage, UsageError
+from djk.base import Pipe, ParsedToken, Usage
 
 class HeadPipe(Pipe):
     @classmethod
-    def define_usage(cls):
+    def usage(cls):
         usage = Usage(
             name='head',
-            desc='take first records of source (when single-threadedE)'
+            desc='take first records of source (when single-threaded)'
         )
         usage.def_arg(name='limit', usage='number of records', is_num=True)
         return usage

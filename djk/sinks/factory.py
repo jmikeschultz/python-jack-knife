@@ -1,6 +1,6 @@
 from typing import Any, List, Callable
 import os
-from djk.base import Source, Sink, ParsedToken, TokenError
+from djk.base import Source, Sink, ParsedToken, TokenError, UsageError, ComponentFactory
 from djk.sinks.sinks import StdoutYamlSink
 from djk.sinks.json_sink import JsonSink, JsonGzSink
 from djk.sinks.devnull import DevNullSink
@@ -11,11 +11,14 @@ from djk.sinks.ddb import DDBSink
 from djk.sinks.dir_sink import DirSink
 from djk.sinks.user_sink_factory import UserSinkFactory
 
-class SinkFactory:
-    file_formats = {'json': JsonSink,
-                    'json.gz': JsonGzSink,
-                    'csv': CSVSink,
-                    'tsv': TSVSink}
+class SinkFactory(ComponentFactory):
+    TYPE = 'SINK'
+    COMPONENTS = {
+        'json': JsonSink,
+        'json.gz': JsonGzSink,
+        'csv': CSVSink,
+        'tsv': TSVSink
+        }
     
     @classmethod
     def _resolve_file_sinks(cls, token: str):
@@ -89,6 +92,6 @@ class SinkFactory:
             return sink_class(source, path_no_ext)
 
         else:
-            raise TokenError(token, 'pjk <source> [<pipe> ...] <sink>', ["Expression must end in a sink (e.g. '-', 'out.json')"])
+            raise TokenError(None, 'pjk <source> [<pipe> ...] <sink>', ["Expression must end in a sink (e.g. '-', 'out.json')"])
 
 

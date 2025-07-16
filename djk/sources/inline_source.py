@@ -3,7 +3,7 @@ import hjson
 from hjson import HjsonDecodeError
 import gzip
 from typing import Optional
-from djk.base import Source, TokenError
+from djk.base import Source, TokenError, Usage
 from collections import OrderedDict
 
 def to_builtin(obj):
@@ -16,6 +16,14 @@ def to_builtin(obj):
         return obj
 
 class InlineSource(Source):
+    @classmethod
+    def usage(cls):
+        usage = Usage(
+            name='inline json',
+            desc="e.g. \"{hello: 'world'}\" or \"[{id:1},{id:2}]\""
+        )
+        return usage
+    
     def __init__(self, inline_expr):
         self.file = None
         self.num_recs = 0

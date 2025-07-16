@@ -2,12 +2,15 @@
 import sys
 import signal
 from djk.parser import ExpressionParser
-from djk.base import TokenError, UsageError
+from djk.base import UsageError
 from djk.log import init as init_logging
 import sys
 import os
 from datetime import datetime, timezone
 import concurrent.futures
+from djk.pipes.factory import PipeFactory
+from djk.sources.factory import SourceFactory
+from djk.sinks.factory import SinkFactory
 
 def write_history(tokens):
     log_path = ".pjk-history.txt"
@@ -37,6 +40,14 @@ def main():
     signal.signal(signal.SIGINT, lambda s, f: sys.exit(0))
     if len(sys.argv) < 2:
         print("Usage: pjk <source> [<pipe> ...] <sink>")
+        print()
+        SourceFactory.print_descriptions()
+        print()
+        PipeFactory.print_descriptions()
+        print()
+        SinkFactory.print_descriptions()
+
+
         return
 
     init_logging()

@@ -4,15 +4,16 @@ from abc import ABC
 from typing import List, Optional
 
 class TokenError(ValueError):
-    def __init__(self, bad_token: str, token_syntax: str, usage_notes: list[str]):
+    def __init__(self, desc: str, token_syntax: str, usage_notes: list[str]):
         super().__init__(token_syntax)
-        self.bad_token = bad_token
+        self.desc = desc
         self.token_syntax = token_syntax
         self.usage_notes = usage_notes
 
     def __str__(self):
         lines = []
-        lines.append(f'Token error: {self.bad_token}')
+        if self.desc:
+            lines.append(self.desc)
         if self.token_syntax:
             lines.append(f'syntax:')
             lines.append(f'  {self.token_syntax}')
@@ -51,8 +52,6 @@ class UsageError(ValueError):
         offset = 4 + sum(len(t) + 1 for t in tokens[:self.token_no])  # +1 for space, 4 for pjk
         underline = ' ' * offset + marker * len(tokens[self.token_no])
         return underline
-
-
 
 class ParsedToken:
     def __init__(self, token: str):
@@ -124,7 +123,7 @@ class Usage:
                 notes.append(f'  {name} = {usage}')
         return notes
 
-    def set(self, ptok: ParsedToken):
+    def bind(self, ptok: ParsedToken):
         for i, adef in enumerate(self.arg_defs):
             name, usage, is_num = adef
 
@@ -132,12 +131,12 @@ class Usage:
                 val_str = ptok.get_arg(i)
                 self.args[name] = self._get_val(val_str, is_num)
             except (ValueError, TypeError) as e:
-                raise TokenError(ptok.whole_token, self.get_token_syntax(), self.get_usage_notes())
+                raise TokenError(self.desc, self.get_token_syntax(), self.get_usage_notes())
             
         for name, value in ptok.get_params():
             usage = self.param_usages.get(name, None)
             if not usage:
-                raise TokenError(ptok.whole_token, self.get_token_syntax(), self.get_usage_notes())
+                raise TokenError(self.desc, self.get_token_syntax(), self.get_usage_notes())
             self.params[name] = value
 
     def _get_val(self, val_str: str, is_num: bool):
@@ -152,6 +151,13 @@ class Usage:
                 return float(val_str)
 
 class KeyedSource(ABC):
+    @classmethod
+    def usage(cls):
+        return Usage(
+            name=cls.__name__,
+            desc=f"{cls.__name__} component"
+        )
+    
     @abstractmethod
     def get_keyed_field(self) -> str:
         """Return the field name this source is keyed on."""
@@ -166,6 +172,13 @@ class KeyedSource(ABC):
         return None
 
 class Source(ABC):
+    @classmethod
+    def usage(cls):
+        return Usage(
+            name=cls.__name__,
+            desc=f"{cls.__name__} component"
+        )
+    
     @abstractmethod
     def next(self) -> Optional[Any]:
         pass
@@ -180,13 +193,6 @@ class Pipe(Source):
     deep_copyable: bool = False # default to false
     arity: int = 1
     
-    @classmethod
-    def define_usage(cls):
-        return Usage(
-            name=cls.__name__,
-            desc=f"{cls.__name__} component"
-        )
-
     def __init__(self, ptok: ParsedToken, usage: Usage = None):
         self.ptok = ptok
         self.inputs: List[Source] = []
@@ -220,6 +226,13 @@ class Pipe(Source):
         return clone
 
 class Sink(ABC):
+    @classmethod
+    def usage(cls):
+        return Usage(
+            name=cls.__name__,
+            desc=f"{cls.__name__} component"
+        )
+    
     def __init__(self, input_source: Source):
         self.input = input_source
 
@@ -336,3 +349,15 @@ def format_metrics2(metrics: dict) -> str:
 class IdentitySource(Source):
     def next(self):
         raise RuntimeError("IdentitySource should never be executed")
+
+class ComponentFactory:
+    COMPONENTS = {} # name -> component_class
+    TYPE = "COMPONENT" # source pipe sink
+
+    @classmethod
+    def print_descriptions(cls):
+        print(cls.TYPE + 'S')
+        for name, comp_class in cls.COMPONENTS.items():
+            usage = comp_class.usage()
+
+            print(f'  {name:<12} {usage.desc}')

@@ -1,6 +1,6 @@
 import os
 import queue
-from djk.base import Source, ParsedToken, UsageError
+from djk.base import Source, ParsedToken, ComponentFactory
 from djk.sources.json_source import JsonSource
 from djk.sources.csv_source import CSVSource
 from djk.sources.tsv_source import TSVSource
@@ -13,7 +13,11 @@ from djk.sources.lazy_file import LazyFile
 from djk.sources.lazy_file_local import LazyFileLocal
 #from djk.sources.postgres import PostgresSource
 
-class SourceFactory:
+class SourceFactory(ComponentFactory):
+    TYPE = 'SOURCE'
+    COMPONENTS = {
+        "inline": InlineSource
+    }
 
     @classmethod
     def source_class_getter(cls, name, parms) -> Source:
@@ -53,7 +57,6 @@ class SourceFactory:
 
         elif os.path.isdir(path):
             return DirSource.create(path, cls.source_class_getter, parms)
-
 
         # individual file
         source_class = cls.source_class_getter(path, parms)

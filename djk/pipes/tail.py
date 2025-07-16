@@ -4,14 +4,18 @@ from typing import Optional
 from djk.base import Pipe, ParsedToken, Usage, UsageError
 
 class TailPipe(Pipe):
-    def __init__(self, ptok: ParsedToken, bound_usage: Usage):
+    @classmethod
+    def usage(cls):
+        usage = Usage(
+            name='tail',
+            desc='take last records of source (when single-threaded)'
+        )
+        usage.def_arg(name='limit', usage='number of records', is_num=True)
+        return usage
+    
+    def __init__(self, ptok: ParsedToken, usage: Usage):
         super().__init__(ptok)
-        try:
-            self.limit = int(ptok.get_arg(0))
-            if self.limit < 0:
-                raise ValueError()
-        except ValueError:
-            raise UsageError("tail:N expects a non-negative integer")
+        self.limit = usage.get_arg('limit')
 
         self.buffer = []
         self.index = 0

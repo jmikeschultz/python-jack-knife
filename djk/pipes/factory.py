@@ -1,5 +1,5 @@
 # djk/pipes/factory.py
-from djk.base import Usage, Pipe, ParsedToken
+from djk.base import Usage, Pipe, ParsedToken, ComponentFactory
 from djk.pipes.move_field import MoveField
 from djk.pipes.remove_field import RemoveField
 from djk.pipes.add_field import AddField
@@ -17,15 +17,16 @@ from djk.pipes.denorm import DenormPipe
 from djk.pipes.group import GroupPipe
 from djk.pipes.user_pipe_factory import UserPipeFactory
 
-class PipeFactory:
-    PIPE_OPERATORS = {
+class PipeFactory(ComponentFactory):
+    TYPE = 'PIPE'
+    COMPONENTS = {
+        'head': HeadPipe,
         'join': JoinPipe,
         'filter': FilterPipe,
         'map': MapPipe,        
         'mv': MoveField,
         'rm': RemoveField,        
         'let': AddField, # i.e. let a column 
-        'head': HeadPipe,
         'tail': TailPipe,
         'sort': SortPipe,
         'grep': GrepPipe,
@@ -45,13 +46,14 @@ class PipeFactory:
             if pipe:
                 return pipe # else keep looking
 
-        pipe_cls = cls.PIPE_OPERATORS.get(ptok.main)
+        pipe_cls = cls.COMPONENTS.get(ptok.main)
 
         if not pipe_cls:
             return None
         
-        usage = pipe_cls.define_usage()
-        usage.set(ptok)
+        usage = pipe_cls.usage()
+        usage.bind(ptok)
         
         pipe = pipe_cls(ptok, usage)
         return pipe
+
