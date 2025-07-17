@@ -1,4 +1,4 @@
-from djk.base import Sink, Source, UsageError
+from djk.base import Sink, Source, ParsedToken, Usage
 import matplotlib.pyplot as plt
 import numpy as np
 import matplotlib.pyplot as plt
@@ -9,11 +9,11 @@ from djk.sinks.graph_scatter import graph_scatter
 from djk.sinks.graph_bar_line import graph_bar_line
 
 class GraphSink(Sink):
-    def __init__(self, input_source: Source, arg_str: str):
+    def __init__(self, input_source: Source, ptok: ParsedToken, usage: Usage):
         super().__init__(input_source)
         self.records = []
-        self.kind, pairs = arg_str.split(':')
-        self.args_dict = dict(item.split('=') for item in pairs.split(','))
+        self.kind = ptok.get_arg(0)
+        self.args_dict = dict(item.split('=') for item in ptok.get_arg(1).split(','))
 
         self.x_field = self.args_dict.pop('x', None)
         self.y_field = self.args_dict.pop('y', None)

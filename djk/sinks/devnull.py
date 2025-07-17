@@ -1,9 +1,9 @@
 # djk/sinks/devnull.py
 
-from djk.base import Sink, Source
+from djk.base import Sink, Source, ParsedToken, Usage
 
 class DevNullSink(Sink):
-    def __init__(self, input_source: Source, arg_str: str = ""):
+    def __init__(self, input_source: Source, ptok: ParsedToken, usage: Usage):
         super().__init__(input_source)
         self.count = 0
 

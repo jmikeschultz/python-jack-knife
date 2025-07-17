@@ -1,8 +1,8 @@
 from typing import Any, List, Callable
 import os
 from djk.base import Source, Sink, ParsedToken, TokenError, UsageError, ComponentFactory
-from djk.sinks.sinks import StdoutYamlSink
-from djk.sinks.json_sink import JsonSink, JsonGzSink
+from djk.sinks.stdout import StdoutSink
+from djk.sinks.json_sink import JsonSink
 from djk.sinks.devnull import DevNullSink
 from djk.sinks.graph import GraphSink
 from djk.sinks.csv_sink import CSVSink
@@ -12,77 +12,42 @@ from djk.sinks.dir_sink import DirSink
 from djk.sinks.user_sink_factory import UserSinkFactory
 
 class SinkFactory(ComponentFactory):
-    TYPE = 'SINK'
+    HEADER = 'SINKS'
     COMPONENTS = {
+        '-': StdoutSink,
+        'devnull': DevNullSink,
+        'graph': GraphSink,
+        'ddb': DDBSink,
         'json': JsonSink,
-        'json.gz': JsonGzSink,
         'csv': CSVSink,
         'tsv': TSVSink
         }
-    
-    @classmethod
-    def _resolve_file_sinks(cls, token: str):
-        clazz = cls.file_formats.get(token, None)
-        if clazz:
-            return None, clazz
-
-        # for file paths        
-        for ext, sink_class in cls.file_formats.items():
-            if token.endswith(f'.{ext}'):
-                path_no_ext = token.removesuffix(f'.{ext}')
-                return path_no_ext, sink_class
-
-        return None, None
-    
-    @classmethod
-    def _create_dir_sinks(cls, source, main, parms):
-        parts = main.split(':')
-        if len(parts) != 3:
-            return None
-
-        filesys, format, path = parts
-        _, sink_class = cls._resolve_file_sinks(format)
-        if not sink_class:
-            raise UsageError(f'No such format:{format}')
-
-        if 'dir' in filesys:
-            os.makedirs(path, exist_ok=True)
-            return DirSink(source, path, sink_class, parms)
-        
-#        if 's3' in filesys:
-#            retu
-        
-        return None
 
     @classmethod
     def create(cls, token: str, source: Source) -> Callable[[Source], Sink]:
         token = token.strip()
-
-        parts = token.split(',', 1) # the separator for optional params
-        main = parts[0]
-        parms = parts[1] if len(parts) > 1 else ""
-
         ptok = ParsedToken(token)
 
         if ptok.main.endswith('.py'):
             sink = UserSinkFactory.create(ptok, source)
             if sink:
                 return sink
+        
+        sink_cls = cls.COMPONENTS.get(ptok.main)
+        if not sink_cls:
+            # attempt case -> myfile.<format>
+            return cls._attempt_format_file(source, ptok)
+        
+         # case -> <format>:<path> local dir
+        if sink_cls.is_format: 
+            dir_usage = DirSink.usage()
+            dir_usage.bind(ptok)
+            return DirSink(source, ptok, dir_usage, sink_cls)        
 
-        if token == "-":
-            return StdoutYamlSink(source, token)
-        elif token == "devnull":
-            return DevNullSink(source, token)
-        elif token.startswith("graph:"):
-            kind = token.split(":", 1)[1]
-            return GraphSink(source, kind)
-        elif token.startswith('ddb:'):
-            table = token.split(":", 1)[1]
-            return DDBSink(source, table)
+        usage = sink_cls.usage()
+        usage.bind(ptok)
 
-        # filesystem:format:path e.g.
-        # dir:json:path, s3:json:path
-        sink = cls._create_dir_sinks(source, main, parms)
+        sink = sink_cls(source, ptok, usage)
         if sink:
             return sink
 
@@ -92,6 +57,30 @@ class SinkFactory(ComponentFactory):
             return sink_class(source, path_no_ext)
 
         else:
-            raise TokenError(None, 'pjk <source> [<pipe> ...] <sink>', ["Expression must end in a sink (e.g. '-', 'out.json')"])
+            raise TokenError.from_list(['pjk <source> [<pipe> ...] <sink>',
+                                        "Expression must end in a sink (e.g. '-', 'out.json')"]
+                                        )
 
+    @classmethod
+    def _attempt_format_file(cls, source: Source, ptok: ParsedToken):
+        is_gz = False
+        path, ext = os.path.splitext(ptok.main)
+        if '.gz' in ext:
+            is_gz = True
+            path, ext = os.path.splitext(path)
+        
+        file_ext = ext.lstrip('.')  # removes the leading dot
+
+        sink_cls = cls.COMPONENTS.get(file_ext)
+        if not sink_cls:
+            return None
+        
+        file_token = f'{path}:{is_gz}' # hack so user can do .json.gz
+        file_ptok = ParsedToken(file_token)
+        
+        usage = sink_cls.usage()
+        usage.bind(file_ptok) # not sure we'll ever use since we're hacking above
+
+        return sink_cls(source, file_ptok, usage)
+        
 

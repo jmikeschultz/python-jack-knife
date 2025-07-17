@@ -18,16 +18,16 @@ from djk.pipes.group import GroupPipe
 from djk.pipes.user_pipe_factory import UserPipeFactory
 
 class PipeFactory(ComponentFactory):
-    TYPE = 'PIPE'
+    HEADER = 'PIPES'
     COMPONENTS = {
         'head': HeadPipe,
+        'tail': TailPipe,
         'join': JoinPipe,
         'filter': FilterPipe,
         'map': MapPipe,        
         'mv': MoveField,
         'rm': RemoveField,        
         'let': AddField, # i.e. let a column 
-        'tail': TailPipe,
         'sort': SortPipe,
         'grep': GrepPipe,
         'sel': SelectFields,

@@ -1,12 +1,15 @@
+import os
 import gzip
 import json
-from djk.base import Sink, Source
+from djk.base import Sink, Source, ParsedToken, Usage
 
 class JsonSink(Sink):
-    def __init__(self, input_source: Source, path_no_ext: str, gz: bool = False):
-        super().__init__(input_source)
-        self.path_no_ext = path_no_ext
-        self.gz = gz
+    is_format = True
+
+    def __init__(self, input_source: Source, ptok: ParsedToken, usage: Usage):
+        super().__init__(input_source, ptok, usage)
+        self.path_no_ext = ptok.main
+        self.gz = ptok.get_arg(0) == 'True'
 
     def process(self) -> None:
         path = self.path_no_ext + ('.json.gz' if self.gz else '.json')
@@ -19,6 +22,3 @@ class JsonSink(Sink):
                     break
                 f.write(json.dumps(record) + '\n')
 
-class JsonGzSink(JsonSink):
-    def __init__(self, input_source: Source, path_no_ext: str):
-        super().__init__(input_source, path_no_ext, gz=True)

@@ -8,7 +8,7 @@ class HeadPipe(Pipe):
     def usage(cls):
         usage = Usage(
             name='head',
-            desc='take first records of source (when single-threaded)'
+            desc='take first records of input (when single-threaded)'
         )
         usage.def_arg(name='limit', usage='number of records', is_num=True)
         return usage

@@ -14,7 +14,7 @@ from djk.sources.lazy_file_local import LazyFileLocal
 #from djk.sources.postgres import PostgresSource
 
 class SourceFactory(ComponentFactory):
-    TYPE = 'SOURCE'
+    HEADER = 'SOURCES'
     COMPONENTS = {
         "inline": InlineSource
     }

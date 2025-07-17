@@ -4,21 +4,17 @@ from abc import ABC
 from typing import List, Optional
 
 class TokenError(ValueError):
-    def __init__(self, desc: str, token_syntax: str, usage_notes: list[str]):
-        super().__init__(token_syntax)
-        self.desc = desc
-        self.token_syntax = token_syntax
-        self.usage_notes = usage_notes
+    @classmethod
+    def from_list(cls, lines: List[str]):
+        text = '\n'.join(lines)
+        return TokenError(text)
 
-    def __str__(self):
-        lines = []
-        if self.desc:
-            lines.append(self.desc)
-        if self.token_syntax:
-            lines.append(f'syntax:')
-            lines.append(f'  {self.token_syntax}')
-        lines.extend(f"{note}" for note in self.usage_notes)
-        return '\n'.join(lines)
+    def __init__(self, text: str):
+        super().__init__('None')
+        self.text = text
+
+    def get_text(self):
+        return self.text
     
 class UsageError(ValueError):
     def __init__(self, message: str,
@@ -38,7 +34,7 @@ class UsageError(ValueError):
         lines.append(self._get_underline(token_copies))
         lines.append(self.message)
         lines.append('')
-        lines.append(self.token_error.__str__())
+        lines.append(self.token_error.get_text())
         return '\n'.join(lines)
     
     # quote json inline 
@@ -104,6 +100,14 @@ class Usage:
     def get_param(self, name: str):
         return self.params.get(name, None)
     
+    def get_usage_text(self):
+        lines = []
+        lines.append(self.desc)
+        lines.append(f'syntax:')
+        lines.append(f'  {self.get_token_syntax()}')
+        lines.extend(f"{line}" for line in self.get_arg_param_desc())
+        return '\n'.join(lines)
+
     def get_token_syntax(self):
         token = f'{self.name}'
         for name, usage, is_num in self.arg_defs:
@@ -112,7 +116,7 @@ class Usage:
             token += f'@<{name}>={name}'
         return token
     
-    def get_usage_notes(self):
+    def get_arg_param_desc(self):
         notes = []
         notes.append('mandatory args:')
         for name, usage, is_num in self.arg_defs:
@@ -131,12 +135,12 @@ class Usage:
                 val_str = ptok.get_arg(i)
                 self.args[name] = self._get_val(val_str, is_num)
             except (ValueError, TypeError) as e:
-                raise TokenError(self.desc, self.get_token_syntax(), self.get_usage_notes())
+                raise TokenError(self.get_usage_text())
             
         for name, value in ptok.get_params():
             usage = self.param_usages.get(name, None)
             if not usage:
-                raise TokenError(self.desc, self.get_token_syntax(), self.get_usage_notes())
+                raise TokenError(self.get_usage_text())
             self.params[name] = value
 
     def _get_val(self, val_str: str, is_num: bool):
@@ -186,7 +190,7 @@ class Source(ABC):
     def report(self) -> "Report":
         return make_report(self)
     
-    def deep_copy():
+    def deep_copy(self):
         return None
     
 class Pipe(Source):
@@ -226,6 +230,8 @@ class Pipe(Source):
         return clone
 
 class Sink(ABC):
+    is_format = False
+
     @classmethod
     def usage(cls):
         return Usage(
@@ -356,7 +362,7 @@ class ComponentFactory:
 
     @classmethod
     def print_descriptions(cls):
-        print(cls.TYPE + 'S')
+        print(cls.HEADER)
         for name, comp_class in cls.COMPONENTS.items():
             usage = comp_class.usage()
 

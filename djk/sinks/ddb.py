@@ -1,14 +1,14 @@
-from djk.base import Sink, Source, UsageError
+from djk.base import Sink, Source, ParsedToken, Usage
 import boto3
 from decimal import Decimal
 
 class DDBSink(Sink):
-    def __init__(self, input_source: Source, arg_str: str):
+    def __init__(self, input_source: Source, ptok: ParsedToken, usage: Usage):
         super().__init__(input_source)
         self.batch = []
         self.batch_size = 10  # You can increase this up to 25
         dynamodb = boto3.resource('dynamodb')
-        self.table = dynamodb.Table(arg_str)
+        self.table = dynamodb.Table(ptok.get_arg(0))
         self.num_recs = 0
 
     def process_batch(self):

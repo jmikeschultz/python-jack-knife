@@ -30,23 +30,36 @@ def expand_macros(tokens: List[str]) -> List[str]:
             expanded.append(token)
     return expanded
 
-
 class ExpressionParser:
+    usage_error_message = "You've got a problem here."
+    
     def __init__(self, tokens: List[str]):
         self.tokens = expand_macros(tokens)
-        if not self.tokens:
-            raise UsageError("Empty expression")
-        if len(self.tokens) < 2:
-            raise UsageError("Expression must end in a sink (e.g. '-', 'out.json')")
         self.stack: List[Any] = []
 
     def parse(self) -> Sink:
-        copies = self.tokens[:-1] # exclude sink
-        sink_token = self.tokens[-1] # sink
         usage_error_message = "You've got a problem here."
+        pos = 0
+        try:
+            if len(self.tokens) < 2:
+                raise TokenError.from_list(['foo', 'need message.'])
+                #raise UsageError(usage_error_message, self.tokens, 0, None)
+                #raise TokenError(['foo', 'need message.'])
 
-        for pos, token in enumerate(copies):
-            try:
+            for pos, token in enumerate(self.tokens):
+                if pos == len(self.tokens) - 1: # should be sink
+                    if len(self.stack) != 1:
+                        raise TokenError.from_list([token, 'A sink can only consume one source.'])
+                    
+                    penult = self.stack.pop()
+                    if not isinstance(penult, Source):
+                        raise TokenError.from_list([token, 'Penultimate component must be a source of records'])
+
+                    sink = SinkFactory.create(token, penult)
+                    if not sink:
+                        raise TokenError.from_list([token, 'not sure of the message'])
+                    return sink
+
                 source = SourceFactory.create(token)
                 if source:
                     add_operator(source, self.stack)
@@ -58,26 +71,10 @@ class ExpressionParser:
                     continue
 
                 else: # unrecognized token
-                    raise TokenError(token, None, ['unrecognized token'])
-            
-            except TokenError as e:
-                raise UsageError(usage_error_message, self.tokens, pos, e)
-            
-        if len(self.stack) != 1:
-            te = TokenError(sink_token, None, ['A sink can only consume one source.'])
-            pos = len(self.tokens) - 1
-            raise UsageError(usage_error_message, self.tokens, pos, te)
-            
-        penult = self.stack.pop()
-        if not isinstance(penult, Source):
-            te = TokenError(token, None, ['Penultimate component must be a source of records'])
-            raise UsageError(usage_error_message, self.tokens, len(self.tokens)-1, te)
-
-        try:
-            sink = SinkFactory.create(sink_token, penult)
-            return sink
+                    raise TokenError.from_list([token, 'unrecognized token'])
+        
         except TokenError as e:
-            raise UsageError(usage_error_message, self.tokens, len(self.tokens)-1, e)
+            raise UsageError(usage_error_message, self.tokens, pos, e)
         
         
         
