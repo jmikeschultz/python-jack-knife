@@ -42,22 +42,20 @@ class ExpressionParser:
         pos = 0
         try:
             if len(self.tokens) < 2:
-                raise TokenError.from_list(['foo', 'need message.'])
-                #raise UsageError(usage_error_message, self.tokens, 0, None)
-                #raise TokenError(['foo', 'need message.'])
+                raise TokenError.from_list(['expression must end in a sink.',
+                                            'pjk <source> [<pipe> ...] <sink>'])
 
             for pos, token in enumerate(self.tokens):
                 if pos == len(self.tokens) - 1: # should be sink
                     if len(self.stack) != 1:
-                        raise TokenError.from_list([token, 'A sink can only consume one source.'])
+                        raise TokenError.from_list(['A sink can only consume one source.',
+                                                    'pjk <source> [<pipe> ...] <sink>'])
                     
                     penult = self.stack.pop()
-                    if not isinstance(penult, Source):
-                        raise TokenError.from_list([token, 'Penultimate component must be a source of records'])
-
                     sink = SinkFactory.create(token, penult)
                     if not sink:
-                        raise TokenError.from_list([token, 'not sure of the message'])
+                        raise TokenError.from_list(['expression must end in a sink.',
+                                            'pjk <source> [<pipe> ...] <sink>'])
                     return sink
 
                 source = SourceFactory.create(token)
