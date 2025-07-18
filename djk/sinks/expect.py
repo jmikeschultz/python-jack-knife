@@ -9,7 +9,8 @@ class ExpectSink(Sink):
         self.expect_source = InlineSource(inline)
 
     def process(self) -> None:
-        command = ' '.join(sys.argv[1:])
+        command = ' '.join(sys.argv[1:-1]) # omit pjk and expect
+
         num_put = 0
         while True:
             test_rec = self.input.next()
@@ -25,7 +26,7 @@ class ExpectSink(Sink):
                 message = f'expect failure\nexpected:{expect_rec}\ngot:{test_rec}'
                 raise ValueError(message)
             
-        print(f'{command} OK!\n')
+        print(f'{command} ==> OK!\n')
 
             
 
