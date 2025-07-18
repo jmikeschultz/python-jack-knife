@@ -1,6 +1,6 @@
 import os
-from typing import Iterable
-from djk.base import Source
+from typing import Any
+from djk.base import Source, ParsedToken
 from queue import Queue, Empty
 from djk.sources.lazy_file_local import LazyFileLocal
 from djk.log import logger
@@ -37,16 +37,25 @@ class DirSource(Source):
         return DirSource(self.source_queue, next_source)
 
     @classmethod
-    def create(cls, path, source_class_getter, parms: str = ""):
+    def create(cls, ptok: ParsedToken, get_format_class_gz: Any):
+        params = ptok.get_params() # ptok is for the directory, not the files
+        override = params.get('format', None)
+
+        path = ptok.main
         files = [os.path.join(path, f) for f in os.listdir(path) if os.path.isfile(os.path.join(path, f))]
         source_queue = Queue()
         for file in files:
-            source_class = source_class_getter(file, parms)
-            if source_class:
-                lazy_file = LazyFileLocal(file)
-                source_queue.put(source_class(lazy_file))
+
+            # build a ptok for each file
+            file_token = f'{file}' + '' if not override else f'format={override}'
+            file_ptok = ParsedToken(file_token)
+
+            format_class, is_gz = get_format_class_gz(file_ptok)
+            if format_class:
+                lazy_file = LazyFileLocal(file, is_gz)
+                source_queue.put(format_class(lazy_file))
             else:
-                raise UsageError(f'No format for file:{file}')
+                raise(f'Fix me in Dir Source: No format for file:{file}')
             
         if source_queue.empty():
             return None

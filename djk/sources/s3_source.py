@@ -1,7 +1,7 @@
 import boto3
 from queue import Queue, Empty
 from typing import Iterator, Optional
-from djk.base import Source
+from djk.base import Source, ParsedToken
 from djk.sources.lazy_file_s3 import LazyFileS3
 
 class S3Source(Source):
@@ -34,8 +34,11 @@ class S3Source(Source):
         return S3Source(self.source_queue, next_source)
 
     @classmethod
-    def create(cls, s3_uri: str, source_class_getter, parms: str = ""):
+    def create(cls, ptok: ParsedToken, factory_class):
+        s3_uri = ptok.main
+
         raw = s3_uri[3:]  # strip 's3:'
+        raw = raw.removeprefix('//') # optionally
         bucket, _, prefix = raw.partition('/')
         s3 = boto3.client("s3")
         source_queue = Queue()

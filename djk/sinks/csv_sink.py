@@ -2,6 +2,8 @@ import csv
 from djk.base import Sink, Source
 
 class CSVSink(Sink):
+    is_format = True
+    
     def __init__(self, input_source: Source, path_no_ext: str, delimiter: str = ",", ext: str = 'csv'):
         super().__init__(input_source)
         self.path = f'{path_no_ext}.{ext}'

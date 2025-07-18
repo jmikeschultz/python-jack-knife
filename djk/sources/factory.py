@@ -16,19 +16,45 @@ from djk.sources.lazy_file_local import LazyFileLocal
 class SourceFactory(ComponentFactory):
     HEADER = 'SOURCES'
     COMPONENTS = {
-        "inline": InlineSource
+        'inline': InlineSource,
+        'json': JsonSource,
+        'cvs': CSVSource,
+        'tsv': TSVSource,
+        's3': S3Source
     }
 
     @classmethod
-    def source_class_getter(cls, name, parms) -> Source:
-        if name.endswith(".json") or name.endswith(".json.gz") or 'format=json' in parms:
-            return JsonSource
-        if name.endswith(".csv") or name.endswith(".csv.gz") or 'format=csv' in parms:
-            return CSVSource
-        if name.endswith(".tsv") or name.endswith(".tsv.gz") or 'format=tsv' in parms:
-            return TSVSource        
+    def get_format_class_gz(cls, ptok: ParsedToken):
+        params = ptok.get_params()
+        override = params.get('format', None) # e.g. json or json.gz
+
+        lookup = None
+
+        is_gz = False
+        if override:
+            if override.endswith('.gz'):
+                is_gz = True
+                override = override.removesuffix('.gz')
+            lookup = override
+
+        else: # e.g. foo.json or foo.json.gz
+            path = ptok.main
+            if path.endswith('.gz'):
+                is_gz = True
+                path = path.removesuffix('.gz')
+
+            path, ext = os.path.splitext(path) # e.g path=foo.json
+            lookup = ext.removeprefix('.')
             
-        return None
+        format_class = cls.COMPONENTS.get(lookup, None)
+        if not format_class:
+            return None, None
+        
+        # make sure
+        if not format_class.is_format:
+            return None, None # raise ?
+
+        return format_class, is_gz
 
     @classmethod
     def create(cls, token: str) -> Source:
@@ -39,29 +65,22 @@ class SourceFactory(ComponentFactory):
         
         ptok = ParsedToken(token)
         
-        parts = token.split(',') # the separator for optional params
-        path = parts[0]
-        parms = parts[1] if len(parts) > 1 else ""
-
         if ptok.main.endswith('.py'):
             source = UserSourceFactory.create(ptok)
             if source:
                 return source
 
-        #if path.startswith('postgres'):
-        #    table = path.split(':')[1]
-        #    return PostgresSource(table)
+        if ptok.main.startswith('s3:'):
+            return S3Source.create(ptok)
 
-        if path.startswith('s3:'):
-            return S3Source.create(path, cls.source_class_getter, parms)
-
-        elif os.path.isdir(path):
-            return DirSource.create(path, cls.source_class_getter, parms)
+        if os.path.isdir(ptok.main):
+            return DirSource.create(ptok, get_format_class_gz=cls.get_format_class_gz)
 
         # individual file
-        source_class = cls.source_class_getter(path, parms)
-        if source_class:
-            lazy_file = LazyFileLocal(path)
-            return source_class(lazy_file)
+        if os.path.isfile(ptok.main):
+            source_class, is_gz = cls.get_format_class_gz(ptok)
+            if source_class:
+                lazy_file = LazyFileLocal(ptok.main, is_gz)
+                return source_class(lazy_file)
      
         return None

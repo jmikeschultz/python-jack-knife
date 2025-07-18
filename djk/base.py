@@ -55,7 +55,7 @@ class ParsedToken:
         self._params = {}
         p1s = token.split('@', 1)  # Separate params off
         if len(p1s) > 1:
-            self._params = dict(item.split('=') for item in p1s[1].split(',') if '=' in item)
+            self._params = dict(item.split('=') for item in p1s[1].split('@') if '=' in item)
 
         # args
         p2s = p1s[0].split(':')
@@ -75,8 +75,8 @@ class ParsedToken:
         return self._args[arg_no] if arg_no < len(self._args) else None
 
     # params are optional
-    def get_params(self):
-        return self._params.items()
+    def get_params(self) -> dict:
+        return self._params
     
 class Usage:
     def __init__(self, name: str, desc: str):
@@ -176,6 +176,8 @@ class KeyedSource(ABC):
         return None
 
 class Source(ABC):
+    is_format = False
+
     @classmethod
     def usage(cls):
         return Usage(
@@ -357,6 +359,7 @@ class IdentitySource(Source):
         raise RuntimeError("IdentitySource should never be executed")
 
 class ComponentFactory:
+    INVISIBLE = {'expect'} # hack, expect just for testing
     COMPONENTS = {} # name -> component_class
     TYPE = "COMPONENT" # source pipe sink
 
@@ -364,6 +367,12 @@ class ComponentFactory:
     def print_descriptions(cls):
         print(cls.HEADER)
         for name, comp_class in cls.COMPONENTS.items():
+            if name in cls.INVISIBLE:
+                continue
+
             usage = comp_class.usage()
 
             print(f'  {name:<12} {usage.desc}')
+
+    def create(cls, token: str):
+        pass

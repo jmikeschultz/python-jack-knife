@@ -4,6 +4,8 @@ from djk.base import Source
 from djk.sources.lazy_file import LazyFile
 
 class JsonSource(Source):
+    is_format = True
+    
     def __init__(self, lazy_file: LazyFile):
         self.lazy_file = lazy_file
         self.file = None

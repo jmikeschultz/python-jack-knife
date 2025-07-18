@@ -42,20 +42,22 @@ class ExpressionParser:
         pos = 0
         try:
             if len(self.tokens) < 2:
-                raise TokenError.from_list(['expression must end in a sink.',
+                raise TokenError.from_list(['expression must include source and sink.',
                                             'pjk <source> [<pipe> ...] <sink>'])
 
             for pos, token in enumerate(self.tokens):
                 if pos == len(self.tokens) - 1: # should be sink
-                    if len(self.stack) != 1:
+                    if len(self.stack) > 0:
+                        penult = self.stack.pop()
+                        sink = SinkFactory.create(token, penult)
+                        if not sink:
+                            raise TokenError.from_list(['expression must end in a sink.',
+                                            'pjk <source> [<pipe> ...] <sink>'])
+                        
+                    if len(self.stack) != 0:
                         raise TokenError.from_list(['A sink can only consume one source.',
                                                     'pjk <source> [<pipe> ...] <sink>'])
                     
-                    penult = self.stack.pop()
-                    sink = SinkFactory.create(token, penult)
-                    if not sink:
-                        raise TokenError.from_list(['expression must end in a sink.',
-                                            'pjk <source> [<pipe> ...] <sink>'])
                     return sink
 
                 source = SourceFactory.create(token)

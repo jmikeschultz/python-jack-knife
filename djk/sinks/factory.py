@@ -9,6 +9,7 @@ from djk.sinks.csv_sink import CSVSink
 from djk.sinks.tsv_sink import TSVSink
 from djk.sinks.ddb import DDBSink
 from djk.sinks.dir_sink import DirSink
+from djk.sinks.expect import ExpectSink
 from djk.sinks.user_sink_factory import UserSinkFactory
 
 class SinkFactory(ComponentFactory):
@@ -20,7 +21,8 @@ class SinkFactory(ComponentFactory):
         'ddb': DDBSink,
         'json': JsonSink,
         'csv': CSVSink,
-        'tsv': TSVSink
+        'tsv': TSVSink,
+        'expect': ExpectSink
         }
 
     @classmethod
@@ -52,7 +54,7 @@ class SinkFactory(ComponentFactory):
             return sink
 
         # when main is file path with format
-        path_no_ext, sink_class = cls._resolve_file_sinks(main)
+        path_no_ext, sink_class = cls._resolve_file_sinks(ptok.main)
         if sink_class:
             return sink_class(source, path_no_ext)
 
