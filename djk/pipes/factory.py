@@ -14,7 +14,6 @@ from djk.pipes.select import SelectFields
 from djk.pipes.subexp import SubExpression
 from djk.pipes.subexp_over import SubExpressionOver
 from djk.pipes.denorm import DenormPipe
-from djk.pipes.group import GroupPipe
 from djk.pipes.user_pipe_factory import UserPipeFactory
 
 class PipeFactory(ComponentFactory):
@@ -24,7 +23,7 @@ class PipeFactory(ComponentFactory):
         'tail': TailPipe,
         'join': JoinPipe,
         'filter': FilterPipe,
-        'map': MapPipe,        
+        'map': MapPipe,            
         'mv': MoveField,
         'rm': RemoveField,        
         'let': AddField, # i.e. let a column 
@@ -32,7 +31,6 @@ class PipeFactory(ComponentFactory):
         'grep': GrepPipe,
         'sel': SelectFields,
         'denorm': DenormPipe,
-        'group': GroupPipe,
         '[': SubExpression,
         'over': SubExpressionOver
     }

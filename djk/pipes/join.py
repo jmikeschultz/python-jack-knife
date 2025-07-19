@@ -6,7 +6,7 @@ from djk.base import Pipe, Usage, UsageError, ParsedToken, KeyedSource
 class JoinPipe(Pipe):
     arity = 2
 
-    def __init__(self, ptok: ParsedToken, bound_usage: Usage):
+    def __init__(self, ptok: ParsedToken, usage: Usage):
         super().__init__(ptok)
 
         arg_string = ptok.get_arg(0)
@@ -17,53 +17,49 @@ class JoinPipe(Pipe):
                 "join:<mode> must be one of 'left', 'inner', or 'outer'",
                 details={"received": arg_string}
             )
+        
         self.mode = arg_string
         self.index = 0
-        self.pending_left = []
-        self.right_lookup = None
-        self.key_field = None
+        self.pending_right = None
+        self.check_right = False
+        self.right = None
 
     def _load_right(self):
         right = self.inputs[1]
         if not isinstance(right, KeyedSource):
             raise UsageError("right input to join must be a KeyedSource")
-        self.right_lookup = right
-        self.key_field = right.get_keyed_field()
+        self.right = right
 
     def next(self) -> Optional[dict]:
-        if self.right_lookup is None:
+        if self.right is None:
             self._load_right()
 
         left = self.inputs[0]
 
         while True:
-            if self.pending_left:
-                return self.pending_left.pop(0)
+            if self.check_right:
+                if len(self.pending_right) == 0:
+                    return None
+                return self.pending_right.pop(0)
 
-            record = left.next()
-            if record is None:
-                return None
+            left_rec = left.next()
+            if left_rec is None:
+                if self.mode != 'outer':
+                    return None
+                self.pending_right = self.right.get_unlookedup_records()
+                self.check_right = True
+                continue
 
-            key = record.get(self.key_field)
-            match = self.right_lookup.get_record(key)
+            match = self.right.lookup(left_rec)
 
             if match is not None:
-                merged = dict(match)
-                merged.update(record)
+                merged = dict(left_rec)
+                merged.update(match)  # right overrides left
                 return merged
 
-            elif self.mode == "outer":
-                # Emit left record with missing right fields filled as None
-                merged = dict(record)
-                for rk in self.right_lookup.get_record(next(iter(self.right_lookup.map))).keys():
-                    if rk not in merged:
-                        merged[rk] = None
-                return merged
+            if self.mode == "left":
+                return left_rec 
 
-            elif self.mode == "inner":
-                # Skip unmatched
-                continue
+            if self.mode == "inner":
+                continue  # skip unmatched
 
-            elif self.mode == "left":
-                # Skip unmatched
-                continue
