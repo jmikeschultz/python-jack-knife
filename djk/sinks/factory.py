@@ -22,13 +22,16 @@ class SinkFactory(ComponentFactory):
         'json': JsonSink,
         'csv': CSVSink,
         'tsv': TSVSink,
-        'expect': ExpectSink
         }
 
     @classmethod
     def create(cls, token: str, source: Source) -> Callable[[Source], Sink]:
         token = token.strip()
         ptok = ParsedToken(token)
+
+        # non-usage sink (bind incompatible)
+        if ptok.main == 'expect':
+            return ExpectSink(source, ptok, None)
 
         if ptok.main.endswith('.py'):
             sink = UserSinkFactory.create(ptok, source)

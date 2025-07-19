@@ -407,7 +407,6 @@ class IdentitySource(Source):
         raise RuntimeError("IdentitySource should never be executed")
 
 class ComponentFactory:
-    INVISIBLE = {'expect'} # hack, expect just for testing
     COMPONENTS = {} # name -> component_class
     TYPE = "COMPONENT" # source pipe sink
 
@@ -415,9 +414,6 @@ class ComponentFactory:
     def print_descriptions(cls):
         print(cls.HEADER)
         for name, comp_class in cls.COMPONENTS.items():
-            if name in cls.INVISIBLE:
-                continue
-
             usage = comp_class.usage()
 
             print(f'  {name:<12} {usage.desc}')
