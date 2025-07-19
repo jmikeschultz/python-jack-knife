@@ -10,7 +10,7 @@ class TokenError(ValueError):
         return TokenError(text)
 
     def __init__(self, text: str):
-        super().__init__('None')
+        super().__init__(text)
         self.text = text
 
     def get_text(self):
@@ -53,14 +53,24 @@ class ParsedToken:
     def __init__(self, token: str):
         self.token = token
         self._params = {}
+        self._args = []
         p1s = token.split('@', 1)  # Separate params off
         if len(p1s) > 1:
-            self._params = dict(item.split('=') for item in p1s[1].split('@') if '=' in item)
+            param_list = p1s[1].split('@')
+            for param in param_list:
+                parts = param.split('=')
+                value = parts[1] if len(parts) == 2 else None
+                self._params[parts[0]] = value
 
         # args
         p2s = p1s[0].split(':')
         self._main = p2s[0]
-        self._args = p2s[1:] if len(p2s) > 1 else []
+
+        for arg in p2s[1:]: # treat a '' arg as missing and ignore all args after that
+            if arg != '':
+                self._args.append(arg)
+            else:
+                break
 
     @property
     def main(self):
@@ -69,6 +79,9 @@ class ParsedToken:
     @property
     def whole_token(self):
         return self.token
+    
+    def num_args(self):
+        return len(self._args)
     
     # args are mandatory
     def get_arg(self, arg_no: int):
@@ -88,11 +101,12 @@ class Usage:
         self.arg_defs = []
         self.param_usages = {}
 
-    def def_arg(self, name: str, usage: str, is_num: bool = False): # default as str
+    # args and param values default as str
+    def def_arg(self, name: str, usage: str, is_num: bool = False):
         self.arg_defs.append((name, usage, is_num))
 
-    def def_param(self, name:str, usage: str):
-        self.param_usages[name] = usage
+    def def_param(self, name:str, usage: str, is_num: bool = False):
+        self.param_usages[name] = (usage, is_num)
 
     def get_arg(self, name: str):
         return self.args.get(name, None)
@@ -124,10 +138,29 @@ class Usage:
         if self.param_usages:
             notes.append('optional params:')
             for name, usage in self.param_usages.items():
-                notes.append(f'  {name} = {usage}')
+                text, is_num = usage
+                notes.append(f'  {name} = {text}')
         return notes
 
     def bind(self, ptok: ParsedToken):
+        if ptok.num_args() > len(self.arg_defs):
+            extra = []
+            for i in range(len(self.arg_defs), ptok.num_args()):
+                name = ptok.get_arg(i)
+                extra.append(name)
+
+            raise TokenError.from_list([f"extra arg{'s' if len(extra) > 1 else ''}: {','.join(extra)}.", 
+                                        '', self.get_usage_text()])
+        
+        if ptok.num_args() < len(self.arg_defs):
+            missing = []
+            for i in range(ptok.num_args(), len(self.arg_defs)):
+                name, usage, is_num = self.arg_defs[i]
+                missing.append(name)
+
+            raise TokenError.from_list([f"missing arg{'s' if len(missing) > 1 else ''}: {','.join(missing)}.", 
+                                        '', self.get_usage_text()])
+
         for i, adef in enumerate(self.arg_defs):
             name, usage, is_num = adef
 
@@ -135,13 +168,20 @@ class Usage:
                 val_str = ptok.get_arg(i)
                 self.args[name] = self._get_val(val_str, is_num)
             except (ValueError, TypeError) as e:
-                raise TokenError(self.get_usage_text())
+                raise TokenError.from_list([f"wrong value type for '{name}' arg.", '', self.get_usage_text()])
             
-        for name, value in ptok.get_params():
+        for name, str_val in ptok.get_params().items():
             usage = self.param_usages.get(name, None)
             if not usage:
-                raise TokenError(self.get_usage_text())
-            self.params[name] = value
+                raise TokenError.from_list([f"unknown param: '{name}'.", '', self.get_usage_text()])
+            if not str_val:
+                raise TokenError.from_list([f"missing value for '{name}' param.", '', self.get_usage_text()])
+
+            text, is_num = usage
+            try:
+                self.params[name] = self._get_val(str_val, is_num)
+            except (ValueError, TypeError) as e:
+                raise TokenError.from_list([f"wrong value type for '{name}' param.", '', self.get_usage_text()])
 
     def _get_val(self, val_str: str, is_num: bool):
         if not val_str:
@@ -154,6 +194,14 @@ class Usage:
             except ValueError as e: # coud be a float that errors, but is ok
                 return float(val_str)
 
+# until all usages are implemented a default that doesn't bind
+# they continue to use ParsedToken ptok
+class NoBindUsage(Usage):
+    def __init__(self, name: str, desc: str):
+        super().__init__(name=name, desc=desc)
+    def bind(self, ptok: ParsedToken):
+        return
+            
 class KeyedSource(ABC):
     @classmethod
     def usage(cls):
@@ -180,7 +228,7 @@ class Source(ABC):
 
     @classmethod
     def usage(cls):
-        return Usage(
+        return NoBindUsage(
             name=cls.__name__,
             desc=f"{cls.__name__} component"
         )
@@ -236,7 +284,7 @@ class Sink(ABC):
 
     @classmethod
     def usage(cls):
-        return Usage(
+        return NoBindUsage(
             name=cls.__name__,
             desc=f"{cls.__name__} component"
         )

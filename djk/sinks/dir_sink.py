@@ -3,6 +3,15 @@ from djk.base import Source, Sink, ParsedToken, Usage
 from djk.log import logger
 
 class DirSink(Sink):
+    @classmethod
+    def usage(cls):
+        usage = Usage(
+            name='<format>',
+            desc='write records to a local directory in <format>'
+        )
+        usage.def_arg(name='dir', usage='path to directory')
+        return usage
+
     def __init__(self, source: Source, ptok: ParsedToken, usage: Usage, sink_class: str, fileno: int = 0):
         self.source = source
         self.ptok = ptok

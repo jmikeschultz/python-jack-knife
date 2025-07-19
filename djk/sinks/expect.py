@@ -3,6 +3,14 @@ from djk.sources.inline_source import InlineSource
 import sys
 
 class ExpectSink(Sink):
+    @classmethod
+    def usage(cls):
+        class NoBind(Usage):
+            def bind(self, ptok: ParsedToken):
+                return
+            
+        return NoBind(name='expect', desc='for testing')
+    
     def __init__(self, input_source: Source, ptok: ParsedToken, usage: Usage):
         super().__init__(input_source)
         inline = ptok.whole_token.split(':', 1)[-1] # need raw token cuz : in there

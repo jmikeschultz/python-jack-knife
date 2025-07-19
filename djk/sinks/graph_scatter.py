@@ -3,9 +3,6 @@ import numpy as np
 import matplotlib.pyplot as plt
 
 def graph_scatter(obj):
-    x_field = obj.args_dict.get('x')
-    y_field = obj.args_dict.get('y')
-
     valid_records = [r for r in obj.records if obj.x_field in r and obj.y_field in r]
     x_vals = [r[obj.x_field] for r in valid_records]
     y_vals = [r[obj.y_field] for r in valid_records]
@@ -27,5 +24,10 @@ def graph_scatter(obj):
     plt.legend()
     plt.grid(True)
     plt.tight_layout()
-    plt.show()
 
+    if not obj.pause:
+        plt.show()
+    else:
+        plt.show(block=False)   
+        plt.pause(int(obj.pause))           
+        plt.close()            
