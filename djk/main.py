@@ -39,7 +39,8 @@ def execute_threaded(sinks):
 def main():
     signal.signal(signal.SIGINT, lambda s, f: sys.exit(0))
     if len(sys.argv) < 2:
-        print("Usage: pjk <source> [<pipe> ...] <sink>")
+        print('Usage: pjk <source> [<pipe> ...] <sink>')
+        print('       pjk <source1> <source2> map:<how>:<fields> join:<how> <sink>')
         print()
         SourceFactory.print_descriptions()
         print()

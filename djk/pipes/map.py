@@ -12,7 +12,7 @@ class MapPipe(Pipe, KeyedSource):
             name='map',
             desc="keyed source map records either overriding or grouping duplicates."
         )
-        usage.def_arg(name='how', usage="'o' for override, 'g' for group")
+        usage.def_arg(name='how', usage="'o' for override, 'g' for group", valid_values={'o', 'g'})
         usage.def_arg(name='key', usage='comma separated fields to map by')
         return usage
 
@@ -33,7 +33,10 @@ class MapPipe(Pipe, KeyedSource):
                 break
             key_rec = {}
             for field in self.fields:
-                key_rec[field] = record.pop(field, None)
+                # we pop for group because we dont want key fields in children redundantly, 
+                # in override it doesn't matter
+                # crucial for getting outer to work correctly
+                key_rec[field] = record.pop(field, None) if self.is_group else record.get(field)
 
             key = tuple(key_rec.values())
 
@@ -53,7 +56,7 @@ class MapPipe(Pipe, KeyedSource):
                     self.rec_map[key] = record
 
     def next(self) -> Optional[dict]:
-        if not self.rec_list == None:
+        if self.rec_list is None:
             if not self.is_loaded:
                 self.load()
             self.rec_list = list(self.rec_map.values())
@@ -70,7 +73,7 @@ class MapPipe(Pipe, KeyedSource):
         key = tuple(left_rec.get(f) for f in self.fields)
         rec = self.rec_map.pop(key, None)
 
-        if rec:
+        if rec is not None: # careful needs to recognize empty record as match
             self.matched_map[key] = rec
             return rec
         else:

@@ -71,6 +71,11 @@ class ExpressionParser:
                     continue
 
                 else: # unrecognized token
+                    # could be sink in WRONG position, let's see for better error message
+                    sink = SinkFactory.create(token, None) 
+                    if sink:
+                        raise TokenError.from_list(['sink may only occur in final position.',
+                                            'pjk <source> [<pipe> ...] <sink>'])
                     raise TokenError.from_list([token, 'unrecognized token'])
         
         except TokenError as e:

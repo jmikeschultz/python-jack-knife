@@ -23,18 +23,18 @@ class JoinPipe(Pipe):
         self.pending_right = None
         self.check_right = False
         self.right = None
+        self.left = None
 
-    def _load_right(self):
+    def _setup(self):
         right = self.inputs[1]
         if not isinstance(right, KeyedSource):
             raise UsageError("right input to join must be a KeyedSource")
         self.right = right
+        self.left = self.inputs[0]
 
     def next(self) -> Optional[dict]:
         if self.right is None:
-            self._load_right()
-
-        left = self.inputs[0]
+            self._setup()
 
         while True:
             if self.check_right:
@@ -42,7 +42,7 @@ class JoinPipe(Pipe):
                     return None
                 return self.pending_right.pop(0)
 
-            left_rec = left.next()
+            left_rec = self.left.next()
             if left_rec is None:
                 if self.mode != 'outer':
                     return None

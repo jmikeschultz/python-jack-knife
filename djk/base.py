@@ -1,5 +1,5 @@
 from abc import ABC, abstractmethod
-from typing import Any, Optional, List
+from typing import Any, Optional, List, Set
 from abc import ABC
 from typing import List, Optional
 
@@ -102,11 +102,11 @@ class Usage:
         self.param_usages = {}
 
     # args and param values default as str
-    def def_arg(self, name: str, usage: str, is_num: bool = False):
-        self.arg_defs.append((name, usage, is_num))
+    def def_arg(self, name: str, usage: str, is_num: bool = False, valid_values: Optional[Set[str]] = None):
+        self.arg_defs.append((name, usage, is_num, valid_values))
 
-    def def_param(self, name:str, usage: str, is_num: bool = False):
-        self.param_usages[name] = (usage, is_num)
+    def def_param(self, name:str, usage: str, is_num: bool = False, valid_values: Optional[Set[str]] = None):
+        self.param_usages[name] = (usage, is_num, valid_values)
 
     def get_arg(self, name: str):
         return self.args.get(name, None)
@@ -124,21 +124,21 @@ class Usage:
 
     def get_token_syntax(self):
         token = f'{self.name}'
-        for name, usage, is_num in self.arg_defs:
+        for name, usage, is_num, valid_values in self.arg_defs:
             token += f':<{name}>'
-        for name, usage in self.param_usages.items():
-            token += f'@<{name}>={name}'
+        for name, usage, in self.param_usages.items():
+            token += f'@{name}=<{name}>'
         return token
     
     def get_arg_param_desc(self):
         notes = []
         notes.append('mandatory args:')
-        for name, usage, is_num in self.arg_defs:
+        for name, usage, is_num, valid_values in self.arg_defs:
             notes.append(f'  {name} = {usage}')
         if self.param_usages:
             notes.append('optional params:')
             for name, usage in self.param_usages.items():
-                text, is_num = usage
+                text, is_num, valid_values = usage
                 notes.append(f'  {name} = {text}')
         return notes
 
@@ -155,20 +155,20 @@ class Usage:
         if ptok.num_args() < len(self.arg_defs):
             missing = []
             for i in range(ptok.num_args(), len(self.arg_defs)):
-                name, usage, is_num = self.arg_defs[i]
+                name, usage, is_num, valid_values = self.arg_defs[i]
                 missing.append(name)
 
             raise TokenError.from_list([f"missing arg{'s' if len(missing) > 1 else ''}: {','.join(missing)}.", 
                                         '', self.get_usage_text()])
 
         for i, adef in enumerate(self.arg_defs):
-            name, usage, is_num = adef
+            name, usage, is_num, valid_values = adef
 
             try:
                 val_str = ptok.get_arg(i)
-                self.args[name] = self._get_val(val_str, is_num)
+                self.args[name] = self._get_val(val_str, is_num, valid_values)
             except (ValueError, TypeError) as e:
-                raise TokenError.from_list([f"wrong value type for '{name}' arg.", '', self.get_usage_text()])
+                raise TokenError.from_list([f"wrong value for '{name}' arg.", '', self.get_usage_text()])
             
         for name, str_val in ptok.get_params().items():
             usage = self.param_usages.get(name, None)
@@ -177,17 +177,22 @@ class Usage:
             if not str_val:
                 raise TokenError.from_list([f"missing value for '{name}' param.", '', self.get_usage_text()])
 
-            text, is_num = usage
+            text, is_num, valid_values = usage
             try:
-                self.params[name] = self._get_val(str_val, is_num)
+                self.params[name] = self._get_val(str_val, is_num, valid_values)
             except (ValueError, TypeError) as e:
                 raise TokenError.from_list([f"wrong value type for '{name}' param.", '', self.get_usage_text()])
 
-    def _get_val(self, val_str: str, is_num: bool):
+    def _get_val(self, val_str: str, is_num: bool, valid_values: Optional[Set[str]] = None):
         if not val_str:
             raise ValueError('missing value')
-        if not is_num:
+        if not is_num: # is string
+            if valid_values is None: # no constraints
+                return val_str
+            if not val_str in valid_values:
+                raise ValueError(f'illegal value: {val_str}')
             return val_str
+            
         else: # is_num
             try:
                 return int(val_str)
@@ -211,13 +216,12 @@ class KeyedSource(ABC):
         )
     
     @abstractmethod
-    def get_keyed_field(self) -> str:
-        """Return the field name this source is keyed on."""
+    def lookup(self, left_rec) -> Optional[dict]:
+        """Return the record associated with the given key, or None."""
         pass
 
-    @abstractmethod
-    def get_record(self, key) -> Optional[dict]:
-        """Return the record associated with the given key, or None."""
+    def get_unlookedup_records(self) -> List[Any]:
+        # for outer join
         pass
 
     def deep_copy(self):
