@@ -6,7 +6,7 @@ from djk.pipes.add_field import AddField
 from djk.pipes.head import HeadPipe
 from djk.pipes.tail import TailPipe
 from djk.pipes.sort import SortPipe
-from djk.pipes.grep import GrepPipe
+from djk.pipes.where import WherePipe
 from djk.pipes.map import MapPipe
 from djk.pipes.join import JoinPipe
 from djk.pipes.filter import FilterPipe
@@ -24,13 +24,13 @@ class PipeFactory(ComponentFactory):
         'join': JoinPipe,
         'filter': FilterPipe,
         'map': MapPipe,            
-        'mv': MoveField,
+        'as': MoveField,
         'rm': RemoveField,        
         'let': AddField, # i.e. let a column 
         'sort': SortPipe,
-        'grep': GrepPipe,
+        'where': WherePipe,
         'sel': SelectFields,
-        'denorm': DenormPipe,
+        'explode': DenormPipe,
         '[': SubExpression,
         'over': SubExpressionOver
     }

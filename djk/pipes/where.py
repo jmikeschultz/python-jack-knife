@@ -4,7 +4,7 @@ from types import SimpleNamespace
 from djk.base import Pipe, ParsedToken, Usage, UsageError
 from djk.pipes.common import SafeNamespace
 
-class GrepPipe(Pipe):
+class WherePipe(Pipe):
     def __init__(self, ptok: ParsedToken, bound_usage: Usage):
         super().__init__(ptok)
 
