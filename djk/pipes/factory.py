@@ -2,7 +2,8 @@
 from djk.base import Usage, Pipe, ParsedToken, ComponentFactory
 from djk.pipes.move_field import MoveField
 from djk.pipes.remove_field import RemoveField
-from djk.pipes.add_field import AddField
+from djk.pipes.let import LetPipe
+from djk.pipes.let import ReducePipe
 from djk.pipes.head import HeadPipe
 from djk.pipes.tail import TailPipe
 from djk.pipes.sort import SortPipe
@@ -26,7 +27,8 @@ class PipeFactory(ComponentFactory):
         'map': MapPipe,            
         'as': MoveField,
         'rm': RemoveField,        
-        'let': AddField, # i.e. let a column 
+        'let': LetPipe,
+        'reduce': ReducePipe,        
         'sort': SortPipe,
         'where': WherePipe,
         'sel': SelectFields,
