@@ -38,7 +38,7 @@ class ExpressionParser:
 
     def parse(self) -> Sink:
         usage_error_message = "You've got a problem here."
-        stack_helper = StackHelper()
+        stack_helper = StackLoader()
         pos = 0
         
         try:
@@ -118,8 +118,7 @@ class ReducerAggregatorPipe(Pipe):
         
         return self.reduction
 
-# should just become the stack itself
-class StackHelper:
+class StackLoader:
     def __init__(self):
         self.top_level_reducers = []
 
@@ -211,7 +210,7 @@ class SubExpression(Pipe):
         self.subexp_stack: List[Any] = [self.upstream_source] # put list source on operand stack
         self.subexp_ops: List[Any] = [] # list of operators for parent to reset
         self.over_pipe = None
-        self.stack_helper = StackHelper()
+        self.stack_helper = StackLoader()
         
     def add_subop(self, op):
         self.subexp_ops.append(op)
