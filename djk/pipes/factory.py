@@ -2,8 +2,8 @@
 from djk.base import Usage, Pipe, ParsedToken, ComponentFactory
 from djk.pipes.move_field import MoveField
 from djk.pipes.remove_field import RemoveField
-from djk.pipes.let import LetPipe
-from djk.pipes.let import ReducePipe
+from djk.pipes.let_reduce import LetPipe
+from djk.pipes.let_reduce import ReducePipe
 from djk.pipes.head import HeadPipe
 from djk.pipes.tail import TailPipe
 from djk.pipes.sort import SortPipe
@@ -12,8 +12,6 @@ from djk.pipes.map import MapPipe
 from djk.pipes.join import JoinPipe
 from djk.pipes.filter import FilterPipe
 from djk.pipes.select import SelectFields
-from djk.pipes.subexp import SubExpression
-from djk.pipes.subexp_over import SubExpressionOver
 from djk.pipes.denorm import DenormPipe
 from djk.pipes.user_pipe_factory import UserPipeFactory
 
@@ -33,8 +31,6 @@ class PipeFactory(ComponentFactory):
         'where': WherePipe,
         'sel': SelectFields,
         'explode': DenormPipe,
-        '[': SubExpression,
-        'over': SubExpressionOver
     }
 
     @classmethod

@@ -105,7 +105,7 @@ class LetPipe(Pipe):
 
 # --- Reduce variant ---
 class ReducePipe(Pipe):
-    def __init__(self, ptok: ParsedToken, bound_usage: Usage):
+    def __init__(self, ptok: ParsedToken, usage: Usage):
         super().__init__(ptok)
         args = parse_args(ptok.whole_token.split(':', 1)[-1])
         self.field = args['field']
