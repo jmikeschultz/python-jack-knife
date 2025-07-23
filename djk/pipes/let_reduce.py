@@ -2,8 +2,9 @@
 
 from typing import Optional
 from djk.base import Pipe, ParsedToken, NoBindUsage, Usage, UsageError
-from djk.pipes.common import SafeNamespace
+from djk.pipes.common import SafeNamespace, ReducingNamespace
 import re
+import ast
 
 # --- Shared Utilities ---
 def parse_args(token: str):
@@ -37,42 +38,61 @@ def eval_regular(expr: str, record: dict):
 
     return do_eval(expr, env)
 
+#!! Removed old unused version of eval_accumulating2
+
 def eval_accumulating(expr: str, record: dict, op: str, acc=None):
+    #!! Inject acc into expr before any parsing
+    if op in ('-=', '*=', '/=') and 'acc' not in expr:
+        expr = f'acc {op[0]} ({expr})'  #!! Inject once, here
+
     env = {'f': SafeNamespace(record)}
     if acc is not None:
         env['acc'] = acc
 
-    # Handle list.append(...) reducer
-    if expr.startswith('list.append(') and expr.endswith(')'):
-        inner_expr = expr[len('list.append('):-1].strip()
-        value = eval(inner_expr, {}, env)
-        if isinstance(acc, list):
-            return acc + [value]
-        return [value] if acc is None else [acc, value]
+    try:
+        node = ast.parse(expr, mode='eval').body
+    except SyntaxError:
+        raise UsageError(f"Invalid expression: {expr}")
 
-    # Handle set.union(...) reducer
-    if expr.startswith('set.union(') and expr.endswith(')'):
-        inner_expr = expr[len('set.union('):-1].strip()
-        value = eval(inner_expr, {}, env)
-        return (acc or set()).union(value)
+    #!! Use ReducingNamespace only for comprehensions
+    if isinstance(node, (ast.ListComp, ast.SetComp, ast.DictComp)):
+        env['f'] = ReducingNamespace(record)
 
-    # Fallback for +=, -=, etc.
+    # List comprehension
+    if isinstance(node, ast.ListComp):
+        compiled = compile(ast.Expression(node), '<reduce:listcomp>', 'eval')
+        values = eval(compiled, {}, env)
+        return (acc or []) + list(values)
+
+    # Set comprehension
+    if isinstance(node, ast.SetComp):
+        compiled = compile(ast.Expression(node), '<reduce:setcomp>', 'eval')
+        values = eval(compiled, {}, env)
+        return (acc or set()).union(values)
+
+    # Dict comprehension
+    if isinstance(node, ast.DictComp):
+        compiled = compile(ast.Expression(node), '<reduce:dictcomp>', 'eval')
+        values = eval(compiled, {}, env)
+        return {**(acc or {}), **values}
+
+    # Fallback: standard accumulation
     if op == '+=':
         value = eval(expr, {}, env)
         if isinstance(value, (int, float)):
             return (acc or 0) + value
-        elif isinstance(value, list):
-            return (acc or []) + value
         elif isinstance(value, str):
             return str(acc or '') + value
+        elif isinstance(value, list):
+            return (acc or []) + value
         else:
-            raise UsageError(f"Don't know how to += value of type {type(value)}")
+            return (acc or []) + [value]
 
     if op in ('-=', '*=', '/='):
-        if 'acc' not in expr:
-            expr = f'acc {op[0]} ({expr})'
+        return do_eval(expr, env)  #!! use the already-rewritten expr
 
     return do_eval(expr, env)
+
 
 # --- Base Class ---
 class LetPipe(Pipe):
@@ -104,6 +124,13 @@ class LetPipe(Pipe):
         return record
 
 # --- Reduce variant ---
+def is_comprehension(expr: str) -> bool:
+    try:
+        node = ast.parse(expr, mode='eval').body
+        return isinstance(node, (ast.ListComp, ast.SetComp, ast.DictComp))
+    except SyntaxError:
+        return False
+
 class ReducePipe(Pipe):
     def __init__(self, ptok: ParsedToken, usage: Usage):
         super().__init__(ptok)
@@ -112,8 +139,12 @@ class ReducePipe(Pipe):
         self.op = args['op']
         self.rest = args['rest']
 
+        # allow omit op if RHS is a comprehension → treat as +=
         if self.op not in ('+=', '-=', '*=', '/='):
-            raise UsageError("Reduce pipe requires an accumulating operator (+=, -=, etc.)")
+            if is_comprehension(self.rest):
+                self.op = '+='
+            else:
+                raise UsageError("Reduce pipe requires an accumulating operator (+=, -=, etc.), unless RHS is a comprehension")
 
         self.accum_value = None
 
@@ -121,7 +152,7 @@ class ReducePipe(Pipe):
         return (self.field, self.accum_value)
 
     def reset(self):
-        self.accum_value = None
+        self.accum_value = self.initial_acc_value()  
 
     def next(self) -> Optional[dict]:
         record = self.inputs[0].next()
@@ -130,3 +161,14 @@ class ReducePipe(Pipe):
         self.accum_value = eval_accumulating(self.rest, record, self.op, self.accum_value)
         return record
 
+    def initial_acc_value(self):
+        if self.op == '+=':
+            return 0
+        elif self.op == '*=':
+            return 1
+        elif self.op == '-=':
+            return 0
+        elif self.op == '/=':
+            return 1.0
+        else:
+            return None

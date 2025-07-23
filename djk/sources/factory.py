@@ -18,7 +18,7 @@ class SourceFactory(ComponentFactory):
     COMPONENTS = {
         'inline': InlineSource,
         'json': JsonSource,
-        'cvs': CSVSource,
+        'csv': CSVSource,
         'tsv': TSVSource,
         's3': S3Source
     }

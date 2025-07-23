@@ -7,6 +7,8 @@ from djk.sources.lazy_file import LazyFile
 csv.field_size_limit(sys.maxsize)
 
 class CSVSource(Source):
+    is_format = True
+    
     def __init__(self, lazy_file: LazyFile, delimiter: str = ","):
         self.lazy_file = lazy_file
         self.delimiter = delimiter

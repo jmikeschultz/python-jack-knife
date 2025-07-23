@@ -11,3 +11,13 @@ class SafeNamespace:
 
     def __getattr__(self, key):
         return None  # gracefully handle missing keys
+
+class ReducingNamespace:
+    def __init__(self, record):
+        self._record = record
+
+    def __getattr__(self, name):
+        value = self._record[name]
+        if isinstance(value, (list, tuple, set)):
+            return value
+        return [value]  # promote scalars to singleton lists

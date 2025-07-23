@@ -3,5 +3,6 @@
 ./map_join.sh
 ./map_let_reduce.sh
 ./map_join_errors.sh
+./reduction.sh
 ./usage_errors.sh
 
