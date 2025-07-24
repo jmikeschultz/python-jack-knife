@@ -319,7 +319,7 @@ class IdentitySource(Source):
 
 class ComponentFactory:
     COMPONENTS = {} # name -> component_class
-    TYPE = "COMPONENT" # source pipe sink
+    HEADER = "COMPONENT" # source pipe sink
 
     @classmethod
     def print_descriptions(cls):

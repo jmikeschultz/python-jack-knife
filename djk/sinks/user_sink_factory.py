@@ -4,7 +4,7 @@ from djk.base import Source, Sink, UsageError, ParsedToken
 class UserSinkFactory:
     @staticmethod
     def create_from_path(ptok: ParsedToken, input_source) -> Sink | None:
-        script_path = ptok.main
+        script_path = ptok.pre_colon
         try:
             spec = importlib.util.spec_from_file_location("user_sink", script_path)
             if spec is None or spec.loader is None:
@@ -22,13 +22,16 @@ class UserSinkFactory:
                 and value is not Sink
                 and value.__module__ == module.__name__
             ):
-                return value(ptok, input_source)
+                usage = value.usage()
+                usage.bind(ptok)
+
+                return value(input_source, ptok, usage)
 
         return None
 
     @classmethod
     def create(cls, ptok: ParsedToken, source: Source) -> Sink:
-        if ptok.main.endswith('.py'):
+        if ptok.pre_colon.endswith('.py'):
             sink = cls.create_from_path(ptok, source)
             if sink:
                 return sink

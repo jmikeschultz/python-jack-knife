@@ -33,7 +33,7 @@ class SinkFactory(ComponentFactory):
         if ptok.pre_colon == 'expect':
             return ExpectSink(source, ptok, None)
 
-        if ptok.all_but_params.endswith('.py'):
+        if ptok.pre_colon.endswith('.py'):
             sink = UserSinkFactory.create(ptok, source)
             if sink:
                 return sink

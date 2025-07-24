@@ -1,10 +1,11 @@
 # Split AddField into base LetPipe and ReducePipe
 
 from typing import Optional
-from djk.base import Pipe, ParsedToken, NoBindUsage, Usage, UsageError
+from djk.base import Pipe, ParsedToken, NoBindUsage, Usage, UsageError, TokenError
 from djk.pipes.common import SafeNamespace, ReducingNamespace
 import re
 import ast
+import json
 
 # --- Shared Utilities ---
 def parse_args(token: str):
@@ -25,7 +26,9 @@ class FieldProxy:
 # --- Evaluation ---
 def do_eval(expr, env):
     try:
-        return eval(expr, {}, env)
+        safe_env = dict(env)
+        safe_env['json'] = json
+        return eval(expr, {}, safe_env)
     except Exception:
         raise UsageError(f"UsageError in expression: {expr}")
 
@@ -113,7 +116,7 @@ class LetPipe(Pipe):
         self.rest = args['rest']
 
         if self.op in ('+=', '-=', '*=', '/='):
-            raise UsageError("Aggregation operator not allowed in let, use reduce:")
+            raise TokenError("Aggregation operator not allowed in let, use reduce:")
 
     def next(self) -> Optional[dict]:
         record = self.inputs[0].next()
@@ -144,7 +147,7 @@ class ReducePipe(Pipe):
             if is_comprehension(self.rest):
                 self.op = '+='
             else:
-                raise UsageError("Reduce pipe requires an accumulating operator (+=, -=, etc.), unless RHS is a comprehension")
+                raise TokenError("Reduce pipe requires an accumulating operator (+=, -=, etc.), unless RHS is a comprehension")
 
         self.accum_value = None
 

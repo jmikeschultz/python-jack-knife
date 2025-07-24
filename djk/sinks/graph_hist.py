@@ -57,10 +57,11 @@ def graph_hist(obj):
 
         ylabel = "count"
 
-    for name, val in obj.args_dict.items():
-        fn = getattr(plt, name, None)
-        if fn and callable(fn):
-            fn(val)
+    # need to fix as usage.params and list them
+    #for name, val in obj.args_dict.items():
+    #    fn = getattr(plt, name, None)
+    #    if fn and callable(fn):
+    #       fn(val)
 
     plt.xlabel(obj.x_field)
     plt.ylabel(ylabel)

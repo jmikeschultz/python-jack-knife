@@ -5,6 +5,7 @@ from djk.base import Pipe, ParsedToken, Usage, UsageError
 
 class Denormer:
     def __init__(self, record, field):
+        self.field = field
         data = record.pop(field, None)
         if not data:
             self.subrec_list = [record]
@@ -25,6 +26,9 @@ class Denormer:
         if len(self.subrec_list) == 0:
             return None
         subrec = self.subrec_list.pop()
+        if not isinstance(subrec, dict): # subrec is scalar because field is list of scalar
+            subrec = {self.field: subrec}
+
         out = self.base_record.copy() # deep copy?
         out.update(subrec)
         return out

@@ -65,7 +65,7 @@ class SourceFactory(ComponentFactory):
         
         ptok = ParsedToken(token)
         
-        if ptok.all_but_params.endswith('.py'):
+        if ptok.pre_colon.endswith('.py'):
             source = UserSourceFactory.create(ptok)
             if source:
                 return source

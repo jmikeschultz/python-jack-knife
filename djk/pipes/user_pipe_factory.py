@@ -4,7 +4,7 @@ from djk.base import Pipe, Sink, ParsedToken, UsageError
 class UserPipeFactory:
     @staticmethod
     def create(ptok: ParsedToken) -> Pipe | None:
-        script_path = ptok.main
+        script_path = ptok.pre_colon
         try:
             spec = importlib.util.spec_from_file_location("user_pipe", script_path)
             if spec is None or spec.loader is None:

@@ -16,8 +16,8 @@ class GraphSink(Sink):
             desc='display graphs of various kinds'
         )
         usage.def_arg(name='kind', usage='hist|scatter|bar|line|cumulative')
-        usage.def_arg(name='x-field', usage='name of x-axis field')
-        usage.def_arg(name='y-field', usage='name of y-axis field')
+        usage.def_param(name='x', usage='name of x-axis field')
+        usage.def_param(name='y', usage='name of y-axis field')
         usage.def_param(name='pause', usage='seconds to show graph, otherwise indefinite.', is_num=True)
         return usage
 
@@ -25,8 +25,8 @@ class GraphSink(Sink):
         super().__init__(input_source)
         self.records = []
         self.kind = usage.get_arg('kind')
-        self.x_field = usage.get_arg('x-field')
-        self.y_field = usage.get_arg('y-field')
+        self.x_field = usage.get_param('x')
+        self.y_field = usage.get_param('y')
         self.pause = usage.get_param('pause')
 
     def process(self):

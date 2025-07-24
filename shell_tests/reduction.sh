@@ -5,7 +5,7 @@ echo "--- list comprehension"
 pjk '[{i:1},{i:2}]' 'reduce:xs=[x for x in f.i]' \
     expect:'{xs: [1, 2]}'
 
-#echo "--- set comprehension"
+#echo "--- set comprehension" have no way to test this with expect tho it should work
 #pjk '[{tags:["a","b"]},{tags:["b","c"]}]' 'reduce:uniq={x for x in f.tags}' \
 #    expect:'{uniq: ["a", "b", "c"]}'
 
@@ -41,13 +41,6 @@ pjk '[{i:10},{i:3}]' 'reduce:diff-=f.i' \
 pjk "{id:1, cars:[{size: 24}, {size: 43}]}" [ reduce:^tot+=f.size over:cars \
     expect:'{"id": 1, "cars": [{"size": 24}, {"size": 43}], "tot":67}'
 
-
-echo "--- reject scalar RHS without op"
-pjk '[{i:3}]' 'reduce:x=f.i' || echo "ok: expected failure"
-
-echo "--- reject literal dict without op"
-pjk '[{i:3}]' 'reduce:x={"a": 1}' || echo "ok: expected failure"
-
 echo "--- let: preserves scalar access"
 pjk '[{i:42}]' 'let:x=f.i' \
     expect:'{i: 42, x: 42}'
@@ -55,4 +48,10 @@ pjk '[{i:42}]' 'let:x=f.i' \
 echo "--- reduce: lifts scalar for comp"
 pjk '[{i:42}]' 'reduce:xs=[x for x in f.i]' \
     expect:'{xs: [42]}'
+
+echo "--- reject scalar RHS without op"
+pjk '[{i:3}]' 'reduce:x=f.i' - || echo "ok: expected failure"
+
+echo "--- reject literal dict without op"
+pjk '[{i:3}]' 'reduce:x={"a": 1}' - || echo "ok: expected failure"
 

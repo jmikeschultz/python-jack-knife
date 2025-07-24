@@ -4,7 +4,7 @@ from djk.base import Source, Pipe, Sink, ParsedToken, UsageError
 class UserSourceFactory:
     @staticmethod
     def create(ptok: ParsedToken) -> Source | None:
-        script_path = ptok.main
+        script_path = ptok.pre_colon
         try:
             spec = importlib.util.spec_from_file_location("user_source", script_path)
             if spec is None or spec.loader is None:
