@@ -8,7 +8,7 @@ class JsonSink(Sink):
 
     def __init__(self, input_source: Source, ptok: ParsedToken, usage: Usage):
         super().__init__(input_source)
-        self.path_no_ext = ptok.main
+        self.path_no_ext = ptok.pre_colon
         self.gz = ptok.get_arg(0) == 'True'
 
     def process(self) -> None:

@@ -37,12 +37,12 @@ class PipeFactory(ComponentFactory):
     def create(cls, token: str) -> Pipe:
 
         ptok = ParsedToken(token)
-        if ptok.main.endswith('.py'):
+        if ptok.all_but_params.endswith('.py'):
             pipe = UserPipeFactory.create(ptok)
             if pipe:
                 return pipe # else keep looking
 
-        pipe_cls = cls.COMPONENTS.get(ptok.main)
+        pipe_cls = cls.COMPONENTS.get(ptok.pre_colon)
 
         if not pipe_cls:
             return None

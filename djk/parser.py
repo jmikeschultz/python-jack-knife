@@ -196,9 +196,9 @@ class SubExpression(Pipe):
     def create(cls, token: str) -> Pipe:
         ptok = ParsedToken(token)
 
-        if ptok.main == '[':
+        if ptok.pre_colon == '[':
             return SubExpression(ptok, None)
-        if ptok.main == 'over':
+        if ptok.pre_colon == 'over':
             return SubExpressionOver(ptok, None)
         return None
 

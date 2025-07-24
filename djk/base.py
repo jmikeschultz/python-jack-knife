@@ -54,31 +54,37 @@ class ParsedToken:
         self.token = token
         self._params = {}
         self._args = []
-        p1s = token.split('@', 1)  # Separate params off
-        if len(p1s) > 1:
-            param_list = p1s[1].split('@')
+        at_parts = token.split('@', 1)  # Separate params off
+        if len(at_parts) > 1:
+            param_list = at_parts[1].split('@')
             for param in param_list:
                 parts = param.split('=')
                 value = parts[1] if len(parts) == 2 else None
                 self._params[parts[0]] = value
 
-        # args
-        p2s = p1s[0].split(':')
-        self._main = p2s[0]
+        self._all_but_params = at_parts[0]
 
-        for arg in p2s[1:]: # treat a '' arg as missing and ignore all args after that
+        # args
+        colon_parts = at_parts[0].split(':')
+        self._pre_colon = colon_parts[0]
+
+        for arg in colon_parts[1:]: # treat a '' arg as missing and ignore all args after that
             if arg != '':
                 self._args.append(arg)
             else:
                 break
 
     @property
-    def main(self):
-        return self._main
+    def pre_colon(self):
+        return self._pre_colon
     
     @property
     def whole_token(self):
         return self.token
+    
+    @property # avoid colon parsing
+    def all_but_params(self):
+        return self._all_but_params
     
     def num_args(self):
         return len(self._args)

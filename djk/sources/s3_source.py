@@ -1,6 +1,6 @@
 import boto3
 from queue import Queue, Empty
-from typing import Iterator, Optional
+from typing import Optional, Any
 from djk.base import Source, ParsedToken
 from djk.sources.lazy_file_s3 import LazyFileS3
 
@@ -34,8 +34,10 @@ class S3Source(Source):
         return S3Source(self.source_queue, next_source)
 
     @classmethod
-    def create(cls, ptok: ParsedToken, factory_class):
-        s3_uri = ptok.main
+    def create(cls, ptok: ParsedToken, get_format_class_gz: Any):
+        s3_uri = ptok.all_but_params
+        params = ptok.get_params()
+        override = params.get('format', None)
 
         raw = s3_uri[3:]  # strip 's3:'
         raw = raw.removeprefix('//') # optionally
@@ -47,13 +49,17 @@ class S3Source(Source):
         for page in paginator.paginate(Bucket=bucket, Prefix=prefix):
             for obj in page.get("Contents", []):
                 key = obj["Key"]
-                source_cls = source_class_getter(key, parms)
-                if source_cls:
-                    lazy_file = LazyFileS3(bucket, key)
-                    source_queue.put(source_cls(lazy_file))
+
+                # build a ptok for each file
+                file_token = f'{key}' + '' if not override else f'format={override}'
+                file_ptok = ParsedToken(file_token)
+
+                format_class, is_gz = get_format_class_gz(file_ptok)
+                if format_class:
+                    lazy_file = LazyFileS3(bucket, key, is_gz)
+                    source_queue.put(format_class(lazy_file))
                 else:
-                    print(f"fix me in source factory: {key}")
-                    break
+                    raise(f'Fix me in s3 Source: No format for file:{key}')
 
         if source_queue.empty():
             return None

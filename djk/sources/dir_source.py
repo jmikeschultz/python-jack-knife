@@ -41,7 +41,7 @@ class DirSource(Source):
         params = ptok.get_params() # ptok is for the directory, not the files
         override = params.get('format', None)
 
-        path = ptok.main
+        path = ptok.all_but_params
         files = [os.path.join(path, f) for f in os.listdir(path) if os.path.isfile(os.path.join(path, f))]
         source_queue = Queue()
         for file in files:

@@ -38,7 +38,7 @@ class SourceFactory(ComponentFactory):
             lookup = override
 
         else: # e.g. foo.json or foo.json.gz
-            path = ptok.main
+            path = ptok.all_but_params
             if path.endswith('.gz'):
                 is_gz = True
                 path = path.removesuffix('.gz')
@@ -65,22 +65,22 @@ class SourceFactory(ComponentFactory):
         
         ptok = ParsedToken(token)
         
-        if ptok.main.endswith('.py'):
+        if ptok.all_but_params.endswith('.py'):
             source = UserSourceFactory.create(ptok)
             if source:
                 return source
 
-        if ptok.main.startswith('s3:'):
-            return S3Source.create(ptok)
+        if ptok.all_but_params.startswith('s3'):
+            return S3Source.create(ptok, get_format_class_gz=cls.get_format_class_gz)
 
-        if os.path.isdir(ptok.main):
+        if os.path.isdir(ptok.all_but_params):
             return DirSource.create(ptok, get_format_class_gz=cls.get_format_class_gz)
 
         # individual file
-        if os.path.isfile(ptok.main):
+        if os.path.isfile(ptok.all_but_params):
             source_class, is_gz = cls.get_format_class_gz(ptok)
             if source_class:
-                lazy_file = LazyFileLocal(ptok.main, is_gz)
+                lazy_file = LazyFileLocal(ptok.all_but_params, is_gz)
                 return source_class(lazy_file)
      
         return None

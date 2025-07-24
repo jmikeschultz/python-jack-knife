@@ -30,15 +30,15 @@ class SinkFactory(ComponentFactory):
         ptok = ParsedToken(token)
 
         # non-usage sink (bind incompatible)
-        if ptok.main == 'expect':
+        if ptok.pre_colon == 'expect':
             return ExpectSink(source, ptok, None)
 
-        if ptok.main.endswith('.py'):
+        if ptok.all_but_params.endswith('.py'):
             sink = UserSinkFactory.create(ptok, source)
             if sink:
                 return sink
         
-        sink_cls = cls.COMPONENTS.get(ptok.main)
+        sink_cls = cls.COMPONENTS.get(ptok.pre_colon) # <format>: directory case
         if not sink_cls:
             # attempt case -> myfile.<format>
             return cls._attempt_format_file(source, ptok)
@@ -57,7 +57,7 @@ class SinkFactory(ComponentFactory):
             return sink
 
         # when main is file path with format
-        path_no_ext, sink_class = cls._resolve_file_sinks(ptok.main)
+        path_no_ext, sink_class = cls._resolve_file_sinks(ptok.all_but_params)
         if sink_class:
             return sink_class(source, path_no_ext)
 
@@ -69,7 +69,7 @@ class SinkFactory(ComponentFactory):
     @classmethod
     def _attempt_format_file(cls, source: Source, ptok: ParsedToken):
         is_gz = False
-        path, ext = os.path.splitext(ptok.main)
+        path, ext = os.path.splitext(ptok.all_but_params)
         if '.gz' in ext:
             is_gz = True
             path, ext = os.path.splitext(path)
