@@ -25,7 +25,7 @@ class UserSinkFactory:
                 usage = value.usage()
                 usage.bind(ptok)
 
-                return value(input_source, ptok, usage)
+                return value(ptok, input_source)
 
         return None
 

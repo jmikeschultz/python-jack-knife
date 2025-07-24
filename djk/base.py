@@ -247,9 +247,16 @@ class Source(ABC):
     def next(self) -> Optional[Any]:
         pass
 
-    def report(self) -> "Report":
-        return make_report(self)
-    
+    def __iter__(self):
+        return self
+
+    def __next__(self):
+        result = self.next()
+        if result is None:
+            raise StopIteration
+        return result
+
+
     def deep_copy(self):
         return None
     

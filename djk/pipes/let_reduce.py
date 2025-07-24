@@ -122,6 +122,11 @@ class LetPipe(Pipe):
         record = self.inputs[0].next()
         if record is None:
             return None
+        
+        if self.op == ':':
+                record[self.field] = self.rest
+                return record
+
         value = eval_regular(self.rest, record)
         record[self.field] = value
         return record
