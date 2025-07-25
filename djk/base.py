@@ -117,8 +117,8 @@ class Usage:
     def get_arg(self, name: str):
         return self.args.get(name, None)
 
-    def get_param(self, name: str):
-        return self.params.get(name, None)
+    def get_param(self, name: str, default: str = None):
+        return self.params.get(name, default)
     
     def get_usage_text(self):
         lines = []
@@ -132,15 +132,21 @@ class Usage:
         token = f'{self.name}'
         for name, usage, is_num, valid_values in self.arg_defs:
             token += f':<{name}>'
-        for name, usage, in self.param_usages.items():
-            token += f'@{name}=<{name}>'
+
+        for name, (usage, is_num, valid_values) in self.param_usages.items():
+            value_display = self.name
+            if valid_values:
+                value_display  = '|'.join(list(valid_values))
+            token += f'@{name}=<{value_display}>'
         return token
     
     def get_arg_param_desc(self):
         notes = []
-        notes.append('mandatory args:')
-        for name, usage, is_num, valid_values in self.arg_defs:
-            notes.append(f'  {name} = {usage}')
+        if self.arg_defs:
+            notes.append('mandatory args:')
+            for name, usage, is_num, valid_values in self.arg_defs:
+                notes.append(f'  {name} = {usage}')
+
         if self.param_usages:
             notes.append('optional params:')
             for name, usage in self.param_usages.items():
