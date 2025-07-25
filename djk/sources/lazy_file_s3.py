@@ -11,11 +11,13 @@ class LazyFileS3(LazyFile):
         self.key = key
         self.is_gz = is_gz
 
-    def open(self) -> IO[str]:
+    def open(self, binary=False) -> IO[str]:
         obj = self.s3.get_object(Bucket=self.bucket, Key=self.key)
         raw_body = obj['Body'].read()
         if self.is_gz:
             return io.TextIOWrapper(gzip.GzipFile(fileobj=io.BytesIO(raw_body)))
+        elif binary:
+            return io.BytesIO(raw_body)
         else:
             return io.StringIO(raw_body.decode("utf-8"))
 

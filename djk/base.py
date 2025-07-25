@@ -292,7 +292,7 @@ class Pipe(Source):
                 return None
             cloned_inputs.append(strand)
 
-        clone = self.__class__(arg_string=self.arg_string)
+        clone = self.__class__(self.ptok, self.__class__.usage())
         clone.set_sources(cloned_inputs)
         return clone
 

@@ -11,6 +11,7 @@ from djk.sources.dir_source import DirSource
 from djk.sources.user_source_factory import UserSourceFactory
 from djk.sources.lazy_file import LazyFile
 from djk.sources.lazy_file_local import LazyFileLocal
+from djk.sources.parquet_source import ParquetSource
 #from djk.sources.postgres import PostgresSource
 
 class SourceFactory(ComponentFactory):
@@ -20,6 +21,7 @@ class SourceFactory(ComponentFactory):
         'json': JsonSource,
         'csv': CSVSource,
         'tsv': TSVSource,
+        'parquet': ParquetSource,
         's3': S3Source
     }
 
