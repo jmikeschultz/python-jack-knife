@@ -17,7 +17,6 @@ class DBClient:
                     database=dbname,
                     port=port
                 )
-                print("DB connection established")
             except Exception as e:
                 print("Failed to connect to DB")
                 raise e
@@ -35,7 +34,6 @@ class DBClient:
         if self.conn:
             self.conn.close()
             DBClient._connection = None
-            print("🔌 Connection closed")
 
 def normalize(obj):
     if isinstance(obj, uuid.UUID):
