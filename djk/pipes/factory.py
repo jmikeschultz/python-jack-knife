@@ -13,6 +13,7 @@ from djk.pipes.join import JoinPipe
 from djk.pipes.filter import FilterPipe
 from djk.pipes.select import SelectFields
 from djk.pipes.denorm import DenormPipe
+from djk.pipes.postgres_pipe import PostgresPipe
 from djk.pipes.user_pipe_factory import UserPipeFactory
 
 class PipeFactory(ComponentFactory):
@@ -31,6 +32,7 @@ class PipeFactory(ComponentFactory):
         'where': WherePipe,
         'sel': SelectFields,
         'explode': DenormPipe,
+        'postgres': PostgresPipe,
     }
 
     @classmethod
