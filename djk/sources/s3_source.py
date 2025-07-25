@@ -1,3 +1,6 @@
+# SPDX-License-Identifier: Apache-2.0
+# Copyright 2024 Mike Schultz
+
 import boto3
 from queue import Queue, Empty
 from typing import Optional, Any

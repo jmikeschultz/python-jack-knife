@@ -1,3 +1,6 @@
+# SPDX-License-Identifier: Apache-2.0
+# Copyright 2024 Mike Schultz
+
 from typing import Optional
 from djk.base import Pipe, Usage, UsageError, ParsedToken, KeyedSource
 

@@ -1,3 +1,6 @@
+# SPDX-License-Identifier: Apache-2.0
+# Copyright 2024 Mike Schultz
+
 import os
 from djk.base import Source, Sink, ParsedToken, Usage
 from djk.log import logger

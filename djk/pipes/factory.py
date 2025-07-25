@@ -1,3 +1,6 @@
+# SPDX-License-Identifier: Apache-2.0
+# Copyright 2024 Mike Schultz
+
 # djk/pipes/factory.py
 from djk.base import Usage, Pipe, ParsedToken, ComponentFactory
 from djk.pipes.move_field import MoveField

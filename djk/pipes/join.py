@@ -1,3 +1,6 @@
+# SPDX-License-Identifier: Apache-2.0
+# Copyright 2024 Mike Schultz
+
 # djk/pipes/join.py
 
 from typing import Optional

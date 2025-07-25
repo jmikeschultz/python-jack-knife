@@ -1,3 +1,6 @@
+# SPDX-License-Identifier: Apache-2.0
+# Copyright 2024 Mike Schultz
+
 import os
 import pg8000
 from djk.base import Pipe, ParsedToken, NoBindUsage, Usage, TokenError

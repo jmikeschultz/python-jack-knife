@@ -1,3 +1,6 @@
+# SPDX-License-Identifier: Apache-2.0
+# Copyright 2024 Mike Schultz
+
 from djk.base import Sink, Source, ParsedToken, Usage
 import boto3
 from decimal import Decimal

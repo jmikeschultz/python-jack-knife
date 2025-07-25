@@ -1,3 +1,6 @@
+# SPDX-License-Identifier: Apache-2.0
+# Copyright 2024 Mike Schultz
+
 # djk/pipes/move_field.py
 from typing import Optional
 from djk.base import Pipe, Source, ParsedToken, Usage

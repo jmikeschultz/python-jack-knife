@@ -1,3 +1,6 @@
+# SPDX-License-Identifier: Apache-2.0
+# Copyright 2024 Mike Schultz
+
 from typing import Any, List, Callable
 import os
 from djk.base import Source, Sink, ParsedToken, TokenError, UsageError, ComponentFactory
