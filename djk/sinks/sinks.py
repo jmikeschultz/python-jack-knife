@@ -17,8 +17,8 @@ class YamlSink(Sink):
         usage.def_arg(name='path', usage='Path to output YAML file')
         return usage
 
-    def __init__(self, input_source: Source, ptok: ParsedToken, usage: Usage):
-        super().__init__(input_source)
+    def __init__(self, ptok: ParsedToken, usage: Usage):
+        super().__init__(ptok, usage)
         self.path = usage.get_arg('path')
 
     def process(self) -> None:

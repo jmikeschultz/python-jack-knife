@@ -6,7 +6,7 @@ from djk.base import Source, Sink, UsageError, ParsedToken
 
 class UserSinkFactory:
     @staticmethod
-    def create_from_path(ptok: ParsedToken, input_source) -> Sink | None:
+    def create_from_path(ptok: ParsedToken) -> Sink | None:
         script_path = ptok.pre_colon
         try:
             spec = importlib.util.spec_from_file_location("user_sink", script_path)
@@ -28,14 +28,14 @@ class UserSinkFactory:
                 usage = value.usage()
                 usage.bind(ptok)
 
-                return value(ptok, input_source)
+                return value(ptok, usage)
 
         return None
 
     @classmethod
-    def create(cls, ptok: ParsedToken, source: Source) -> Sink:
+    def create(cls, ptok: ParsedToken) -> Sink:
         if ptok.pre_colon.endswith('.py'):
-            sink = cls.create_from_path(ptok, source)
+            sink = cls.create_from_path(ptok)
             if sink:
                 return sink
 

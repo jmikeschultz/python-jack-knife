@@ -9,8 +9,8 @@ from djk.base import Sink, Source, ParsedToken, Usage
 class JsonSink(Sink):
     is_format = True
 
-    def __init__(self, input_source: Source, ptok: ParsedToken, usage: Usage):
-        super().__init__(input_source)
+    def __init__(self, ptok: ParsedToken, usage: Usage):
+        super().__init__(ptok, usage)
         self.path_no_ext = ptok.pre_colon # NOTE: ptok built by framework, doesn't use usage
         self.gz = ptok.get_arg(0) == 'True'# NOTE: ptok built by framework, doesn't use usage
 

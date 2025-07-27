@@ -9,8 +9,8 @@ class ExpectSink(Sink):
     # NOTE: ExpectSink intentionally does NOT use Usage due to raw JSON argument parsing
     # e.g., expect:'[{a:1},{a:2}]' must preserve the entire post-colon string unparsed
 
-    def __init__(self, input_source: Source, ptok: ParsedToken, usage: Usage):
-        super().__init__(input_source)
+    def __init__(self, ptok: ParsedToken, usage: Usage):
+        super().__init__(ptok, usage)
         self.inline = ptok.whole_token.split(':', 1)[-1]
         self.expect_source = InlineSource(self.inline)
         self._expect_iter = iter(self.expect_source)

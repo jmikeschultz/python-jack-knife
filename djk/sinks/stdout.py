@@ -8,8 +8,8 @@ import shutil
 from djk.base import Sink, Source, ParsedToken, Usage
 
 class StdoutSink(Sink):
-    def __init__(self, input_source: Source, ptok: ParsedToken, usage: Usage):
-        super().__init__(input_source)
+    def __init__(self, ptok: ParsedToken, usage: Usage):
+        super().__init__(ptok, usage)
 
         # NOTE: self.use_pager is hardcoded for now; override via constructor if needed
         self.use_pager = True

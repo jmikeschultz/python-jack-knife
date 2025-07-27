@@ -3,8 +3,6 @@
 
 from abc import ABC, abstractmethod
 from typing import Any, Optional, List, Set
-from abc import ABC
-from typing import List, Optional
 
 class TokenError(ValueError):
     @classmethod
@@ -243,10 +241,6 @@ class KeyedSource(ABC):
     def deep_copy(self):
         return None
 
-from abc import ABC, abstractmethod
-from typing import Optional, Any
-from djk.base import NoBindUsage
-
 class Source(ABC):
     is_format = False
 
@@ -314,11 +308,15 @@ class Sink(ABC):
             desc=f"{cls.__name__} component"
         )
     
-    def __init__(self, input_source: Source):
-        self.input = input_source
+    def __init__(self, ptok: ParsedToken, usage: Usage = None):
+        self.ptok = ptok
+        self.usage = usage
 
     def drain(self):
         self.process()
+
+    def add_source(self, source: Source) -> None:
+        self.input = source
         
     @abstractmethod
     def process(self) -> None:

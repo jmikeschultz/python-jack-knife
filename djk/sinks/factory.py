@@ -28,41 +28,41 @@ class SinkFactory(ComponentFactory):
         }
 
     @classmethod
-    def create(cls, token: str, source: Source) -> Callable[[Source], Sink]:
+    def create(cls, token: str) -> Callable[[Source], Sink]:
         token = token.strip()
         ptok = ParsedToken(token)
 
         # non-usage sink (bind incompatible)
         if ptok.pre_colon == 'expect':
-            return ExpectSink(source, ptok, None)
+            return ExpectSink(ptok, None)
 
         if ptok.pre_colon.endswith('.py'):
-            sink = UserSinkFactory.create(ptok, source)
+            sink = UserSinkFactory.create(ptok)
             if sink:
                 return sink
         
         sink_cls = cls.COMPONENTS.get(ptok.pre_colon) # <format>: directory case
         if not sink_cls:
             # attempt case -> myfile.<format>
-            return cls._attempt_format_file(source, ptok)
+            return cls._attempt_format_file(ptok)
         
          # case -> <format>:<path> local dir
         if sink_cls.is_format: 
             dir_usage = DirSink.usage()
             dir_usage.bind(ptok)
-            return DirSink(source, ptok, dir_usage, sink_cls)        
+            return DirSink(ptok, dir_usage, sink_cls)        
 
         usage = sink_cls.usage()
         usage.bind(ptok)
 
-        sink = sink_cls(source, ptok, usage)
+        sink = sink_cls(ptok, usage)
         if sink:
             return sink
 
         # when main is file path with format
         path_no_ext, sink_class = cls._resolve_file_sinks(ptok.all_but_params)
         if sink_class:
-            return sink_class(source, path_no_ext)
+            return sink_class(path_no_ext)
 
         else:
             raise TokenError.from_list(['pjk <source> [<pipe> ...] <sink>',
@@ -70,7 +70,7 @@ class SinkFactory(ComponentFactory):
                                         )
 
     @classmethod
-    def _attempt_format_file(cls, source: Source, ptok: ParsedToken):
+    def _attempt_format_file(cls, ptok: ParsedToken):
         is_gz = False
         path, ext = os.path.splitext(ptok.all_but_params)
         if '.gz' in ext:
@@ -89,6 +89,6 @@ class SinkFactory(ComponentFactory):
         usage = sink_cls.usage()
         usage.bind(file_ptok) # not sure we'll ever use since we're hacking above
 
-        return sink_cls(source, file_ptok, usage)
+        return sink_cls(file_ptok, usage)
         
 

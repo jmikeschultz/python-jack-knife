@@ -39,6 +39,31 @@ class ExpressionParser:
         self.tokens = expand_macros(tokens)
         self.stack: List[Any] = []
 
+    def get_sink(self, stack_helper, token):
+        if len(self.stack) < 1:
+            raise TokenError.from_list(['expression must include source and sink.',
+                                            'pjk <source> [<pipe> ...] <sink>'])
+
+        source = self.stack.pop()
+        if len(self.stack) != 0:
+            raise TokenError.from_list(['A sink can only consume one source.',
+                                        'pjk <source> [<pipe> ...] <sink>'])
+
+        # if there's top level aggregation for reduction
+        aggregator = stack_helper.get_reducer_aggregator()
+        if aggregator:
+            aggregator.add_source(source)
+            source = aggregator
+
+        sink = SinkFactory.create(token)
+        
+        if not sink:
+            raise TokenError.from_list(['expression must end in a sink.',
+                            'pjk <source> [<pipe> ...] <sink>'])
+
+        sink.add_source(source)
+        return sink
+
     def parse(self) -> Sink:
         usage_error_message = "You've got a problem here."
         stack_helper = StackLoader()
@@ -50,36 +75,17 @@ class ExpressionParser:
                                             'pjk <source> [<pipe> ...] <sink>'])
 
             for pos, token in enumerate(self.tokens):
-                if pos == len(self.tokens) - 1: # should be sink
-                    if len(self.stack) > 0:
-                        penult = self.stack.pop()
-
-                        # if there's top level aggregation
-                        aggregator = stack_helper.get_reducer_aggregator()
-                        if aggregator:
-                            aggregator.add_source(penult)
-                            sink = SinkFactory.create(token, aggregator)
-                        else:
-                            sink = SinkFactory.create(token, penult)
-
-                        if not sink:
-                            raise TokenError.from_list(['expression must end in a sink.',
-                                            'pjk <source> [<pipe> ...] <sink>'])
-                        
-                    if len(self.stack) != 0:
-                        raise TokenError.from_list(['A sink can only consume one source.',
-                                                    'pjk <source> [<pipe> ...] <sink>'])
+                if pos == len(self.tokens) - 1: # token should be THE sink
+                    return self.get_sink(stack_helper, token)
                     
-                    return sink
-
                 source = SourceFactory.create(token)
                 if source:
                     stack_helper.add_operator(source, self.stack)
                     continue
 
-                pipe = SubExpression.create(token)
-                if pipe:
-                    stack_helper.add_operator(pipe, self.stack)
+                subexp = SubExpression.create(token)
+                if subexp:
+                    stack_helper.add_operator(subexp, self.stack)
                     continue
 
                 pipe = PipeFactory.create(token)

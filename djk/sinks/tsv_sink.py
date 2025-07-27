@@ -16,6 +16,6 @@ class TSVSink(CSVSink):
         usage.def_arg(name='path', usage='Path prefix (no extension)')
         return usage
 
-    def __init__(self, input_source: Source, ptok: ParsedToken, usage: Usage):
+    def __init__(self, ptok: ParsedToken, usage: Usage):
         path_no_ext = usage.get_arg('path')
-        super().__init__(input_source, path_no_ext, delimiter="\t", ext='tsv')
+        super().__init__(path_no_ext, delimiter="\t", ext='tsv')

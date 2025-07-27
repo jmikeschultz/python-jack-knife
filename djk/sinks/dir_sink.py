@@ -15,8 +15,8 @@ class DirSink(Sink):
         usage.def_arg(name='dir', usage='Path to output directory')
         return usage
 
-    def __init__(self, source: Source, ptok: ParsedToken, usage: Usage, sink_class: type, fileno: int = 0):
-        super().__init__(source)
+    def __init__(self, ptok: ParsedToken, usage: Usage, sink_class: type, fileno: int = 0):
+        super().__init__(ptok, usage)
         self.dir_path = usage.get_arg('dir')  # ✅ Use usage, not ptok directly
 
         self.ptok = ptok
@@ -33,7 +33,9 @@ class DirSink(Sink):
         file_usage = self.sink_class.usage()
         file_usage.bind(file_ptok)
 
-        file_sink = self.sink_class(self.input, file_ptok, file_usage)
+        file_sink = self.sink_class(file_ptok, file_usage)
+        file_sink.add_source(self.input)
+
         logger.debug(f'in process sinking to: {file}')
         file_sink.process()
 

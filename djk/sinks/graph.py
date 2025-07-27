@@ -23,8 +23,8 @@ class GraphSink(Sink):
         usage.def_param(name='pause', usage='Seconds to show graph (default: wait for close)', is_num=True)
         return usage
 
-    def __init__(self, input_source: Source, ptok: ParsedToken, usage: Usage):
-        super().__init__(input_source)
+    def __init__(self, ptok: ParsedToken, usage: Usage):
+        super().__init__(ptok, usage)
         self.records = []
         self.kind = usage.get_arg('kind')
         self.x_field = usage.get_param('x')
