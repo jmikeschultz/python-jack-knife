@@ -11,17 +11,14 @@ class JsonSink(Sink):
 
     def __init__(self, input_source: Source, ptok: ParsedToken, usage: Usage):
         super().__init__(input_source)
-        self.path_no_ext = ptok.pre_colon
-        self.gz = ptok.get_arg(0) == 'True'
+        self.path_no_ext = ptok.pre_colon # NOTE: ptok built by framework, doesn't use usage
+        self.gz = ptok.get_arg(0) == 'True'# NOTE: ptok built by framework, doesn't use usage
+
 
     def process(self) -> None:
         path = self.path_no_ext + ('.json.gz' if self.gz else '.json')
         open_func = gzip.open if self.gz else open
 
         with open_func(path, 'wt', encoding='utf-8') as f:
-            while True:
-                record = self.input.next()
-                if record is None:
-                    break
+            for record in self.input:
                 f.write(json.dumps(record) + '\n')
-

@@ -10,43 +10,44 @@ class DirSink(Sink):
     def usage(cls):
         usage = Usage(
             name='<format>',
-            desc='write records to a local directory in <format>'
+            desc='Write records to a local directory in the given <format> (e.g., csv)'
         )
-        usage.def_arg(name='dir', usage='path to directory')
+        usage.def_arg(name='dir', usage='Path to output directory')
         return usage
 
-    def __init__(self, source: Source, ptok: ParsedToken, usage: Usage, sink_class: str, fileno: int = 0):
-        self.source = source
+    def __init__(self, source: Source, ptok: ParsedToken, usage: Usage, sink_class: type, fileno: int = 0):
+        super().__init__(source)
+        self.dir_path = usage.get_arg('dir')  # ✅ Use usage, not ptok directly
+
         self.ptok = ptok
         self.usage = usage
-
-        # till we get usage working
-        self.dir_path = ptok.get_arg(0)
-
         self.sink_class = sink_class
-        self.fileno = fileno # root node gets fileno = 0
+        self.fileno = fileno
         self.num_files = 1
 
         os.makedirs(self.dir_path, exist_ok=True)
 
     def process(self):
-        # build a ptok for the format sink
         file = os.path.join(self.dir_path, f'file-{self.fileno:04d}')
         file_ptok = ParsedToken(file)
         file_usage = self.sink_class.usage()
-
         file_usage.bind(file_ptok)
 
-        fileSink = self.sink_class(self.source, file_ptok, file_usage)
+        file_sink = self.sink_class(self.input, file_ptok, file_usage)
         logger.debug(f'in process sinking to: {file}')
-        fileSink.process()
+        file_sink.process()
 
     def deep_copy(self):
-        source_clone = self.source.deep_copy()
+        source_clone = self.input.deep_copy()
         if not source_clone:
             return None
-        
-        clone = DirSink(source_clone, self.ptok, self.usage, self.sink_class, self.num_files)
+
+        clone = DirSink(
+            source=source_clone,
+            ptok=self.ptok,
+            usage=self.usage,
+            sink_class=self.sink_class,
+            fileno=self.num_files
+        )
         self.num_files += 1
         return clone
-        

@@ -5,15 +5,13 @@
 
 from typing import Optional
 from djk.base import ParsedToken, Usage, Pipe, KeyedSource
-from datetime import datetime
 
-''' exhausts source to group them by argument fields'''
 class MapPipe(Pipe, KeyedSource):
     @classmethod
     def usage(cls):
         usage = Usage(
             name='map',
-            desc="keyed source map records either overriding or grouping duplicates."
+            desc="keyed source map records either overriding or grouping duplicates.",
         )
         usage.def_arg(name='how', usage="'o' for override, 'g' for group", valid_values={'o', 'g'})
         usage.def_arg(name='key', usage='comma separated fields to map by')
@@ -21,70 +19,65 @@ class MapPipe(Pipe, KeyedSource):
 
     def __init__(self, ptok: ParsedToken, usage: Usage):
         super().__init__(ptok)
-        self.is_group = usage.get_arg('how') == 'g' # or 'o' for override
+        self.is_group = usage.get_arg('how') == 'g'
         self.fields = usage.get_arg('key').split(',')
         self.rec_map = {}
-        self.matched_map = {} # for records returned by get_record (for join:right)
-        self.rec_list = None
+        self.matched_map = {}
+        self._rec_list = None
+        self.is_loaded = False
+
+    def reset(self):
+        self.rec_map.clear()
+        self.matched_map.clear()
+        self._rec_list = None
         self.is_loaded = False
 
     def load(self):
+        if self.is_loaded:
+            return
         self.is_loaded = True
-        while True:
-            record = self.inputs[0].next()
-            if record is None:
-                break
+
+        for record in self.left:
             key_rec = {}
             for field in self.fields:
-                # we pop for group because we dont want key fields in children redundantly, 
-                # in override it doesn't matter
-                # crucial for getting outer to work correctly
                 key_rec[field] = record.pop(field, None) if self.is_group else record.get(field)
 
             key = tuple(key_rec.values())
+            existing = self.rec_map.get(key)
 
-            lookup = self.rec_map.get(key, None)
-            if not lookup:
+            if not existing:
                 if self.is_group:
-                    key_rec['child'] = []
-                    key_rec['child'].append(record)
+                    key_rec['child'] = [record]
                     self.rec_map[key] = key_rec
                 else:
                     self.rec_map[key] = record
             else:
                 if self.is_group:
-                    entries = lookup.get('child')
-                    entries.append(record)
+                    existing['child'].append(record)
                 else:
                     self.rec_map[key] = record
 
-    def next(self) -> Optional[dict]:
-        if self.rec_list is None:
-            if not self.is_loaded:
-                self.load()
-            self.rec_list = list(self.rec_map.values())
+    def __iter__(self):
+        if not self.is_loaded:
+            self.load()
+        if self._rec_list is None:
+            self._rec_list = list(self.rec_map.values())
 
-        if len(self.rec_list) == 0:
-            return None
+        while self._rec_list:
+            yield self._rec_list.pop()
 
-        return self.rec_list.pop()
-            
     def lookup(self, left_rec) -> Optional[dict]:
         if not self.is_loaded:
             self.load()
 
         key = tuple(left_rec.get(f) for f in self.fields)
         rec = self.rec_map.pop(key, None)
-
-        if rec is not None: # careful needs to recognize empty record as match
+        if rec is not None:
             self.matched_map[key] = rec
             return rec
-        else:
-            rec = self.matched_map.get(key) # may have been moved
-            return rec
+        return self.matched_map.get(key)
 
     def get_unlookedup_records(self):
         if not self.is_loaded:
             self.load()
-
         return list(self.rec_map.values())

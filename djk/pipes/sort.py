@@ -3,15 +3,22 @@
 
 # djk/pipes/sort.py
 
-from typing import Optional
 from djk.base import Pipe, ParsedToken, Usage, UsageError
 
 class SortPipe(Pipe):
-    def __init__(self, ptok: ParsedToken, bound_usage: Usage):
+    @classmethod
+    def usage(cls):
+        usage = Usage(
+            name='sort',
+            desc="Sort records by a single field, using +field or -field syntax"
+        )
+        usage.def_arg(name='field', usage="Prefix '+' for ascending, '-' for descending field name")
+        return usage
+
+    def __init__(self, ptok: ParsedToken, usage: Usage):
         super().__init__(ptok)
 
-        arg_string = ptok.get_arg(0)
-
+        arg_string = usage.get_arg('field')
         if not arg_string:
             raise UsageError("sort:[+-]<field> requires direction and field name")
 
@@ -22,29 +29,24 @@ class SortPipe(Pipe):
             self.field = arg_string[1:]
             self.reverse = False
         else:
-            raise UsageError("sort:[+-]<field> requires direction and field name")
+            raise UsageError("sort:[+-]<field> must start with '+' or '-'")
 
         self._buffer = None
         self._index = 0
 
-    def next(self) -> Optional[dict]:
-        if self._buffer is None:
-            self._buffer = []
-            while True:
-                rec = self.inputs[0].next()
-                if rec is None:
-                    break
-                self._buffer.append(rec)
+    def reset(self):
+        self._buffer = None
+        self._index = 0
 
-            # Sort by field, treating missing values as None (sorts to end)
+    def __iter__(self):
+        if self._buffer is None:
+            self._buffer = list(self.left)
+
             self._buffer.sort(
                 key=lambda r: (r.get(self.field) is None, r.get(self.field)),
                 reverse=self.reverse
             )
 
-        if self._index >= len(self._buffer):
-            return None
-
-        out = self._buffer[self._index]
-        self._index += 1
-        return out
+        while self._index < len(self._buffer):
+            yield self._buffer[self._index]
+            self._index += 1

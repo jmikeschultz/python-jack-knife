@@ -6,19 +6,18 @@ from djk.base import Source
 
 class SourceListSource(Source):
     def __init__(self, source_iter: Iterable[Source]):
-        self.sources = source_iter
+        self.sources = iter(source_iter)
         self.current = None
 
-    def next(self):
+    def __iter__(self):
         while True:
             if self.current is None:
                 try:
                     self.current = next(self.sources)
                 except StopIteration:
-                    return None
+                    return  # all sources exhausted
 
-            record = self.current.next()
-            if record is not None:
-                return record
-            else:
+            try:
+                yield from self.current
+            finally:
                 self.current = None

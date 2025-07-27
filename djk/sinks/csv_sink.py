@@ -2,27 +2,35 @@
 # Copyright 2024 Mike Schultz
 
 import csv
-from djk.base import Sink, Source
+from djk.base import Sink, Source, ParsedToken, Usage
 
 class CSVSink(Sink):
     is_format = True
-    
-    def __init__(self, input_source: Source, path_no_ext: str, delimiter: str = ",", ext: str = 'csv'):
+
+    @classmethod
+    def usage(cls):
+        usage = Usage(
+            name='csv',
+            desc='Write records to a CSV file with dynamic header from first record'
+        )
+        usage.def_arg('path', usage='Path prefix (no extension)')
+        usage.def_param('delim', usage='CSV delimiter (default: ",")', default=',')
+        usage.def_param('ext', usage='File extension (default: csv)', default='csv')
+        return usage
+
+    def __init__(self, input_source: Source, ptok: ParsedToken, usage: Usage):
         super().__init__(input_source)
-        self.path = f'{path_no_ext}.{ext}'
-        self.delimiter = delimiter
+        path_no_ext = usage.get_arg('path')
+        self.delimiter = usage.get_param('delim', default=',')
+        ext = usage.get_param('ext', default='csv')
+        self.path = f"{path_no_ext}.{ext}"
 
     def process(self) -> None:
         with open(self.path, 'w', newline='') as f:
             writer = None
 
-            while True:
-                record = self.input.next()
-                if record is None:
-                    break
-
+            for record in self.input:
                 if writer is None:
                     writer = csv.DictWriter(f, fieldnames=record.keys(), delimiter=self.delimiter)
                     writer.writeheader()
-
                 writer.writerow(record)

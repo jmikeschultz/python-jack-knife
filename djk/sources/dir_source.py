@@ -3,8 +3,8 @@
 
 import os
 from typing import Any
-from djk.base import Source, ParsedToken
 from queue import Queue, Empty
+from djk.base import Source, ParsedToken
 from djk.sources.lazy_file_local import LazyFileLocal
 from djk.log import logger
 
@@ -13,24 +13,24 @@ class DirSource(Source):
         self.source_queue = source_queue
         self.current = in_source
 
-    def next(self):
+    def __iter__(self):
         while True:
             if self.current is None:
                 try:
                     self.current = self.source_queue.get_nowait()
                     logger.debug(f'next source={self.current}')
                 except Empty:
-                    return None
+                    return  # end of all sources
 
-            record = self.current.next()
-            if record is not None:
-                return record
-            else:
-                self.current = None
+            try:
+                for record in self.current:
+                    yield record
+            finally:
+                self.current = None  # move to next source after exhaustion
 
     def deep_copy(self):
         if self.source_queue.qsize() <= 1:
-            return None # leave for original DirSource
+            return None  # leave remaining files to original
         try:
             next_source = self.source_queue.get_nowait()
             logger.debug(f'deep_copy next_source={next_source}')
@@ -41,16 +41,19 @@ class DirSource(Source):
 
     @classmethod
     def create(cls, ptok: ParsedToken, get_format_class_gz: Any):
-        params = ptok.get_params() # ptok is for the directory, not the files
+        params = ptok.get_params()
         override = params.get('format', None)
-
         path = ptok.all_but_params
-        files = [os.path.join(path, f) for f in os.listdir(path) if os.path.isfile(os.path.join(path, f))]
+
+        files = [
+            os.path.join(path, f)
+            for f in os.listdir(path)
+            if os.path.isfile(os.path.join(path, f))
+        ]
+
         source_queue = Queue()
         for file in files:
-
-            # build a ptok for each file
-            file_token = f'{file}' + '' if not override else f'format={override}'
+            file_token = file if not override else f"{file} format={override}"
             file_ptok = ParsedToken(file_token)
 
             format_class, is_gz = get_format_class_gz(file_ptok)
@@ -58,9 +61,9 @@ class DirSource(Source):
                 lazy_file = LazyFileLocal(file, is_gz)
                 source_queue.put(format_class(lazy_file))
             else:
-                raise(f'Fix me in Dir Source: No format for file:{file}')
-            
+                raise RuntimeError(f"No format for file: {file}")
+
         if source_queue.empty():
             return None
-        
+
         return DirSource(source_queue)

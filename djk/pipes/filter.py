@@ -1,7 +1,6 @@
 # SPDX-License-Identifier: Apache-2.0
 # Copyright 2024 Mike Schultz
 
-from typing import Optional
 from djk.base import Pipe, Usage, UsageError, ParsedToken, KeyedSource
 
 class FilterPipe(Pipe):
@@ -20,39 +19,19 @@ class FilterPipe(Pipe):
     def __init__(self, ptok: ParsedToken, usage: Usage):
         super().__init__(ptok)
         self.mode = usage.get_arg('mode')
-
-        '''
-        arg_string = ptok.get_arg(0)
-        if arg_string not in ("+", "-"):
-            raise UsageError(
-                "filter:<mode> must be '+' or '-'",
-                tokens=[ptok.whole_token],
-                token_no=0,
-                details={"received": arg_string}
-            )
-'''
-        self.right = None
         self.left = None
+        self.right = None
 
-    def _setup(self):
-        right = self.inputs[1]
-        if not isinstance(right, KeyedSource):
+    def reset(self):
+        pass  # stateless
+
+    def __iter__(self):
+        if not isinstance(self.right, KeyedSource):
             raise UsageError("Right input to filter must be a KeyedSource")
-        self.right = right
-        self.left = self.inputs[0]
 
-    def next(self) -> Optional[dict]:
-        if self.right is None:
-            self._setup()
-
-        while True:
-            record = self.left.next()
-            if record is None:
-                return None
-
+        for record in self.left:
             match = self.right.lookup(record)
             exists = match is not None
 
             if (self.mode == "+" and exists) or (self.mode == "-" and not exists):
-                return record
-            # otherwise, keep looping
+                yield record

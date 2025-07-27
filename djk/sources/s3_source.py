@@ -12,23 +12,22 @@ class S3Source(Source):
         self.source_queue = source_queue
         self.current = in_source
 
-    def next(self):
+    def __iter__(self):
         while True:
             if self.current is None:
                 try:
                     self.current = self.source_queue.get_nowait()
                 except Empty:
-                    return None
+                    return  # done
 
-            record = self.current.next()
-            if record is not None:
-                return record
-            else:
-                self.current = None
+            try:
+                yield from self.current
+            finally:
+                self.current = None  # move on to next source
 
     def deep_copy(self):
         if self.source_queue.qsize() <= 1:
-            return None # leave for original S3Source
+            return None
         try:
             next_source = self.source_queue.get_nowait()
         except Empty:
@@ -40,11 +39,12 @@ class S3Source(Source):
     def create(cls, ptok: ParsedToken, get_format_class_gz: Any):
         s3_uri = ptok.all_but_params
         params = ptok.get_params()
-        override = params.get('format', None)
+        override = params.get('format')
 
         raw = s3_uri[3:]  # strip 's3:'
-        raw = raw.removeprefix('//') # optionally
+        raw = raw.removeprefix('//')
         bucket, _, prefix = raw.partition('/')
+
         s3 = boto3.client("s3")
         source_queue = Queue()
 
@@ -53,8 +53,7 @@ class S3Source(Source):
             for obj in page.get("Contents", []):
                 key = obj["Key"]
 
-                # build a ptok for each file
-                file_token = f'{key}' + '' if not override else f'format={override}'
+                file_token = key if not override else f"{key} format={override}"
                 file_ptok = ParsedToken(file_token)
 
                 format_class, is_gz = get_format_class_gz(file_ptok)
@@ -62,7 +61,7 @@ class S3Source(Source):
                     lazy_file = LazyFileS3(bucket, key, is_gz)
                     source_queue.put(format_class(lazy_file))
                 else:
-                    raise(f'Fix me in s3 Source: No format for file:{key}')
+                    raise RuntimeError(f"No format for file: {key}")
 
         if source_queue.empty():
             return None

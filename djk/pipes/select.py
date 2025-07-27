@@ -3,17 +3,24 @@
 
 # djk/select_pipe.py
 
-from typing import Optional
 from djk.base import Pipe, Usage, ParsedToken, UsageError
 
 class SelectFields(Pipe):
     deep_copyable: bool = True
 
+    @classmethod
+    def usage(cls):
+        usage = Usage(
+            name='select',
+            desc='Keep only the specified fields from each record'
+        )
+        usage.def_arg(name='fields', usage='Comma-separated list of fields to retain')
+        return usage
+
     def __init__(self, ptok: ParsedToken, usage: Usage):
         super().__init__(ptok)
 
-        arg_string = ptok.get_arg(0)
-
+        arg_string = usage.get_arg('fields')
         if not arg_string:
             raise UsageError("select:<f1,f2,...> requires at least one field")
 
@@ -21,14 +28,13 @@ class SelectFields(Pipe):
         if not self.keep_fields:
             raise UsageError("select must include at least one valid field name")
 
+    def reset(self):
+        pass  # stateless
 
-    def next(self) -> Optional[dict]:
-        record = self.inputs[0].next()
-        if record is None:
-            return None
-        
-        for k in list(record.keys()):
-            if k not in self.keep_fields:
-                record.pop(k)
-
-        return record
+    def __iter__(self):
+        for record in self.left:
+            keys = list(record.keys())
+            for k in keys:
+                if k not in self.keep_fields:
+                    record.pop(k)
+            yield record

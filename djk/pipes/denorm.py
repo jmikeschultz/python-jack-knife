@@ -3,60 +3,61 @@
 
 # djk/pipes/denorm.py
 
-from typing import Optional
 from djk.base import Pipe, ParsedToken, Usage, UsageError
+from typing import Iterator
 
 class Denormer:
     def __init__(self, record, field):
         self.field = field
         data = record.pop(field, None)
+
         if not data:
             self.subrec_list = [record]
             self.base_record = {}
             return
 
         self.base_record = record
+
         if isinstance(data, list):
             self.subrec_list = data
-
         elif isinstance(data, dict):
-            subrec_list = [data]
-
+            self.subrec_list = [data]
         else:
             raise UsageError("can only denorm sub-records")
 
-    def next(self):
-        if len(self.subrec_list) == 0:
-            return None
-        subrec = self.subrec_list.pop()
-        if not isinstance(subrec, dict): # subrec is scalar because field is list of scalar
-            subrec = {self.field: subrec}
+    def __iter__(self) -> Iterator[dict]:
+        for subrec in self.subrec_list:
+            if not isinstance(subrec, dict):
+                subrec = {self.field: subrec}
+            out = self.base_record.copy()
+            out.update(subrec)
+            yield out
 
-        out = self.base_record.copy() # deep copy?
-        out.update(subrec)
-        return out
 
 class DenormPipe(Pipe):
-    def __init__(self, ptok: ParsedToken, bound_usage: Usage):
+    @classmethod
+    def usage(cls):
+        usage = Usage(
+            name='explode',
+            desc='Explode a nested list/dict field into separate flattened records'
+        )
+        usage.def_arg(name='field', usage='Field to denormalize')
+        return usage
+
+    def __init__(self, ptok: ParsedToken, usage: Usage):
         super().__init__(ptok)
 
-        self.field = ptok.get_arg(0)
+        self.field = usage.get_arg('field')
         if not self.field:
-            raise UsageError("select must include at least one valid field name")
+            raise UsageError("denorm must include a field name")
 
-        self.denormer = None
+        self._pending_iter = None
 
-    def next(self) -> Optional[dict]:
-        if not self.denormer:
-            record = self.inputs[0].next()
-            if record is None:
-                return None
-            self.denormer = Denormer(record, self.field)
+    def reset(self):
+        self._pending_iter = None
 
-        rec = self.denormer.next()
-        if rec:
-            return rec
-        else:
-            self.denormer = None
-            return self.next()
-
+    def __iter__(self):
+        for record in self.left:
+            denormer = Denormer(record, self.field)
+            for out in denormer:
+                yield out

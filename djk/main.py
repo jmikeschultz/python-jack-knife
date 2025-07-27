@@ -75,11 +75,11 @@ def main():
         else:
             sink.drain() # run single in main thread
 
+        write_history(sys.argv[1:])
+
     except UsageError as e:
         print(e, file=sys.stderr)
         sys.exit(2)  # Exit with a non-zero code, but no traceback
-
-    write_history(sys.argv[1:])
 
 if __name__ == "__main__":
     main()

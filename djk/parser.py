@@ -57,7 +57,7 @@ class ExpressionParser:
                         # if there's top level aggregation
                         aggregator = stack_helper.get_reducer_aggregator()
                         if aggregator:
-                            aggregator.set_sources([penult])
+                            aggregator.add_source(penult)
                             sink = SinkFactory.create(token, aggregator)
                         else:
                             sink = SinkFactory.create(token, penult)
@@ -105,21 +105,19 @@ class ReducerAggregatorPipe(Pipe):
         self.reduction = {}
         self.done = False
 
-    def next(self) -> Optional[dict]:
-        while not self.done:
-            record = self.inputs[0].next()
-            if record is None:
-                break
-        
+    def reset(self):
+        self.done = False
+        self.reduction.clear()
+
+    def __iter__(self):
         if not self.done:
+            for _ in self.left:
+                pass  # consume all input
             for reducer in self.top_level_reducers:
                 name, value = reducer.get_subexp_result()
                 self.reduction[name] = value
             self.done = True
-        else:
-            return None
-        
-        return self.reduction
+            yield self.reduction
 
 class StackLoader:
     def __init__(self):
@@ -139,7 +137,7 @@ class StackLoader:
                 if isinstance(op, SubExpressionOver):
                     subexp_begin = stack.pop()
                     subexp_begin.set_over_arg(op.get_over_arg())
-                    op.set_sources([subexp_begin])
+                    op.add_source(subexp_begin)
                     stack.append(op)
                     return
                 else: # an operator within the subexpression
@@ -151,7 +149,8 @@ class StackLoader:
             arity = op.arity # class level attribute
             if len(stack) < arity:
                 raise UsageError(f"'{op}' requires {arity} input(s)")
-            op.set_sources([stack.pop() for _ in range(arity)][::-1])
+            for _ in range(arity):
+                op.add_source(stack.pop())
             stack.append(op)
 
             if isinstance(op, ReducePipe):
@@ -168,37 +167,32 @@ class StackLoader:
 class UpstreamSource(Source):
     def __init__(self):
         self.data = []
-        self.index = 0
         self.inner_source = None
 
     def set_source(self, source: Source):
         self.inner_source = source
 
     def set_list(self, items):
-        self.index = 0
         self.data = items if items else []
 
     def add_item(self, rec):
         self.data.append(rec)
 
     def reset(self):
-        self.data = []
-    
-    def next(self) -> Optional[dict]:
-        if self.inner_source:
-            return self.inner_source.next()
+        # nothing needed in generator model
+        pass
 
-        if self.index >= len(self.data):
-            return None
-        item = self.data[self.index]
-        self.index += 1
-        return item
+    def __iter__(self):
+        if self.inner_source:
+            yield from self.inner_source
+        else:
+            for item in self.data:
+                yield item
     
 class SubExpression(Pipe):
     @classmethod
     def create(cls, token: str) -> Pipe:
         ptok = ParsedToken(token)
-
         if ptok.pre_colon == '[':
             return SubExpression(ptok, None)
         if ptok.pre_colon == 'over':
@@ -208,76 +202,66 @@ class SubExpression(Pipe):
     def __init__(self, ptok: ParsedToken, usage: Usage):
         super().__init__(ptok)
         self.upstream_source = UpstreamSource()
-        self.over_arg = None # set by method
+        self.over_arg = None
         self.over_field = None
-        self.subexp_stack: List[Any] = [self.upstream_source] # put list source on operand stack
-        self.subexp_ops: List[Any] = [] # list of operators for parent to reset
+        self.subexp_stack = [self.upstream_source]
+        self.subexp_ops = []
         self.over_pipe = None
         self.stack_helper = StackLoader()
-        
+
     def add_subop(self, op):
         self.subexp_ops.append(op)
         self.stack_helper.add_operator(op, self.subexp_stack)
 
-    # over_arg can be either a field name (expecting a list)
-    # or it can be a 1-to-many user_pipe
-    # need to think on this, if it makes sense to allow pipes in general
-    # the a one-to-many pipe seems very natural e.g. 1 query in -> many results out
-    # and the subexpress can operate on the results stream into the 'child' field
     def set_over_arg(self, over_arg):
         self.over_arg = over_arg
         if over_arg.endswith('.py'):
-            self.over_field = 'child' # where the new subrecs from the over_pipe will go, default as 'child' field
+            self.over_field = 'child'
             self.over_pipe = UserPipeFactory.create(over_arg)
-            self.upstream_source.set_source(self.over_pipe) # self.upstream_source already on stack
-            self.subexp_ops.append(self.over_pipe) # so the pipe gets reset
+            self.upstream_source.set_source(self.over_pipe)
+            self.subexp_ops.append(self.over_pipe)
         else:
             self.over_field = over_arg
-        
-    def next(self) -> Optional[dict]:
-        record = self.inputs[0].next()
-        if record is None:
-            return None
-        
-        if self.over_pipe:
-            one_rec_upstream = UpstreamSource()
-            one_rec_upstream.add_item(record)
-            self.over_pipe.set_sources([one_rec_upstream])
 
-        else: # else its over:field, get field data        
-            field_data = record.pop(self.over_field, None)
-            if not field_data:
-                return record
-        
-            if isinstance(field_data, list):
-                self.upstream_source.set_list(field_data)
-            else:
-                self.upstream_source.set_list([field_data])
-
-        out_recs = []
-        pipe = self.subexp_stack[-1]
-
-        # reset components that are being reused across records
+    def reset(self):
         for op in self.subexp_ops:
             if isinstance(op, Pipe):
                 op.reset()
-        
-        while True:
-            rec = pipe.next()
-            if rec == None:
-                break
-            out_recs.append(rec)
-        record[self.over_field] = out_recs
 
-        # result for parent
-        for op in self.subexp_ops:
-            get_subexp = getattr(op, "get_subexp_result", None)
-            if get_subexp:
-                name, value = get_subexp()
-                if name:
-                    record[name] = value
+    def __iter__(self):
+        for record in self.left:
+            if self.over_pipe:
+                one = UpstreamSource()
+                one.add_item(record)
+                self.over_pipe.set_sources([one])
+            else:
+                field_data = record.pop(self.over_field, None)
+                if not field_data:
+                    yield record
+                    continue
+                if isinstance(field_data, list):
+                    self.upstream_source.set_list(field_data)
+                else:
+                    self.upstream_source.set_list([field_data])
 
-        return record
+            # Reset sub-pipe stack
+            for op in self.subexp_ops:
+                op.reset()
+
+            out_recs = []
+            for rec in self.subexp_stack[-1]:
+                out_recs.append(rec)
+
+            record[self.over_field] = out_recs
+
+            for op in self.subexp_ops:
+                get_subexp = getattr(op, "get_subexp_result", None)
+                if get_subexp:
+                    name, value = get_subexp()
+                    if name:
+                        record[name] = value
+
+            yield record
 
 class SubExpressionOver(Pipe):
     def __init__(self, ptok: ParsedToken, usage: Usage):
@@ -287,6 +271,9 @@ class SubExpressionOver(Pipe):
     def get_over_arg(self):
         return self.over_arg
 
-    def next(self) -> Optional[dict]:
-        record = self.inputs[0].next()
-        return record
+    def reset(self):
+        pass  # stateless
+
+    def __iter__(self):
+        yield from self.left
+

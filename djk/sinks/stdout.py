@@ -10,7 +10,9 @@ from djk.base import Sink, Source, ParsedToken, Usage
 class StdoutSink(Sink):
     def __init__(self, input_source: Source, ptok: ParsedToken, usage: Usage):
         super().__init__(input_source)
-        self.use_pager = True # FIX ME
+
+        # NOTE: self.use_pager is hardcoded for now; override via constructor if needed
+        self.use_pager = True
         self.suppress_report = True
 
     def process(self) -> None:
@@ -18,20 +20,27 @@ class StdoutSink(Sink):
         pager_proc = None
 
         if self.use_pager and shutil.which("less"):
-            pager_proc = subprocess.Popen(["less", "-FRSX"], stdin=subprocess.PIPE, text=True)
+            pager_proc = subprocess.Popen(
+                ["less", "-FRSX"],
+                stdin=subprocess.PIPE,
+                text=True
+            )
             output_stream = pager_proc.stdin
 
         try:
-            while True:
-                record = self.input.next()
-                if record is None:
-                    break
+            for record in self.input:
                 try:
-                    yaml.dump(record, output_stream, sort_keys=False, explicit_start=True, width=float("inf"))
+                    yaml.dump(
+                        record,
+                        output_stream,
+                        sort_keys=False,
+                        explicit_start=True,
+                        width=float("inf")
+                    )
                 except BrokenPipeError:
                     break  # user quit pager
         except BrokenPipeError:
-            pass  # outer fallback
+            pass
         finally:
             if pager_proc:
                 try:
@@ -39,4 +48,3 @@ class StdoutSink(Sink):
                 except BrokenPipeError:
                     pass
                 pager_proc.wait()
-            

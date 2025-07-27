@@ -3,66 +3,55 @@
 
 # djk/pipes/join.py
 
-from typing import Optional
 from djk.base import Pipe, Usage, UsageError, ParsedToken, KeyedSource
 
 class JoinPipe(Pipe):
-    arity = 2
+    arity = 2  # left = record stream, right = KeyedSource
+
+    @classmethod
+    def usage(cls):
+        usage = Usage(
+            name='join',
+            desc="Join records against a keyed source on shared fields"
+        )
+        usage.def_arg(
+            name='mode',
+            usage="'left', 'inner', or 'outer' join behavior",
+            valid_values={'left', 'inner', 'outer'}
+        )
+        return usage
 
     def __init__(self, ptok: ParsedToken, usage: Usage):
         super().__init__(ptok)
 
-        arg_string = ptok.get_arg(0)
-
-        allowed_modes = {"left", "inner", "outer"}
-        if arg_string not in allowed_modes:
-            raise UsageError(
-                "join:<mode> must be one of 'left', 'inner', or 'outer'",
-                details={"received": arg_string}
-            )
-        
-        self.mode = arg_string
-        self.index = 0
-        self.pending_right = None
-        self.check_right = False
-        self.right = None
+        self.mode = usage.get_arg('mode')
         self.left = None
+        self.right = None
+        self._pending_right = None
+        self._check_right = False
 
-    def _setup(self):
-        right = self.inputs[1]
-        if not isinstance(right, KeyedSource):
+    def reset(self):
+        self._pending_right = None
+        self._check_right = False
+
+    def __iter__(self):
+        if not isinstance(self.right, KeyedSource):
             raise UsageError("right input to join must be a KeyedSource")
-        self.right = right
-        self.left = self.inputs[0]
 
-    def next(self) -> Optional[dict]:
-        if self.right is None:
-            self._setup()
-
-        while True:
-            if self.check_right:
-                if len(self.pending_right) == 0:
-                    return None
-                return self.pending_right.pop(0)
-
-            left_rec = self.left.next()
-            if left_rec is None:
-                if self.mode != 'outer':
-                    return None
-                self.pending_right = self.right.get_unlookedup_records()
-                self.check_right = True
-                continue
-
+        for left_rec in self.left:
             match = self.right.lookup(left_rec)
 
             if match is not None:
                 merged = dict(left_rec)
-                merged.update(match)  # right overrides left
-                return merged
+                merged.update(match)
+                yield merged
+            elif self.mode == "left":
+                yield left_rec
+            elif self.mode == "outer":
+                continue  # collect unmatched right side later
+            elif self.mode == "inner":
+                continue
 
-            if self.mode == "left":
-                return left_rec 
-
-            if self.mode == "inner":
-                continue  # skip unmatched
-
+        if self.mode == "outer":
+            for right_rec in self.right.get_unlookedup_records():
+                yield right_rec

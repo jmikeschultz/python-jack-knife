@@ -221,7 +221,8 @@ class NoBindUsage(Usage):
         super().__init__(name=name, desc=desc)
     def bind(self, ptok: ParsedToken):
         return
-            
+
+# mixin
 class KeyedSource(ABC):
     @classmethod
     def usage(cls):
@@ -242,6 +243,10 @@ class KeyedSource(ABC):
     def deep_copy(self):
         return None
 
+from abc import ABC, abstractmethod
+from typing import Optional, Any
+from djk.base import NoBindUsage
+
 class Source(ABC):
     is_format = False
 
@@ -251,23 +256,15 @@ class Source(ABC):
             name=cls.__name__,
             desc=f"{cls.__name__} component"
         )
-    
+
     @abstractmethod
-    def next(self) -> Optional[Any]:
+    def __iter__(self):
+        """Subclasses must yield records via generator"""
         pass
 
-    def __iter__(self):
-        return self
-
-    def __next__(self):
-        result = self.next()
-        if result is None:
-            raise StopIteration
-        return result
-
-
     def deep_copy(self):
-        return None
+        return None  # Default: not copyable unless overridden
+
     
 class Pipe(Source):
     deep_copyable: bool = False # default to false
@@ -275,15 +272,18 @@ class Pipe(Source):
     
     def __init__(self, ptok: ParsedToken, usage: Usage = None):
         self.ptok = ptok
+        self.left = None  # left source for convience
+        self.right = None # right source for convience
         self.inputs: List[Source] = []
 
-    def set_sources(self, inputs: List[Source]) -> None:
-        if len(inputs) != type(self).arity:
-            raise ValueError(
-                f"{self.__class__.__name__} expects {type(self).arity} input(s), got {len(inputs)}"
-            )
-        self.inputs = inputs
-        self.reset()
+    def add_source(self, source: Source) -> None:
+        self.inputs.append(source)
+        # first two are assigned left, right
+        if self.left is None:
+            self.left = source
+        elif self.right is None:
+            self.right = self.left
+            self.left = source
 
     def reset(self):
         pass  # optional hook
@@ -294,15 +294,14 @@ class Pipe(Source):
         if not self.inputs:
             raise RuntimeError(f"{self.__class__.__name__} has no inputs set")
 
-        cloned_inputs = []
-        for inp in self.inputs:
-            strand = inp.deep_copy()
+        clone = self.__class__(self.ptok, self.__class__.usage())
+
+        for input in self.inputs:
+            strand = input.deep_copy()
             if strand is None:
                 return None
-            cloned_inputs.append(strand)
+            clone.add_source(strand)
 
-        clone = self.__class__(self.ptok, self.__class__.usage())
-        clone.set_sources(cloned_inputs)
         return clone
 
 class Sink(ABC):

@@ -4,7 +4,6 @@
 from djk.base import Sink, Source, ParsedToken, Usage, TokenError
 import matplotlib.pyplot as plt
 import numpy as np
-import matplotlib.pyplot as plt
 
 from djk.sinks.graph_cumulative import graph_cumulative
 from djk.sinks.graph_hist import graph_hist
@@ -16,12 +15,12 @@ class GraphSink(Sink):
     def usage(cls):
         usage = Usage(
             name='graph',
-            desc='display graphs of various kinds'
+            desc='Display various kinds of graphs from streamed records'
         )
         usage.def_arg(name='kind', usage='hist|scatter|bar|line|cumulative')
-        usage.def_param(name='x', usage='name of x-axis field')
-        usage.def_param(name='y', usage='name of y-axis field')
-        usage.def_param(name='pause', usage='seconds to show graph, otherwise indefinite.', is_num=True)
+        usage.def_param(name='x', usage='Name of x-axis field')
+        usage.def_param(name='y', usage='Name of y-axis field')
+        usage.def_param(name='pause', usage='Seconds to show graph (default: wait for close)', is_num=True)
         return usage
 
     def __init__(self, input_source: Source, ptok: ParsedToken, usage: Usage):
@@ -33,28 +32,18 @@ class GraphSink(Sink):
         self.pause = usage.get_param('pause')
 
     def process(self):
-        while True:
-            record = self.input.next()
-            if record is None:
-                break
+        for record in self.input:
             self.records.append(record)
 
         if self.kind == "scatter":
             graph_scatter(self)
-
         elif self.kind == "hist":
             graph_hist(self)
-
         elif self.kind == "cumulative":
             graph_cumulative(self)
-
         elif self.kind == "bar":
             graph_bar_line(self, 'bar')
-
         elif self.kind == "line":
             graph_bar_line(self, 'line')
-
         else:
             raise TokenError(f"Unsupported graph type: {self.kind}")
-
-    

@@ -3,27 +3,32 @@
 
 # djk/pipes/remove_field.py
 
-from typing import Optional
 from djk.base import Pipe, ParsedToken, Usage, UsageError
 
 class RemoveField(Pipe):
-    def __init__(self, ptok: ParsedToken, bound_usage: Usage):
+    @classmethod
+    def usage(cls):
+        usage = Usage(
+            name='rm',
+            desc='Remove one or more fields from each record'
+        )
+        usage.def_arg(name='fields', usage='Comma-separated list of field names to remove')
+        return usage
+
+    def __init__(self, ptok: ParsedToken, usage: Usage):
         super().__init__(ptok)
-
-        arg_string = ptok.get_arg(0)
-
+        arg_string = usage.get_arg('fields')
         self.fields = [f.strip() for f in arg_string.split(',') if f.strip()]
         if not self.fields:
             raise UsageError("rm must include at least one valid field name")
         self.count = 0
 
-    def next(self) -> Optional[dict]:
-        record = self.inputs[0].next()
-        if not record:
-            return None
+    def reset(self):
+        self.count = 0
 
-        self.count += 1
-        for field in self.fields:
-            record.pop(field, None)
-            
-        return record
+    def __iter__(self):
+        for record in self.left:
+            self.count += 1
+            for field in self.fields:
+                record.pop(field, None)
+            yield record

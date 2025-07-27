@@ -5,7 +5,7 @@ pjk "{id:1, cars:[{color: 'green'}, {color: 'blue'}]}" [ let:foo:bar over:cars \
     expect:'{"id": 1, "cars": [{"color": "green", "foo": "bar"}, {"color": "blue", "foo": "bar"}]}'
 
 pjk "{id:1, cars:[{color: 'green'}, {color: 'blue'}]}" explode:cars \
-    expect:'[{"id": 1, "color": "blue"}, {"id": 1, "color": "green"}]'
+    expect:'[{"id": 1, "color": "green"}, {"id": 1, "color": "blue"}]'
 
 pjk '[{hello: 1, id: 1}, {there:2, id:2}]' '{id:1}' map:o:id filter:+ \
     expect:'{"hello": 1, "id": 1}'

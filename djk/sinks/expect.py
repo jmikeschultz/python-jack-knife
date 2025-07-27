@@ -6,37 +6,44 @@ from djk.sources.inline_source import InlineSource
 import sys
 
 class ExpectSink(Sink):
+    # NOTE: ExpectSink intentionally does NOT use Usage due to raw JSON argument parsing
+    # e.g., expect:'[{a:1},{a:2}]' must preserve the entire post-colon string unparsed
+
     def __init__(self, input_source: Source, ptok: ParsedToken, usage: Usage):
         super().__init__(input_source)
-        self.inline = ptok.whole_token.split(':', 1)[-1] # need raw token cuz : in there
+        self.inline = ptok.whole_token.split(':', 1)[-1]
         self.expect_source = InlineSource(self.inline)
+        self._expect_iter = iter(self.expect_source)
 
     def process(self) -> None:
-        command = ' '.join(sys.argv[1:-1]) # omit pjk and expect
+        command = ' '.join(sys.argv[1:-1])  # omit 'pjk' and 'expect'
 
-        num_put = 0
-        while True:
-            test_rec = self.input.next()
-            if test_rec is None:
-                break
-
-            expect_rec = self.expect_source.next()
-            if expect_rec is None:
-                message = f'expect failure: {command}\nexpected_record:None\ngot_record:{test_rec}\nentire_expected:{self.inline}'
-                raise ValueError(message)
+        for test_rec in self.input:
+            try:
+                expect_rec = next(self._expect_iter)
+            except StopIteration:
+                raise ValueError(
+                    f"expect failure: {command}\n"
+                    f"expected_record:None\n"
+                    f"got_record:{test_rec}\n"
+                    f"entire_expected:{self.inline}"
+                )
 
             if test_rec != expect_rec:
-                message = f'expect failure: {command}\nexpected_record:{expect_rec}\ngot_record:{test_rec}\nentire_expected:{self.inline}'
-                raise ValueError(message)
-            
-        expect_rec = self.expect_source.next() # should be None
-        if expect_rec is not None:
-                message = f'expect failure: {command}\nexpected_record:{expect_rec}\ngot_record:None\nentire_expected:{self.inline}'
-                raise ValueError(message)
-        
-        print(f'{command} ==> OK!\n')
+                raise ValueError(
+                    f"expect failure: {command}\n"
+                    f"expected_record:{expect_rec}\n"
+                    f"got_record:{test_rec}\n"
+                    f"entire_expected:{self.inline}"
+                )
 
-            
-
-            
-    
+        try:
+            expect_rec = next(self._expect_iter)
+            raise ValueError(
+                f"expect failure: {command}\n"
+                f"expected_record:{expect_rec}\n"
+                f"got_record:None\n"
+                f"entire_expected:{self.inline}"
+            )
+        except StopIteration:
+            print(f'{command} ==> OK!\n')

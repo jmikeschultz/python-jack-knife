@@ -21,14 +21,12 @@ class HeadPipe(Pipe):
         self.limit = usage.get_arg('limit')
         self.count = 0
 
-    def next(self) -> Optional[dict]:
-        if self.count >= self.limit:
-            return None
-        record = self.inputs[0].next()
-        if record is None:
-            return None
-        self.count += 1
-        return record
+    def __iter__(self):
+        for record in self.left:
+            if self.count >= self.limit:
+                break
+            self.count += 1
+            yield record
     
     def reset(self):
         self.count = 0
