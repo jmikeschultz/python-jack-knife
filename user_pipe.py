@@ -17,5 +17,6 @@ class MyFuncPipe(Pipe):
         if record is None:
             return None
         self.count += 1
-        record[f"marked_{self.field}"] = True
+
+        record['pipe'] = 'user'
         return record

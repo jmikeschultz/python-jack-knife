@@ -1,0 +1,14 @@
+{
+  "python.defaultInterpreterPath": "/Users/mschultz1/basenv/bin/python",
+  "python.linting.enabled": true,
+  "python.linting.flake8Enabled": true,
+  "python.formatting.provider": "black",
+  "editor.formatOnSave": true,
+  "python.testing.pytestEnabled": true,
+  "python.testing.pytestArgs": [
+    "djk"
+  ],
+  "python.analysis.extraPaths": [
+    "djk"
+  ]
+}

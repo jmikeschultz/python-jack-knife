@@ -1,0 +1,19 @@
+{
+  "version": "0.2.0",
+  "configurations": [
+    {
+      "name": "Run djk.main with args",
+      "type": "python",
+      "request": "launch",
+      "module": "djk.main",
+      "console": "integratedTerminal",
+      "justMyCode": false,
+      "env": {
+        "PYTHONPATH": "${workspaceFolder}"
+      },
+      "args": [
+        "/Users/mschultz1/Development/jmike/test.pjk"
+      ]
+    }
+  ]
+}

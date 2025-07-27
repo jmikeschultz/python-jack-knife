@@ -1,3 +1,6 @@
+# SPDX-License-Identifier: Apache-2.0
+# Copyright 2024 Mike Schultz
+
 from djk.base import Usage, ParsedToken, TokenError
 
 def test_token_and_usage():
