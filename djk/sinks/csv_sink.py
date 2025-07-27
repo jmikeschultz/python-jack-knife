@@ -14,8 +14,8 @@ class CSVSink(Sink):
             desc='Write records to a CSV file with dynamic header from first record'
         )
         usage.def_arg('path', usage='Path prefix (no extension)')
-        usage.def_param('delim', usage='CSV delimiter (default: ",")', default=',')
-        usage.def_param('ext', usage='File extension (default: csv)', default='csv')
+        usage.def_param('delim', usage='CSV delimiter (default: ",")')
+        usage.def_param('ext', usage='File extension (default: csv)')
         return usage
 
     def __init__(self, input_source: Source, ptok: ParsedToken, usage: Usage):

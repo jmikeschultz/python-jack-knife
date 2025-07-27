@@ -13,7 +13,7 @@ class DDBSink(Sink):
             desc='Write records to a DynamoDB table via batch_writer()'
         )
         usage.def_arg('table', usage='DynamoDB table name')
-        usage.def_param('batch_size', usage='How many records to write per batch (max 25)', default='10')
+        usage.def_param('batch_size', usage='How many records to write per batch (max 25)')
         return usage
 
     def __init__(self, input_source: Source, ptok: ParsedToken, usage: Usage):

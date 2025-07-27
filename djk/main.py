@@ -14,6 +14,7 @@ import concurrent.futures
 from djk.pipes.factory import PipeFactory
 from djk.sources.factory import SourceFactory
 from djk.sinks.factory import SinkFactory
+from djk.version import __version__
 
 def write_history(tokens):
     log_path = ".pjk-history.txt"
@@ -41,6 +42,11 @@ def execute_threaded(sinks):
 
 def main():
     signal.signal(signal.SIGINT, lambda s, f: sys.exit(0))
+
+    if '--version' in sys.argv:
+        print(f"pjk version {__version__}")
+        sys.exit(0)
+    
     if len(sys.argv) < 2:
         print('Usage: pjk <source> [<pipe> ...] <sink>')
         print('       pjk <source1> <source2> map:<how>:<fields> join:<how> <sink>')
