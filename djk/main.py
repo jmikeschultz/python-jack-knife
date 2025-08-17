@@ -14,6 +14,8 @@ import concurrent.futures
 from djk.pipes.factory import PipeFactory
 from djk.sources.factory import SourceFactory
 from djk.sinks.factory import SinkFactory
+from djk.man_page import do_man, do_examples
+from djk.sinks.expect import ExpectSink
 from djk.version import __version__
 
 def write_history(tokens):
@@ -50,18 +52,26 @@ def main():
     if len(sys.argv) < 2:
         print('Usage: pjk <source> [<pipe> ...] <sink>')
         print('       pjk <source1> <source2> map:<how>:<fields> join:<how> <sink>')
+        print('       pjk man <component>')
+        print('       pjk examples')
         print()
         SourceFactory.print_descriptions()
         print()
         PipeFactory.print_descriptions()
         print()
         SinkFactory.print_descriptions()
-
-
         return
 
     init_logging()
     tokens = sys.argv[1:]
+
+    if len(tokens) == 2 and tokens[0] == 'man':
+        do_man(tokens[1])
+        return
+    if len(tokens) == 1 and tokens[0] == 'examples':
+        do_examples()
+        return
+
     parser = ExpressionParser(tokens)
 
     try:
@@ -80,6 +90,11 @@ def main():
             execute_threaded(sinks)
         else:
             sink.drain() # run single in main thread
+
+            # special case for expect tests
+            if isinstance(sink, ExpectSink):
+                command = ' '.join(sys.argv[1:-1])  # omit 'pjk' and 'expect'
+                print(f'{command} ==> OK!\n') # only prints on success
 
         write_history(sys.argv[1:])
 

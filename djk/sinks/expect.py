@@ -46,4 +46,4 @@ class ExpectSink(Sink):
                 f"entire_expected:{self.inline}"
             )
         except StopIteration:
-            print(f'{command} ==> OK!\n')
+            pass

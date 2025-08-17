@@ -107,6 +107,7 @@ class Usage:
 
         self.arg_defs = []
         self.param_usages = {}
+        self.examples = []
 
     # args and param values default as str
     def def_arg(self, name: str, usage: str, is_num: bool = False, valid_values: Optional[Set[str]] = None):
@@ -115,15 +116,22 @@ class Usage:
     def def_param(self, name:str, usage: str, is_num: bool = False, valid_values: Optional[Set[str]] = None):
         self.param_usages[name] = (usage, is_num, valid_values)
 
+    def def_example(self, expr_tokens:list[str], expect:str):
+        self.examples.append((expr_tokens, expect))
+
+    def get_examples(self):
+        return self.examples
+
     def get_arg(self, name: str):
         return self.args.get(name, None)
-
+    
     def get_param(self, name: str, default: str = None):
         return self.params.get(name, default)
     
     def get_usage_text(self):
         lines = []
         lines.append(self.desc)
+        lines.append('')
         lines.append(f'syntax:')
         lines.append(f'  {self.get_token_syntax()}')
         lines.extend(f"{line}" for line in self.get_arg_param_desc())
@@ -342,5 +350,13 @@ class ComponentFactory:
 
             print(f'  {name:<12} {usage.desc}')
 
+    @classmethod
+    def get_usage(cls, name: str):
+        comp_class = cls.COMPONENTS.get(name)
+        if not comp_class:
+            return None
+        return comp_class.usage()
+
+    @classmethod
     def create(cls, token: str):
         pass

@@ -85,6 +85,8 @@ class LetPipe(Pipe):
             desc="set a new field equal to a rhs python expression"
         )
         usage.def_arg(name='rhs', usage="python rhs expression (use f.<field> syntax)")
+        usage.def_example(expr_tokens=['{hello:1}', 'let:there=f.hello + 1'], expect="{hello:1, there: 2}")
+        usage.def_example(expr_tokens=['{hello:1}', 'let:foo:bar'], expect="{hello:1, foo: 'bar'}")
         return usage
 
     def __init__(self, ptok: ParsedToken, usage: Usage):

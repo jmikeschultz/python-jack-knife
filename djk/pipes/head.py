@@ -14,6 +14,7 @@ class HeadPipe(Pipe):
             desc='take first records of input (when single-threaded)'
         )
         usage.def_arg(name='limit', usage='number of records', is_num=True)
+        usage.def_example(expr_tokens=['[{id:1}, {id:2}]', 'head:1'], expect="{id:1}")
         return usage
 
     def __init__(self, ptok: ParsedToken, usage: Usage):

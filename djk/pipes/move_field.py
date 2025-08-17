@@ -9,11 +9,13 @@ class MoveField(Pipe):
     @classmethod
     def usage(cls):
         usage = Usage(
-            name='move',
+            name='as',
             desc='Move one field to another key in the record',
         )
         usage.def_arg(name='src', usage='Source field name')
         usage.def_arg(name='dst', usage='Destination field name')
+        usage.def_example(expr_tokens=['{up:1}', 'as:up:down'], expect="{down:1}")
+
         return usage
 
     def __init__(self, ptok: ParsedToken, usage: Usage):

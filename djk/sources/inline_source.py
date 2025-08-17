@@ -22,24 +22,15 @@ class InlineSource(Source):
     @classmethod
     def usage(cls):
         usage = Usage(
-            name='inline json',
-            desc="e.g. \"{hello: 'world'}\" or \"[{id:1},{id:2}]\""
+            name='inline',
+            desc="simplified json lines format (uses hjson)"
         )
+        usage.def_example(expr_tokens=["{hello: 'world!'}"], expect="{hello: 'world!'}")
+        usage.def_example(expr_tokens=["[{id:1},{id:2}]"], expect="[{id:1}, {id:2}]")
         return usage
 
     def __init__(self, inline_expr):
         self.num_recs = 0
-
-        help_msg = [
-            'HJSON input is more forgiving than standard JSON.',
-            'Field names do not require quotes; string values use single quotes.',
-            'Shell needs double quotes around the entire expression.',
-            'Examples:',
-            '"{hello: \'world\'}"',
-            '"{price: 34.5}"',
-            '"[{id: 14}, {id: 1}]"',
-        ]
-
         try:
             obj = hjson.loads(inline_expr)
         except HjsonDecodeError:
