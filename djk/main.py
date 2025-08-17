@@ -51,7 +51,6 @@ def main():
     
     if len(sys.argv) < 2:
         print('Usage: pjk <source> [<pipe> ...] <sink>')
-        print('       pjk <source1> <source2> map:<how>:<fields> join:<how> <sink>')
         print('       pjk man <component>')
         print('       pjk examples')
         print()
