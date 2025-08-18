@@ -1,11 +1,16 @@
-A rewrite of the open source 'data jack knife' (DJK) in python.  The java version will die.
-For now the new version is invoked using 'pjk' until the java 'djk' is deprecated.
+# python-jack-knife (pjk)
 
-Almost, caught up in functionality ...
-(basenv) mike@winzig ~/Development find python-jack-knife -name "*.py" -type f -exec cat {} + | wc -l
+A clean Python rewrite of the original open-source **Data Jack Knife (DJK)**.
 
-    1611
-(basenv) mike@winzig ~/Development find data-jack-knife -name "*.java" -type f -exec cat {} + | wc -l
+The Java version will eventually die — this is its reincarnation.
 
-   32922
+For now, the CLI entrypoint is `pjk`, since `djk` is still bound to the old Java implementation.
 
+---
+
+## 🚀 Installation (Pre-1.0 Release)
+
+Until 1.0 is reached, you can install directly from GitHub:
+
+```bash
+pip install git+https://github.com/jmikeschultz/python-jack-knife.git@v0.5.0

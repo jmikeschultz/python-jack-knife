@@ -15,6 +15,7 @@ class SelectFields(Pipe):
             desc='Keep only the specified fields from each record'
         )
         usage.def_arg(name='fields', usage='Comma-separated list of fields to retain')
+        usage.def_example(expr_tokens=["{id:1, dir:'up', color:'blue'}", 'sel:id,color'], expect="id: 1, color:'blue'")
         return usage
 
     def __init__(self, ptok: ParsedToken, usage: Usage):

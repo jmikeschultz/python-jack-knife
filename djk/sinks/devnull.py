@@ -12,19 +12,19 @@ class DevNullSink(Sink):
             name='devnull',
             desc='Consume all input records and discard them (debug/testing)'
         )
+        usage.def_example(expr_tokens=['{id:1}', 'devnull'], expect=None)
         return usage
 
-    def __init__(self, input_source: Source, ptok: ParsedToken, usage: Usage):
-        super().__init__(input_source)
+    def __init__(self, ptok: ParsedToken, usage: Usage):
+        super().__init__(ptok, usage)
         self.count = 0
 
     def process(self):
         for record in self.input:
             self.count += 1
-        print(self.count)
 
-    def display_info(self):
-        return {"count": self.count}
+    def print_info(self):
+        print(f'num_recs:{self.count}')
 
     def deep_copy(self):
         return None  # until we implement cross-thread coordination

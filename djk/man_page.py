@@ -35,11 +35,17 @@ def smart_print(expr_tokens: list[str]):
 
 def print_example(expr_tokens: list[str], expect:str):
     try:
-        expr_tokens.append(f'expect:{expect}')
+        if expect: # = None when sink included in expression
+            expr_tokens.append(f'expect:{expect}')
 
         parser = ExpressionParser(expr_tokens)
         sink = parser.parse()
         sink.drain() # make sure the expect is fulfilled
+
+        if not expect:
+            smart_print(expr_tokens)
+            print()
+            return
 
         expr_tokens[-1] = '-' # change sink to expression out
         smart_print(expr_tokens)
@@ -68,10 +74,15 @@ def print_man(name: str, usage: Usage):
         print_example(expr_tokens, expect)
 
 def do_examples():
+    ignores = {'-'}
+
     for factory in [SourceFactory, PipeFactory, SinkFactory]:
         print(factory.HEADER)
         print()
         for name, comp_class in factory.COMPONENTS.items():
+            if name in ignores:
+                continue
+
             usage = comp_class.usage()
             examples = usage.get_examples()
             if not examples:

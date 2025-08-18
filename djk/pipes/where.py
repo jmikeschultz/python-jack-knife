@@ -10,19 +10,21 @@ class WherePipe(Pipe):
     @classmethod
     def usage(cls):
         usage = Usage(
-            name='grep',
-            desc="Filter records using a Python expression over fields, e.g. f.price > 100"
+            name='where',
+            desc="Filter records using a Python expression over fields"
         )
         usage.def_arg(name='expr', usage='Python expression using `f.<field>` syntax')
+        usage.def_example(expr_tokens=["[{size:1}, {size:5}, {size:10}]", "where:f.size >= 5"], expect="[{size:5}, {size:10}]")
+        usage.def_example(expr_tokens=["[{color:'blue'}, {color:'red'}, {color:'black'}]", "where:f.color.startswith('bl')"], expect="[{color:'blue'}, {color:'black'}]")
         return usage
 
     def __init__(self, ptok: ParsedToken, usage: Usage):
         super().__init__(ptok)
         self.expr = usage.get_arg('expr').strip()
         try:
-            self.code = compile(self.expr, '<grep>', 'eval')
+            self.code = compile(self.expr, '<where>', 'eval')
         except Exception as e:
-            raise UsageError(f"Invalid grep expression: {self.expr}") from e
+            raise UsageError(f"Invalid where expression: {self.expr}") from e
 
     def reset(self):
         pass  # stateless

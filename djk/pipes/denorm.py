@@ -41,7 +41,11 @@ class DenormPipe(Pipe):
             name='explode',
             desc='Explode a nested list/dict field into separate flattened records'
         )
-        usage.def_arg(name='field', usage='Field to denormalize')
+        usage.def_arg(name='field', usage='Field to explode')
+        usage.def_example(expr_tokens=["{ferry:'orca', cars:[{make: 'ford', size:9}, {make:'bmw', size:4}]}",
+                                       'explode:cars'
+                                       ],
+                        expect="[{ferry:'orca', make: 'ford', size:9}, {ferry:'orca', make:'bmw', size:4}]")
         return usage
 
     def __init__(self, ptok: ParsedToken, usage: Usage):

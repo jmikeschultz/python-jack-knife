@@ -38,7 +38,7 @@ echo "--- subtraction via -= (with implied acc)"
 pjk '[{i:10},{i:3}]' 'reduce:diff-=f.i' \
     expect:'{diff: -13}'
 
-pjk "{id:1, cars:[{size: 24}, {size: 43}]}" [ reduce:^tot+=f.size over:cars \
+pjk "{id:1, cars:[{size: 24}, {size: 43}]}" [ reduce:tot+=f.size over:cars \
     expect:'{"id": 1, "cars": [{"size": 24}, {"size": 43}], "tot":67}'
 
 echo "--- let: preserves scalar access"

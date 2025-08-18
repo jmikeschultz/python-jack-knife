@@ -330,6 +330,9 @@ class Sink(ABC):
     def drain(self):
         self.process()
 
+    def print_info(self):
+        pass
+
     def add_source(self, source: Source) -> None:
         self.input = source
         

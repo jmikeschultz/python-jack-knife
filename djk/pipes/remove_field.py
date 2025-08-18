@@ -9,10 +9,11 @@ class RemoveField(Pipe):
     @classmethod
     def usage(cls):
         usage = Usage(
-            name='rm',
+            name='drop',
             desc='Remove one or more fields from each record'
         )
-        usage.def_arg(name='fields', usage='Comma-separated list of field names to remove')
+        usage.def_arg(name='fields', usage='Comma-separated list of field names to drop')
+        usage.def_example(expr_tokens=["{id:1, dir:'up', color:'blue'}", 'drop:id,color'], expect="dir: 'up'")
         return usage
 
     def __init__(self, ptok: ParsedToken, usage: Usage):

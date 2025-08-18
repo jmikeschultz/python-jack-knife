@@ -28,7 +28,7 @@ class PipeFactory(ComponentFactory):
         'filter': FilterPipe,
         'map': MapPipe,            
         'as': MoveField,
-        'rm': RemoveField,        
+        'drop': RemoveField,        
         'let': LetPipe,
         'reduce': ReducePipe,        
         'sort': SortPipe,

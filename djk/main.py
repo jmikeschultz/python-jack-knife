@@ -89,11 +89,7 @@ def main():
             execute_threaded(sinks)
         else:
             sink.drain() # run single in main thread
-
-            # special case for expect tests
-            if isinstance(sink, ExpectSink):
-                command = ' '.join(sys.argv[1:-1])  # omit 'pjk' and 'expect'
-                print(f'{command} ==> OK!\n') # only prints on success
+            sink.print_info() # rarely used, e.g. expect and devnull
 
         write_history(sys.argv[1:])
 
