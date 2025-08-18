@@ -69,6 +69,8 @@ def print_man(name: str, usage: Usage):
 
 def do_examples():
     for factory in [SourceFactory, PipeFactory, SinkFactory]:
+        print(factory.HEADER)
+        print()
         for name, comp_class in factory.COMPONENTS.items():
             usage = comp_class.usage()
             examples = usage.get_examples()

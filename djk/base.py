@@ -104,6 +104,7 @@ class Usage:
         self.desc = desc
         self.args = {}
         self.params = {}
+        self.syntax = None
 
         self.arg_defs = []
         self.param_usages = {}
@@ -118,6 +119,9 @@ class Usage:
 
     def def_example(self, expr_tokens:list[str], expect:str):
         self.examples.append((expr_tokens, expect))
+
+    def def_syntax(self, syntax: str):
+        self.syntax = syntax
 
     def get_examples(self):
         return self.examples
@@ -138,6 +142,9 @@ class Usage:
         return '\n'.join(lines)
 
     def get_token_syntax(self):
+        if self.syntax:
+            return self.syntax # else piece it together
+
         token = f'{self.name}'
         for name, usage, is_num, valid_values in self.arg_defs:
             token += f':<{name}>'

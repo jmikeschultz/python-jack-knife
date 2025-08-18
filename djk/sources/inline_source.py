@@ -26,7 +26,7 @@ class InlineSource(Source):
             desc="simplified json lines format (uses hjson)"
         )
         usage.def_example(expr_tokens=["{hello: 'world!'}"], expect="{hello: 'world!'}")
-        usage.def_example(expr_tokens=["[{id:1},{id:2}]"], expect="[{id:1}, {id:2}]")
+        usage.def_example(expr_tokens=["[{id:1, dir:'up'},{id:2, dir:'down'}]"], expect="[{id:1, dir:'up'}, {id:2, dir:'down'}]")
         return usage
 
     def __init__(self, inline_expr):
@@ -34,14 +34,14 @@ class InlineSource(Source):
         try:
             obj = hjson.loads(inline_expr)
         except HjsonDecodeError:
-            raise TokenError(f'"{inline_expr}"', '<hjson line>', help_msg)
+            raise TokenError('incorrect hjson line syntax')
 
         if isinstance(obj, dict):
             self.records = [obj]
         elif isinstance(obj, list):
             self.records = obj
         else:
-            raise TokenError(f'"{inline_expr}"', '<hjson line>', help_msg)
+            raise TokenError(f'"{inline_expr}"')
 
     def __iter__(self):
         for raw in self.records:

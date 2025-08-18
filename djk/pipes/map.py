@@ -11,10 +11,17 @@ class MapPipe(Pipe, KeyedSource):
     def usage(cls):
         usage = Usage(
             name='map',
-            desc="keyed source map records either overriding or grouping duplicates.",
+            desc="maps records to key, either overriding or grouping duplicates. Creates Keyed Source for join or filter.",
         )
         usage.def_arg(name='how', usage="'o' for override, 'g' for group", valid_values={'o', 'g'})
         usage.def_arg(name='key', usage='comma separated fields to map by')
+        usage.def_example(expr_tokens=["[{id: 1, color:'blue'}, {id:1, color:'green'}, {id:2, color:'red'}]", 'map:o:id'],
+                          expect="[{id:2, color:'red'}, {id:1, color:'green'}]")
+        usage.def_example(expr_tokens=["[{id: 1, color:'blue'}, {id:1, color:'green'}, {id:2, color:'red'}]", 'map:g:id'], 
+                          expect="[{id:2, child:[{color:'red'}]}, {id:1, child:[{color:'blue'},{color: 'green'}]}]")
+        usage.def_example(expr_tokens=["[{id: 1, color:'blue', size:5}, {id:1, color:'green', size:10}]", 'map:o:id,color'], 
+                          expect="[{id:1, color:'green', size: 10}, {id:1, color:'blue', size:5}]")
+
         return usage
 
     def __init__(self, ptok: ParsedToken, usage: Usage):

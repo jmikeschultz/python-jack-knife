@@ -19,6 +19,33 @@ class JoinPipe(Pipe):
             usage="'left', 'inner', or 'outer' join behavior",
             valid_values={'left', 'inner', 'outer'}
         )
+        usage.def_syntax("pjk <left_source> <map_source> map:<how>:<key> join:<mode> <sink>")
+
+        usage.def_example(expr_tokens=
+        [
+            "[{color:'blue'},{color:'green'}]",
+            "[{color:'blue', price:50}, {color:'red', price:20}]",
+            'map:o:color',
+            "join:left"
+        ],
+        expect="[{color:'blue', price:50}, {color:'green'}]")
+        usage.def_example(expr_tokens=
+        [
+            "[{color:'blue'},{color:'green'}]",
+            "[{color:'blue', price:50}, {color:'red', price:20}]",
+            'map:o:color',
+            "join:inner"
+        ],
+        expect="[{color:'blue', price:50}]")
+
+        usage.def_example(expr_tokens=
+        [
+            "[{color:'blue'},{color:'green'}]",
+            "[{color:'blue', price:50}, {color:'red', price:20}]",
+            'map:o:color',
+            "join:outer"
+        ],
+        expect="[{color:'blue', price:50}, {color:'green'}, {color:'red', price: 20}]")
         return usage
 
     def __init__(self, ptok: ParsedToken, usage: Usage):
@@ -36,7 +63,7 @@ class JoinPipe(Pipe):
 
     def __iter__(self):
         if not isinstance(self.right, KeyedSource):
-            raise UsageError("right input to join must be a KeyedSource")
+            raise UsageError("right source must be a KeyedSource")
 
         for left_rec in self.left:
             match = self.right.lookup(left_rec)
@@ -48,7 +75,7 @@ class JoinPipe(Pipe):
             elif self.mode == "left":
                 yield left_rec
             elif self.mode == "outer":
-                continue  # collect unmatched right side later
+                yield left_rec 
             elif self.mode == "inner":
                 continue
 
