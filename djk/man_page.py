@@ -17,7 +17,24 @@ def do_man(name: str):
 
     print(f'unknown: {name}')
 
-def smart_print(expr_tokens: list[str]):
+def highlight(text: str, value: str, color: str = 'bold') -> str:
+    COLOR_CODES = {
+        'bold': '\033[1m',
+        'underline': '\033[4m',
+        'red': '\033[31m',
+        'green': '\033[32m',
+        'yellow': '\033[33m',
+        'blue': '\033[34m',
+        'magenta': '\033[35m',
+        'cyan': '\033[36m',
+        'gray': '\033[90m',
+    }
+
+    RESET = '\033[0m'
+    style = COLOR_CODES.get(color.lower(), COLOR_CODES['bold'])
+    return text.replace(value, f"{style}{value}{RESET}")
+
+def smart_print(expr_tokens: list[str], name: str):
     import re
     SAFE_UNQUOTED_RE = re.compile(r"^[a-zA-Z0-9._/:=+-]+$")
 
@@ -31,9 +48,13 @@ def smart_print(expr_tokens: list[str]):
         else:
             return '"' + token.replace('"', '\\"') + '"'
 
-    print("pjk", " ".join(quote(t) for t in expr_tokens))
+    expr_str = ' '.join(quote(t) for t in expr_tokens)
+    expr_str = highlight(expr_str, name, 'bold')
 
-def print_example(expr_tokens: list[str], expect:str):
+    #print("pjk", " ".join(quote(t) for t in expr_tokens))
+    print('pjk', expr_str)
+
+def print_example(expr_tokens: list[str], expect:str, name: str):
     try:
         if expect: # = None when sink included in expression
             expr_tokens.append(f'expect:{expect}')
@@ -43,12 +64,12 @@ def print_example(expr_tokens: list[str], expect:str):
         sink.drain() # make sure the expect is fulfilled
 
         if not expect:
-            smart_print(expr_tokens)
+            smart_print(expr_tokens, name)
             print()
             return
 
         expr_tokens[-1] = '-' # change sink to expression out
-        smart_print(expr_tokens)
+        smart_print(expr_tokens, name)
         parser = ExpressionParser(expr_tokens)
         sink = parser.parse()
         sink.drain()
@@ -71,7 +92,7 @@ def print_man(name: str, usage: Usage):
     print()
 
     for expr_tokens, expect in usage.get_examples(): # expect in InlineSource format
-        print_example(expr_tokens, expect)
+        print_example(expr_tokens, expect, name)
 
 def do_examples():
     ignores = {'-'}
@@ -90,8 +111,4 @@ def do_examples():
                 print()
 
             for expr_tokens, expect in examples:
-                print_example(expr_tokens, expect)
-            #print(name, comp_class, usage, examples)
-
-        #usage = factory.get_usage(name)
-        #if usage:
+                print_example(expr_tokens, expect, name)
