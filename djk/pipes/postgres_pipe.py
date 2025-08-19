@@ -60,7 +60,8 @@ class PostgresPipe(Pipe):
     def usage(cls):
         usage = Usage(
             name='postgres',
-            desc="Postgres query pipe; reads SQL from record['query'] and DB name from record['db'] (default: postgres)"
+            desc="Postgres query pipe; reads SQL from record['query'] and DB name from record['db'] (default: postgres)",
+            component_class=cls
         )
         usage.def_param('no_header', usage='omit header record before query result', is_num=False, valid_values={'true', 'false'})
         return usage

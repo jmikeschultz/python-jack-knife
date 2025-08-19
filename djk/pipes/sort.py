@@ -10,7 +10,8 @@ class SortPipe(Pipe):
     def usage(cls):
         usage = Usage(
             name='sort',
-            desc="Sort records by a single field (records with missing field sort last)."
+            desc="Sort records by a single field (records with missing field sort last).",
+            component_class=cls
         )
         usage.def_arg(name='field', usage="+name or -name for ascending or decending sort by field 'name'.")
         usage.def_example(expr_tokens=["[{id:17}, {id:10}, {id:1}]", 'sort:+id'], expect="[{id:1}, {id:10}, {id:17}]")

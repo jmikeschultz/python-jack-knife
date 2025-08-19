@@ -11,7 +11,8 @@ class HeadPipe(Pipe):
     def usage(cls):
         usage = Usage(
             name='head',
-            desc='take first records of input (when single-threaded)'
+            desc='take first records of input (when single-threaded)',
+            component_class=cls
         )
         usage.def_arg(name='limit', usage='number of records', is_num=True)
         usage.def_example(expr_tokens=['[{id:1}, {id:2}]', 'head:1'], expect="{id:1}")

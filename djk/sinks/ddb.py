@@ -10,7 +10,8 @@ class DDBSink(Sink):
     def usage(cls):
         usage = Usage(
             name='ddb',
-            desc='Write records to a DynamoDB table via batch_writer()'
+            desc='Write records to a DynamoDB table via batch_writer()',
+            component_class=cls
         )
         usage.def_arg('table', usage='DynamoDB table name')
         usage.def_param('batch_size', usage='How many records to write per batch (max 25)')

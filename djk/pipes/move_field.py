@@ -11,6 +11,7 @@ class MoveField(Pipe):
         usage = Usage(
             name='as',
             desc='Move one field to another key in the record',
+            component_class=cls
         )
         usage.def_arg(name='src', usage='Source field name')
         usage.def_arg(name='dst', usage='Destination field name')

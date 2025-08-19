@@ -99,9 +99,10 @@ class ParsedToken:
         return self._params
     
 class Usage:
-    def __init__(self, name: str, desc: str):
+    def __init__(self, name: str, desc: str, component_class: type):
         self.name = name
         self.desc = desc
+        self.comp_class = component_class
         self.args = {}
         self.params = {}
         self.syntax = None
@@ -109,6 +110,18 @@ class Usage:
         self.arg_defs = []
         self.param_usages = {}
         self.examples = []
+
+    def get_component_class(self):
+        return self.comp_class
+    
+    def get_base_class(self, as_string: bool = False):
+        if issubclass(self.comp_class, Sink):
+            return 'sink' if as_string else Sink
+        elif issubclass(self.comp_class, Pipe):
+            return 'pipe' if as_string else Pipe
+        elif issubclass(self.comp_class, Source):
+            return 'source' if as_string else Source
+        raise 'improper class'
 
     # args and param values default as str
     def def_arg(self, name: str, usage: str, is_num: bool = False, valid_values: Optional[Set[str]] = None):
@@ -135,14 +148,18 @@ class Usage:
     def get_usage_text(self):
         lines = []
         lines.append(self.desc)
-        lines.append('')
-        lines.append(f'syntax:')
-        lines.append(f'  {self.get_token_syntax()}')
+
+        syntax_str = self.get_token_syntax() # might be ''
+        if len(syntax_str) > 0:
+            lines.append('')
+            lines.append(f'syntax:')
+            lines.append(f'  {self.get_token_syntax()}')
+
         lines.extend(f"{line}" for line in self.get_arg_param_desc())
         return '\n'.join(lines)
 
     def get_token_syntax(self):
-        if self.syntax:
+        if self.syntax != None:
             return self.syntax # else piece it together
 
         token = f'{self.name}'
@@ -230,8 +247,8 @@ class Usage:
 # until all usages are implemented a default that doesn't bind
 # they continue to use ParsedToken ptok
 class NoBindUsage(Usage):
-    def __init__(self, name: str, desc: str):
-        super().__init__(name=name, desc=desc)
+    def __init__(self, name: str, desc: str, component_class: type):
+        super().__init__(name=name, desc=desc, component_class=component_class)
     def bind(self, ptok: ParsedToken):
         return
 
@@ -320,7 +337,8 @@ class Sink(ABC):
     def usage(cls):
         return NoBindUsage(
             name=cls.__name__,
-            desc=f"{cls.__name__} component"
+            desc=f"{cls.__name__} component",
+            component_class=cls
         )
     
     def __init__(self, ptok: ParsedToken, usage: Usage = None):
@@ -350,21 +368,22 @@ class IdentitySource(Source):
 
 class ComponentFactory:
     COMPONENTS = {} # name -> component_class
-    HEADER = "COMPONENT" # source pipe sink
+    TYPE = "COMPONENT" # source pipe sink
 
     @classmethod
     def print_descriptions(cls):
-        print(cls.HEADER)
+        print(cls.TYPE + 's')
         for name, comp_class in cls.COMPONENTS.items():
             usage = comp_class.usage()
-
-            print(f'  {name:<12} {usage.desc}')
+            lines = usage.desc.split('\n')
+            print(f'  {name:<12} {lines[0]}')
 
     @classmethod
     def get_usage(cls, name: str):
         comp_class = cls.COMPONENTS.get(name)
         if not comp_class:
             return None
+        
         return comp_class.usage()
 
     @classmethod

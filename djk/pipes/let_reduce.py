@@ -82,7 +82,8 @@ class LetPipe(Pipe):
     def usage(cls):
         usage = NoBindUsage( # can't use bound usage because of complicated parsing
             name='let',
-            desc="set a new field equal to a rhs python expression"
+            desc="set a new field equal to a rhs python expression",
+            component_class=cls
         )
         usage.def_arg(name='rhs', usage="python rhs expression (use f.<field> syntax)")
         usage.def_example(expr_tokens=['{hello:0}', 'let:there=f.hello + 1'], expect="{hello:0, there: 1}")
@@ -126,7 +127,8 @@ class ReducePipe(Pipe):
             name='reduce',
             desc="set a new field equal to a reduction over records of a sub or main expression\n" +
             "rhs operators must be accumulating, e.g. +=, -=, *=, /=\n" +
-            "or use list or dictionary comprehension"
+            "or use list or dictionary comprehension",
+            component_class=cls
         )
         usage.def_arg(name='rhs', usage="accumulating python rhs expression (use f.<field> syntax)")
 

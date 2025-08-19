@@ -15,7 +15,8 @@ class GraphSink(Sink):
     def usage(cls):
         usage = Usage(
             name='graph',
-            desc='Display various kinds of graphs from streamed records'
+            desc='Display various kinds of graphs from streamed records',
+            component_class=cls
         )
         usage.def_arg(name='kind', usage='hist|scatter|bar|line|cumulative')
         usage.def_param(name='x', usage='Name of x-axis field')

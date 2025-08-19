@@ -11,7 +11,8 @@ class TSVSink(CSVSink):
     def usage(cls):
         usage = Usage(
             name='tsv',
-            desc='Write records to a .tsv file (tab-separated values)'
+            desc='Write records to a .tsv file (tab-separated values)',
+            component_class=cls
         )
         usage.def_arg(name='path', usage='Path prefix (no extension)')
         return usage

@@ -12,6 +12,7 @@ class MapPipe(Pipe, KeyedSource):
         usage = Usage(
             name='map',
             desc="maps records to key, either overriding or grouping duplicates. Creates Keyed Source for join or filter.",
+            component_class=cls
         )
         usage.def_arg(name='how', usage="'o' for override, 'g' for group", valid_values={'o', 'g'})
         usage.def_arg(name='key', usage='comma separated fields to map by')

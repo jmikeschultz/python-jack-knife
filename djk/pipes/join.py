@@ -12,7 +12,8 @@ class JoinPipe(Pipe):
     def usage(cls):
         usage = Usage(
             name='join',
-            desc="Join records against a keyed source on shared fields"
+            desc="Join records against a keyed source on shared fields",
+            component_class=cls
         )
         usage.def_arg(
             name='mode',

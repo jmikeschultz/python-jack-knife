@@ -51,7 +51,7 @@ def main():
     
     if len(sys.argv) < 2:
         print('Usage: pjk <source> [<pipe> ...] <sink>')
-        print('       pjk man <component>')
+        print('       pjk man <component> or pjk man --all')
         print('       pjk examples')
         print()
         SourceFactory.print_descriptions()

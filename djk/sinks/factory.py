@@ -16,7 +16,7 @@ from djk.sinks.expect import ExpectSink
 from djk.sinks.user_sink_factory import UserSinkFactory
 
 class SinkFactory(ComponentFactory):
-    HEADER = 'SINKS'
+    TYPE = 'sink'
     COMPONENTS = {
         '-': StdoutSink,
         'devnull': DevNullSink,

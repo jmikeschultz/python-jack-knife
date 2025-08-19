@@ -11,7 +11,8 @@ class WherePipe(Pipe):
     def usage(cls):
         usage = Usage(
             name='where',
-            desc="Filter records using a Python expression over fields"
+            desc="Filter records using a Python expression over fields",
+            component_class=cls
         )
         usage.def_arg(name='expr', usage='Python expression using `f.<field>` syntax')
         usage.def_example(expr_tokens=["[{size:1}, {size:5}, {size:10}]", "where:f.size >= 5"], expect="[{size:5}, {size:10}]")

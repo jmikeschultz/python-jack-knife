@@ -3,13 +3,17 @@
 
 import sys
 import csv
-from djk.base import Source
+from djk.base import Source, NoBindUsage
+from djk.sources.format_usage import FormatUsage
 from djk.sources.lazy_file import LazyFile
 
 csv.field_size_limit(sys.maxsize)
 
 class CSVSource(Source):
     is_format = True
+    @classmethod
+    def usage(cls):
+        return FormatUsage('csv', 'csv source for local files and directories and also s3', component_class=cls)
 
     def __init__(self, lazy_file: LazyFile, delimiter: str = ","):
         self.lazy_file = lazy_file

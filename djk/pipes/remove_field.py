@@ -10,7 +10,8 @@ class RemoveField(Pipe):
     def usage(cls):
         usage = Usage(
             name='drop',
-            desc='Remove one or more fields from each record'
+            desc='Remove one or more fields from each record',
+            component_class=cls
         )
         usage.def_arg(name='fields', usage='Comma-separated list of field names to drop')
         usage.def_example(expr_tokens=["{id:1, dir:'up', color:'blue'}", 'drop:id,color'], expect="dir: 'up'")

@@ -11,7 +11,8 @@ class CSVSink(Sink):
     def usage(cls):
         usage = Usage(
             name='csv',
-            desc='Write records to a CSV file with dynamic header from first record'
+            desc='Write records to a CSV file with dynamic header from first record',
+            component_class=cls
         )
         usage.def_arg('path', usage='Path prefix (no extension)')
         usage.def_param('delim', usage='CSV delimiter (default: ",")')

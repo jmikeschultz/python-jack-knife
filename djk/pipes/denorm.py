@@ -39,7 +39,8 @@ class DenormPipe(Pipe):
     def usage(cls):
         usage = Usage(
             name='explode',
-            desc='Explode a nested list/dict field into separate flattened records'
+            desc='Explode a nested list/dict field into separate flattened records',
+            component_class=cls
         )
         usage.def_arg(name='field', usage='Field to explode')
         usage.def_example(expr_tokens=["{ferry:'orca', cars:[{make: 'ford', size:9}, {make:'bmw', size:4}]}",

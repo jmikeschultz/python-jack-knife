@@ -20,7 +20,7 @@ from djk.pipes.postgres_pipe import PostgresPipe
 from djk.pipes.user_pipe_factory import UserPipeFactory
 
 class PipeFactory(ComponentFactory):
-    HEADER = 'PIPES'
+    TYPE = 'pipe'
     COMPONENTS = {
         'head': HeadPipe,
         'tail': TailPipe,

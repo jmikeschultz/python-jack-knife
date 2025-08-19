@@ -18,14 +18,13 @@ from djk.sources.parquet_source import ParquetSource
 #from djk.sources.postgres import PostgresSource
 
 class SourceFactory(ComponentFactory):
-    HEADER = 'SOURCES'
+    TYPE = 'source'
     COMPONENTS = {
         'inline': InlineSource,
         'json': JsonSource,
         'csv': CSVSource,
         'tsv': TSVSource,
         'parquet': ParquetSource,
-        's3': S3Source
     }
 
     @classmethod

@@ -6,19 +6,8 @@ from djk.sources.factory import SourceFactory
 from djk.sinks.factory import SinkFactory
 from djk.parser import ExpressionParser
 from djk.base import Usage
-import shlex
 
-def do_man(name: str):
-    for factory in [SourceFactory, PipeFactory, SinkFactory]:
-        usage = factory.get_usage(name)
-        if usage:
-            print_man(name, usage)
-            return
-
-    print(f'unknown: {name}')
-
-def highlight(text: str, value: str, color: str = 'bold') -> str:
-    COLOR_CODES = {
+COLOR_CODES = {
         'bold': '\033[1m',
         'underline': '\033[4m',
         'red': '\033[31m',
@@ -30,7 +19,34 @@ def highlight(text: str, value: str, color: str = 'bold') -> str:
         'gray': '\033[90m',
     }
 
-    RESET = '\033[0m'
+RESET = '\033[0m'
+
+def do_all_man():
+    for factory in [SourceFactory, PipeFactory, SinkFactory]:
+        comp_type = factory.TYPE
+        for name in factory.COMPONENTS.keys():
+            usage = factory.get_usage(name)
+            print_man(name, usage)
+            print()
+
+def do_man(name: str):
+    if '--all' in name:
+        do_all_man()
+        return
+
+    # source and sinks have common names so go through multiple times
+    printed = False
+    for factory in [SourceFactory, PipeFactory, SinkFactory]:
+        usage = factory.get_usage(name)
+        if usage:
+            print_man(name, usage)
+            printed = True
+
+    if not printed:
+        print(f'unknown: {name}')
+
+def highlight(text: str, value: str, color: str = 'bold') -> str:
+    
     style = COLOR_CODES.get(color.lower(), COLOR_CODES['bold'])
     return text.replace(value, f"{style}{value}{RESET}")
 
@@ -56,17 +72,15 @@ def smart_print(expr_tokens: list[str], name: str):
 
 def print_example(expr_tokens: list[str], expect:str, name: str):
     try:
-        if expect: # = None when sink included in expression
-            expr_tokens.append(f'expect:{expect}')
-
-        parser = ExpressionParser(expr_tokens)
-        sink = parser.parse()
-        sink.drain() # make sure the expect is fulfilled
-
-        if not expect:
+        if not expect: # if no expect, don't run them, just print them
             smart_print(expr_tokens, name)
             print()
             return
+
+        expr_tokens.append(f'expect:{expect}')
+        parser = ExpressionParser(expr_tokens)
+        sink = parser.parse()
+        sink.drain() # make sure the expect is fulfilled
 
         expr_tokens[-1] = '-' # change sink to expression out
         smart_print(expr_tokens, name)
@@ -79,7 +93,10 @@ def print_example(expr_tokens: list[str], expect:str, name: str):
         raise 'error executing example'
 
 def print_man(name: str, usage: Usage):
-    print(name)
+    comp_type = usage.get_base_class(as_string=True)
+    header = f'{name} is a {comp_type}'
+    print(highlight(header, name, 'bold'))
+
     print()
     print(usage.get_usage_text())
 
@@ -95,14 +112,12 @@ def print_man(name: str, usage: Usage):
         print_example(expr_tokens, expect, name)
 
 def do_examples():
-    ignores = {'-'}
-
     for factory in [SourceFactory, PipeFactory, SinkFactory]:
-        print(factory.HEADER)
-        print()
+        comp_type = factory.TYPE
         for name, comp_class in factory.COMPONENTS.items():
-            if name in ignores:
-                continue
+
+            header = f'{comp_type}:{name}'
+            print(highlight(header, comp_type, 'bold'))
 
             usage = comp_class.usage()
             examples = usage.get_examples()

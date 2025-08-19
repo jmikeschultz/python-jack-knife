@@ -10,7 +10,8 @@ class FilterPipe(Pipe):
     def usage(cls):
         usage = Usage(
             name="filter",
-            desc="Filters left records based on presence in right keyed source"
+            desc="Filters left records based on presence in right keyed source",
+            component_class=cls
         )
         usage.def_arg("mode", "'+' to include matches, '-' to exclude matches",
                       valid_values={'+', '-'})

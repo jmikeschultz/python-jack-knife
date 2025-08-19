@@ -10,7 +10,8 @@ class DevNullSink(Sink):
     def usage(cls):
         usage = Usage(
             name='devnull',
-            desc='Consume all input records and discard them (debug/testing)'
+            desc='Consume all input records and discard them (debug/testing)',
+            component_class=cls
         )
         usage.def_example(expr_tokens=['{id:1}', 'devnull'], expect=None)
         return usage

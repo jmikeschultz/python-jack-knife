@@ -23,8 +23,10 @@ class InlineSource(Source):
     def usage(cls):
         usage = Usage(
             name='inline',
-            desc="simplified json lines format (uses hjson)"
+            desc="simplified json lines format (uses hjson)",
+            component_class=cls
         )
+        usage.def_syntax('')
         usage.def_example(expr_tokens=["{hello: 'world!'}"], expect="{hello: 'world!'}")
         usage.def_example(expr_tokens=["[{id:1, dir:'up'},{id:2, dir:'down'}]"], expect="[{id:1, dir:'up'}, {id:2, dir:'down'}]")
         return usage
