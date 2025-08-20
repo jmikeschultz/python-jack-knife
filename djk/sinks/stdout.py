@@ -3,48 +3,41 @@
 
 import sys
 import yaml
-import subprocess
-import shutil
 from djk.base import Sink, Source, ParsedToken, Usage
+from djk.common import pager_stdout
 
 class StdoutSink(Sink):
+    @classmethod
+    def usage(cls):
+        usage = Usage(
+            name='-',
+            desc='less-like display records in yaml format to stdout',
+            component_class=cls
+        )
+        usage.def_param('less', usage='use less to display (default=true)', valid_values=['true', 'false'])
+        return usage
+    
     def __init__(self, ptok: ParsedToken, usage: Usage):
         super().__init__(ptok, usage)
 
         # NOTE: self.use_pager is hardcoded for now; override via constructor if needed
-        self.use_pager = True
-        self.suppress_report = True
+        self.use_pager = True if usage.get_param('less') == None else usage.get_param('less') == 'true'
 
     def process(self) -> None:
-        output_stream = sys.stdout
-        pager_proc = None
-
-        if self.use_pager and shutil.which("less"):
-            pager_proc = subprocess.Popen(
-                ["less", "-FRSX"],
-                stdin=subprocess.PIPE,
-                text=True
-            )
-            output_stream = pager_proc.stdin
-
+        # Route all stdout into `less` while dumping
         try:
-            for record in self.input:
-                try:
-                    yaml.dump(
-                        record,
-                        output_stream,
-                        sort_keys=False,
-                        explicit_start=True,
-                        width=float("inf")
-                    )
-                except BrokenPipeError:
-                    break  # user quit pager
+            with pager_stdout(self.use_pager):
+                for record in self.input:
+                    try:
+                        yaml.dump(
+                            record,
+                            sys.stdout,          # now points to less (if enabled)
+                            sort_keys=False,
+                            explicit_start=True,
+                            width=10**9          # effectively no wrap without using a float
+                        )
+                    except BrokenPipeError:
+                        break  # user quit pager
         except BrokenPipeError:
+            # Swallow if pager closed early
             pass
-        finally:
-            if pager_proc:
-                try:
-                    output_stream.close()
-                except BrokenPipeError:
-                    pass
-                pager_proc.wait()

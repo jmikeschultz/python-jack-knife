@@ -4,7 +4,7 @@
 # djk/pipes/let_reduce.py
 
 from djk.base import Pipe, ParsedToken, NoBindUsage, Usage, UsageError, TokenError
-from djk.pipes.common import SafeNamespace, ReducingNamespace
+from djk.common import SafeNamespace, ReducingNamespace
 import re
 import ast
 import json

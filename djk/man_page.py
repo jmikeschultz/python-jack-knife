@@ -6,6 +6,7 @@ from djk.sources.factory import SourceFactory
 from djk.sinks.factory import SinkFactory
 from djk.parser import ExpressionParser
 from djk.base import Usage
+from djk.common import pager_stdout
 
 COLOR_CODES = {
         'bold': '\033[1m',
@@ -22,12 +23,13 @@ COLOR_CODES = {
 RESET = '\033[0m'
 
 def do_all_man():
-    for factory in [SourceFactory, PipeFactory, SinkFactory]:
-        comp_type = factory.TYPE
-        for name in factory.COMPONENTS.keys():
-            usage = factory.get_usage(name)
-            print_man(name, usage)
-            print()
+    with pager_stdout():
+        for factory in [SourceFactory, PipeFactory, SinkFactory]:
+            comp_type = factory.TYPE
+            for name in factory.COMPONENTS.keys():
+                usage = factory.get_usage(name)
+                print_man(name, usage)
+                print()
 
 def do_man(name: str):
     if '--all' in name:
@@ -82,8 +84,9 @@ def print_example(expr_tokens: list[str], expect:str, name: str):
         sink = parser.parse()
         sink.drain() # make sure the expect is fulfilled
 
-        expr_tokens[-1] = '-' # change sink to expression out
+        expr_tokens[-1] = '-' # for printing so you see simple stdout -
         smart_print(expr_tokens, name)
+        expr_tokens[-1] = '-@less=false' # no less since man is doing less
         parser = ExpressionParser(expr_tokens)
         sink = parser.parse()
         sink.drain()
@@ -112,18 +115,19 @@ def print_man(name: str, usage: Usage):
         print_example(expr_tokens, expect, name)
 
 def do_examples():
-    for factory in [SourceFactory, PipeFactory, SinkFactory]:
-        comp_type = factory.TYPE
-        for name, comp_class in factory.COMPONENTS.items():
+    with pager_stdout():
+        for factory in [SourceFactory, PipeFactory, SinkFactory]:
+            comp_type = factory.TYPE
+            for name, comp_class in factory.COMPONENTS.items():
 
-            header = f'{comp_type}:{name}'
-            print(highlight(header, comp_type, 'bold'))
+                header = f'{comp_type}:{name}'
+                print(highlight(header, comp_type, 'bold'))
 
-            usage = comp_class.usage()
-            examples = usage.get_examples()
-            if not examples:
-                print(f'{name} needs examples')
-                print()
+                usage = comp_class.usage()
+                examples = usage.get_examples()
+                if not examples:
+                    print(f'{name} needs examples')
+                    print()
 
-            for expr_tokens, expect in examples:
-                print_example(expr_tokens, expect, name)
+                for expr_tokens, expect in examples:
+                    print_example(expr_tokens, expect, name)

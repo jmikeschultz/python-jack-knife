@@ -4,7 +4,7 @@
 # djk/pipes/where.py
 
 from djk.base import Pipe, ParsedToken, Usage, UsageError
-from djk.pipes.common import SafeNamespace
+from djk.common import SafeNamespace
 
 class WherePipe(Pipe):
     @classmethod
