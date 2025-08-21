@@ -98,7 +98,9 @@ def print_example(expr_tokens: list[str], expect:str, name: str):
 def print_man(name: str, usage: Usage):
     comp_type = usage.get_base_class(as_string=True)
     header = f'{name} is a {comp_type}'
-    print(highlight(header, name, 'bold'))
+    print('===================================')
+    print('        ', highlight(header, name, 'bold'))
+    print('===================================')
 
     print()
     print(usage.get_usage_text())
@@ -119,11 +121,14 @@ def do_examples():
         for factory in [SourceFactory, PipeFactory, SinkFactory]:
             comp_type = factory.TYPE
             for name, comp_class in factory.COMPONENTS.items():
-
-                header = f'{comp_type}:{name}'
-                print(highlight(header, comp_type, 'bold'))
-
                 usage = comp_class.usage()
+
+                comp_type = usage.get_base_class(as_string=True)
+                header = f'{name} is a {comp_type}'
+                print('===================================')
+                print('        ', highlight(header, name, 'bold'))
+                print('===================================')
+
                 examples = usage.get_examples()
                 if not examples:
                     print(f'{name} needs examples')

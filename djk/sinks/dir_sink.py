@@ -10,7 +10,8 @@ class DirSink(Sink):
     def usage(cls):
         usage = Usage(
             name='<format>',
-            desc='Write records to a local directory in the given <format> (e.g., csv)'
+            desc='Write records to a local directory in the given <format> (e.g., csv)',
+            component_class=cls
         )
         usage.def_arg(name='dir', usage='Path to output directory')
         return usage

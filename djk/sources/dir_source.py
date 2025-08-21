@@ -53,7 +53,7 @@ class DirSource(Source):
 
         source_queue = Queue()
         for file in files:
-            file_token = file if not override else f"{file} format={override}"
+            file_token = file if not override else f"{file}@format={override}"
             file_ptok = ParsedToken(file_token)
 
             format_class, is_gz = get_format_class_gz(file_ptok)

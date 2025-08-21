@@ -53,7 +53,7 @@ class S3Source(Source):
             for obj in page.get("Contents", []):
                 key = obj["Key"]
 
-                file_token = key if not override else f"{key} format={override}"
+                file_token = key if not override else f"{key}@format={override}"
                 file_ptok = ParsedToken(file_token)
 
                 format_class, is_gz = get_format_class_gz(file_ptok)

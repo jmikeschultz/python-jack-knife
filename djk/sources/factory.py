@@ -34,7 +34,7 @@ class SourceFactory(ComponentFactory):
 
         lookup = None
 
-        is_gz = False
+        is_gz = ptok.all_but_params.endswith('gz')
         if override:
             if override.endswith('.gz'):
                 is_gz = True

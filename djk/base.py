@@ -167,7 +167,7 @@ class Usage:
             token += f':<{name}>'
 
         for name, (usage, is_num, valid_values) in self.param_usages.items():
-            value_display = self.name
+            value_display = name
             if valid_values:
                 value_display  = '|'.join(list(valid_values))
             token += f'@{name}=<{value_display}>'
@@ -280,7 +280,8 @@ class Source(ABC):
     def usage(cls):
         return NoBindUsage(
             name=cls.__name__,
-            desc=f"{cls.__name__} component"
+            desc=f"{cls.__name__} component",
+            component_class=cls
         )
 
     @abstractmethod
