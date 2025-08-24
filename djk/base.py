@@ -3,6 +3,7 @@
 
 from abc import ABC, abstractmethod
 from typing import Any, Optional, List, Set
+from djk.common import highlight
 
 class TokenError(ValueError):
     @classmethod
@@ -381,15 +382,19 @@ class ComponentFactory:
         return self.comp_type_name
 
     def print_descriptions(self):
-        print(f'{self.comp_type_name}s')
+        header = highlight(f'{self.comp_type_name}s')
+        print(header)
+
         i = 0
         plugin = ''
         for name, comp_class in self.components.items():
             usage = comp_class.usage()
             lines = usage.desc.split('\n')
             if i >= self.num_orig_comps:
-                plugin = 'PLUGIN'
-            print(f'  {name:<12} {lines[0]} {plugin}')
+                plugin = '(~/.pjk/plugin)'
+            line = f'  {name:<12} {lines[0]} {plugin}'
+            line = highlight(line, 'bold', plugin) if plugin else line
+            print(line)
             i += 1
 
     def get_usage(self, name: str):

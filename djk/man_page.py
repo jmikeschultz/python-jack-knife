@@ -7,25 +7,7 @@ from djk.sinks.factory import SinkFactory
 from djk.parser import ExpressionParser
 from djk.base import Usage
 from djk.registry import ComponentRegistry
-from djk.common import pager_stdout
-
-COLOR_CODES = {
-        'bold': '\033[1m',
-        'underline': '\033[4m',
-        'red': '\033[31m',
-        'green': '\033[32m',
-        'yellow': '\033[33m',
-        'blue': '\033[34m',
-        'magenta': '\033[35m',
-        'cyan': '\033[36m',
-        'gray': '\033[90m',
-    }
-
-RESET = '\033[0m'
-
-def highlight(text: str, value: str, color: str = 'bold') -> str:
-    style = COLOR_CODES.get(color.lower(), COLOR_CODES['bold'])
-    return text.replace(value, f"{style}{value}{RESET}")
+from djk.common import pager_stdout, highlight
 
 def smart_print(expr_tokens: list[str], name: str):
     import re
@@ -42,7 +24,7 @@ def smart_print(expr_tokens: list[str], name: str):
             return '"' + token.replace('"', '\\"') + '"'
 
     expr_str = ' '.join(quote(t) for t in expr_tokens)
-    expr_str = highlight(expr_str, name, 'bold')
+    expr_str = highlight(expr_str, 'bold', name)
 
     #print("pjk", " ".join(quote(t) for t in expr_tokens))
     print('pjk', expr_str)
@@ -76,7 +58,7 @@ def print_man(registry: ComponentRegistry, name: str, usage: Usage):
     comp_type = usage.get_base_class(as_string=True)
     header = f'{name} is a {comp_type}'
     print('===================================')
-    print('        ', highlight(header, name, 'bold'))
+    print('        ', highlight(header, 'bold', name))
     print('===================================')
 
     print()
@@ -103,7 +85,7 @@ def do_examples(registry: ComponentRegistry):
                 comp_type = usage.get_base_class(as_string=True)
                 header = f'{name} is a {comp_type}'
                 print('===================================')
-                print('        ', highlight(header, name, 'bold'))
+                print('        ', highlight(header, 'bold', name))
                 print('===================================')
 
                 examples = usage.get_examples()

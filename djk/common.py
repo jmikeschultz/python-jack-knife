@@ -1,7 +1,6 @@
 # SPDX-License-Identifier: Apache-2.0
 # Copyright 2024 Mike Schultz
 
-from djk.base import Source, Pipe, UsageError
 import sys, shutil, subprocess, contextlib, signal
 
 class SafeNamespace:
@@ -51,3 +50,22 @@ def pager_stdout(use_pager=True):
             pager.wait()
     else:
         yield
+
+COLOR_CODES = {
+        'bold': '\033[1m',
+        'underline': '\033[4m',
+        'red': '\033[31m',
+        'green': '\033[32m',
+        'yellow': '\033[33m',
+        'blue': '\033[34m',
+        'magenta': '\033[35m',
+        'cyan': '\033[36m',
+        'gray': '\033[90m',
+    }
+
+RESET = '\033[0m'
+
+def highlight(text: str, color: str = 'bold', value: str = None) -> str:
+    value = text if not value else value
+    style = COLOR_CODES.get(color.lower(), COLOR_CODES['bold'])
+    return text.replace(value, f"{style}{value}{RESET}")

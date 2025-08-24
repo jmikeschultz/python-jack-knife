@@ -33,7 +33,7 @@ COMPONENTS = {
         'where': WherePipe,
         'sel': SelectFields,
         'explode': DenormPipe,
-        'postgres': PostgresPipe,
+        'pgres': PostgresPipe,
     }
 
 class PipeFactory(ComponentFactory):
