@@ -15,11 +15,8 @@ from djk.sources.user_source_factory import UserSourceFactory
 from djk.sources.lazy_file import LazyFile
 from djk.sources.lazy_file_local import LazyFileLocal
 from djk.sources.parquet_source import ParquetSource
-#from djk.sources.postgres import PostgresSource
 
-class SourceFactory(ComponentFactory):
-    TYPE = 'source'
-    COMPONENTS = {
+COMPONENTS = {
         'inline': InlineSource,
         'json': JsonSource,
         'csv': CSVSource,
@@ -27,8 +24,12 @@ class SourceFactory(ComponentFactory):
         'parquet': ParquetSource,
     }
 
-    @classmethod
-    def get_format_class_gz(cls, ptok: ParsedToken):
+class SourceFactory(ComponentFactory):
+    def __init__(self):
+        super().__init__(COMPONENTS, 'source')
+    
+
+    def get_format_class_gz(self, ptok: ParsedToken):
         params = ptok.get_params()
         override = params.get('format', None) # e.g. json or json.gz
 
@@ -50,7 +51,7 @@ class SourceFactory(ComponentFactory):
             path, ext = os.path.splitext(path) # e.g path=foo.json
             lookup = ext.removeprefix('.')
             
-        format_class = cls.COMPONENTS.get(lookup, None)
+        format_class = self.components.get(lookup, None)
         if not format_class:
             return None, None
         
@@ -60,8 +61,7 @@ class SourceFactory(ComponentFactory):
 
         return format_class, is_gz
 
-    @classmethod
-    def create(cls, token: str) -> Source:
+    def create(self, token: str) -> Source:
         token = token.strip()
 
         if InlineSource.is_inline(token):
@@ -75,14 +75,14 @@ class SourceFactory(ComponentFactory):
                 return source
 
         if ptok.all_but_params.startswith('s3'):
-            return S3Source.create(ptok, get_format_class_gz=cls.get_format_class_gz)
+            return S3Source.create(ptok, get_format_class_gz=self.get_format_class_gz)
 
         if os.path.isdir(ptok.all_but_params):
-            return DirSource.create(ptok, get_format_class_gz=cls.get_format_class_gz)
+            return DirSource.create(ptok, get_format_class_gz=self.get_format_class_gz)
 
         # individual file
         if os.path.isfile(ptok.all_but_params):
-            source_class, is_gz = cls.get_format_class_gz(ptok)
+            source_class, is_gz = self.get_format_class_gz(ptok)
             if source_class:
                 lazy_file = LazyFileLocal(ptok.all_but_params, is_gz)
                 return source_class(lazy_file)

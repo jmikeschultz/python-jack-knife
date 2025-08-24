@@ -19,9 +19,7 @@ from djk.pipes.denorm import DenormPipe
 from djk.pipes.postgres_pipe import PostgresPipe
 from djk.pipes.user_pipe_factory import UserPipeFactory
 
-class PipeFactory(ComponentFactory):
-    TYPE = 'pipe'
-    COMPONENTS = {
+COMPONENTS = {
         'head': HeadPipe,
         'tail': TailPipe,
         'join': JoinPipe,
@@ -38,8 +36,11 @@ class PipeFactory(ComponentFactory):
         'postgres': PostgresPipe,
     }
 
-    @classmethod
-    def create(cls, token: str) -> Pipe:
+class PipeFactory(ComponentFactory):
+    def __init__(self):
+        super().__init__(COMPONENTS, 'pipe')
+
+    def create(self, token: str) -> Pipe:
 
         ptok = ParsedToken(token)
         if ptok.pre_colon.endswith('.py'):
@@ -47,7 +48,7 @@ class PipeFactory(ComponentFactory):
             if pipe:
                 return pipe # else keep looking
 
-        pipe_cls = cls.COMPONENTS.get(ptok.pre_colon)
+        pipe_cls = self.components.get(ptok.pre_colon)
 
         if not pipe_cls:
             return None

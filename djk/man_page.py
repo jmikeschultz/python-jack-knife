@@ -6,6 +6,7 @@ from djk.sources.factory import SourceFactory
 from djk.sinks.factory import SinkFactory
 from djk.parser import ExpressionParser
 from djk.base import Usage
+from djk.registry import ComponentRegistry
 from djk.common import pager_stdout
 
 COLOR_CODES = {
@@ -22,33 +23,7 @@ COLOR_CODES = {
 
 RESET = '\033[0m'
 
-def do_all_man():
-    with pager_stdout():
-        for factory in [SourceFactory, PipeFactory, SinkFactory]:
-            comp_type = factory.TYPE
-            for name in factory.COMPONENTS.keys():
-                usage = factory.get_usage(name)
-                print_man(name, usage)
-                print()
-
-def do_man(name: str):
-    if '--all' in name:
-        do_all_man()
-        return
-
-    # source and sinks have common names so go through multiple times
-    printed = False
-    for factory in [SourceFactory, PipeFactory, SinkFactory]:
-        usage = factory.get_usage(name)
-        if usage:
-            print_man(name, usage)
-            printed = True
-
-    if not printed:
-        print(f'unknown: {name}')
-
 def highlight(text: str, value: str, color: str = 'bold') -> str:
-    
     style = COLOR_CODES.get(color.lower(), COLOR_CODES['bold'])
     return text.replace(value, f"{style}{value}{RESET}")
 
@@ -72,30 +47,32 @@ def smart_print(expr_tokens: list[str], name: str):
     #print("pjk", " ".join(quote(t) for t in expr_tokens))
     print('pjk', expr_str)
 
-def print_example(expr_tokens: list[str], expect:str, name: str):
-    try:
-        if not expect: # if no expect, don't run them, just print them
-            smart_print(expr_tokens, name)
-            print()
-            return
+def do_man(name: str, registry: ComponentRegistry):
+    if '--all' in name:
+        do_all_man(registry)
+        return
 
-        expr_tokens.append(f'expect:{expect}')
-        parser = ExpressionParser(expr_tokens)
-        sink = parser.parse()
-        sink.drain() # make sure the expect is fulfilled
+    # source and sinks have common names so go through multiple times
+    printed = False
+    for factory in registry.get_factories():
+        usage = factory.get_usage(name)
+        if usage:
+            print_man(registry, name, usage)
+            printed = True
 
-        expr_tokens[-1] = '-' # for printing so you see simple stdout -
-        smart_print(expr_tokens, name)
-        expr_tokens[-1] = '-@less=false' # no less since man is doing less
-        parser = ExpressionParser(expr_tokens)
-        sink = parser.parse()
-        sink.drain()
-        print()
+    if not printed:
+        print(f'unknown: {name}')
 
-    except ValueError as e:
-        raise 'error executing example'
+def do_all_man(registry: ComponentRegistry):
+    with pager_stdout():
+        for factory in registry.get_factories():
+            comp_type = factory.get_comp_type_name()
+            for name in factory.components.keys():
+                usage = factory.get_usage(name)
+                print_man(registry, name, usage)
+                print()
 
-def print_man(name: str, usage: Usage):
+def print_man(registry: ComponentRegistry, name: str, usage: Usage):
     comp_type = usage.get_base_class(as_string=True)
     header = f'{name} is a {comp_type}'
     print('===================================')
@@ -114,13 +91,13 @@ def print_man(name: str, usage: Usage):
     print()
 
     for expr_tokens, expect in usage.get_examples(): # expect in InlineSource format
-        print_example(expr_tokens, expect, name)
+        print_example(registry, expr_tokens, expect, name)
 
-def do_examples():
+def do_examples(registry: ComponentRegistry):
     with pager_stdout():
-        for factory in [SourceFactory, PipeFactory, SinkFactory]:
-            comp_type = factory.TYPE
-            for name, comp_class in factory.COMPONENTS.items():
+        for factory in registry.get_factories():
+            comp_type = factory.get_comp_type_name()
+            for name, comp_class in factory.components.items():
                 usage = comp_class.usage()
 
                 comp_type = usage.get_base_class(as_string=True)
@@ -135,4 +112,27 @@ def do_examples():
                     print()
 
                 for expr_tokens, expect in examples:
-                    print_example(expr_tokens, expect, name)
+                    print_example(registry, expr_tokens, expect, name)
+
+def print_example(registry: ComponentRegistry, expr_tokens: list[str], expect:str, name: str):
+    try:
+        if not expect: # if no expect, don't run them, just print them
+            smart_print(expr_tokens, name)
+            print()
+            return
+
+        expr_tokens.append(f'expect:{expect}')
+        parser = ExpressionParser(registry)
+        sink = parser.parse(expr_tokens)
+        sink.drain() # make sure the expect is fulfilled
+
+        expr_tokens[-1] = '-' # for printing so you see simple stdout -
+        smart_print(expr_tokens, name)
+        expr_tokens[-1] = '-@less=false' # no less since man is doing less
+        parser = ExpressionParser(registry)
+        sink = parser.parse(expr_tokens)
+        sink.drain()
+        print()
+
+    except ValueError as e:
+        raise 'error executing example'

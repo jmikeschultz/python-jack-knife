@@ -6,11 +6,9 @@ import os
 import shlex
 from typing import Optional, Any, List
 from djk.base import Source, Pipe, Sink, TokenError, UsageError, ParsedToken, Usage
-from djk.pipes.factory import PipeFactory
 from djk.pipes.user_pipe_factory import UserPipeFactory
 from djk.pipes.let_reduce import ReducePipe
-from djk.sinks.factory import SinkFactory
-from djk.sources.factory import SourceFactory
+from djk.registry import ComponentRegistry
 
 def expand_macros(tokens: List[str]) -> List[str]:
     expanded = []
@@ -35,9 +33,9 @@ def expand_macros(tokens: List[str]) -> List[str]:
     return expanded
 
 class ExpressionParser:
-    def __init__(self, tokens: List[str]):
-        self.tokens = expand_macros(tokens)
+    def __init__(self, registry: ComponentRegistry):
         self.stack: List[Any] = []
+        self.registry = registry
 
     def get_sink(self, stack_helper, token):
         if len(self.stack) < 1:
@@ -55,7 +53,7 @@ class ExpressionParser:
             aggregator.add_source(source)
             source = aggregator
 
-        sink = SinkFactory.create(token)
+        sink = self.registry.create_sink(token)
         
         if not sink:
             raise TokenError.from_list(['expression must end in a sink.',
@@ -64,7 +62,8 @@ class ExpressionParser:
         sink.add_source(source)
         return sink
 
-    def parse(self) -> Sink:
+    def parse(self, tokens: List[str]) -> Sink:
+        self.tokens = expand_macros(tokens)
         usage_error_message = "You've got a problem here."
         stack_helper = StackLoader()
         pos = 0
@@ -78,7 +77,7 @@ class ExpressionParser:
                 if pos == len(self.tokens) - 1: # token should be THE sink
                     return self.get_sink(stack_helper, token)
                     
-                source = SourceFactory.create(token)
+                source = self.registry.create_source(token)
                 if source:
                     stack_helper.add_operator(source, self.stack)
                     continue
@@ -88,14 +87,14 @@ class ExpressionParser:
                     stack_helper.add_operator(subexp, self.stack)
                     continue
 
-                pipe = PipeFactory.create(token)
+                pipe = self.registry.create_pipe(token)
                 if pipe:
                     stack_helper.add_operator(pipe, self.stack)
                     continue
 
                 else: # unrecognized token
                     # could be sink in WRONG position, let's see for better error message
-                    sink = SinkFactory.create(token, None) 
+                    sink = self.registry.create_sink(token, None) 
                     if sink:
                         raise TokenError.from_list(['sink may only occur in final position.',
                                             'pjk <source> [<pipe> ...] <sink>'])
@@ -103,7 +102,7 @@ class ExpressionParser:
         
         except TokenError as e:
             raise UsageError(usage_error_message, self.tokens, pos, e)
-
+    
 class ReducerAggregatorPipe(Pipe):
     def __init__(self, top_level_reducers: List[Any]):
         super().__init__(None)

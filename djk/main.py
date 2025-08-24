@@ -11,6 +11,7 @@ import sys
 import os
 from datetime import datetime, timezone
 import concurrent.futures
+from djk.registry import ComponentRegistry
 from djk.pipes.factory import PipeFactory
 from djk.sources.factory import SourceFactory
 from djk.sinks.factory import SinkFactory
@@ -49,33 +50,27 @@ def main():
         print(f"pjk version {__version__}")
         sys.exit(0)
     
+    registry = ComponentRegistry()
+       
     if len(sys.argv) < 2:
-        print('Usage: pjk <source> [<pipe> ...] <sink>')
-        print('       pjk man <component> or pjk man --all')
-        print('       pjk examples')
-        print()
-        SourceFactory.print_descriptions()
-        print()
-        PipeFactory.print_descriptions()
-        print()
-        SinkFactory.print_descriptions()
+        registry.print_usage()
         return
 
     init_logging()
     tokens = sys.argv[1:]
 
     if len(tokens) == 2 and tokens[0] == 'man':
-        do_man(tokens[1])
+        do_man(tokens[1], registry)
         return
     if len(tokens) == 1 and tokens[0] == 'examples':
-        do_examples()
+        do_examples(registry)
         return
 
-    parser = ExpressionParser(tokens)
+    parser = ExpressionParser(registry)
 
     try:
         # Build initial sink
-        sink = parser.parse()
+        sink = parser.parse(tokens)
 
         sinks = [sink]
         max_threads = os.cpu_count()

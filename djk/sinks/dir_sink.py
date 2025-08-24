@@ -46,11 +46,13 @@ class DirSink(Sink):
             return None
 
         clone = DirSink(
-            source=source_clone,
             ptok=self.ptok,
             usage=self.usage,
             sink_class=self.sink_class,
             fileno=self.num_files
         )
+
+        clone.add_source(source_clone)
+
         self.num_files += 1
         return clone

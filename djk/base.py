@@ -368,25 +368,35 @@ class IdentitySource(Source):
         raise RuntimeError("IdentitySource should never be executed")
 
 class ComponentFactory:
-    COMPONENTS = {} # name -> component_class
-    TYPE = "COMPONENT" # source pipe sink
+    def __init__(self, components: dict, comp_type_name: str):
+        self.num_orig = 0
+        self.components = components # name -> component_class
+        self.comp_type_name = comp_type_name
+        self.num_orig_comps = len(components)
 
-    @classmethod
-    def print_descriptions(cls):
-        print(cls.TYPE + 's')
-        for name, comp_class in cls.COMPONENTS.items():
+    def add_component(self, name, comp_class):
+        self.components[name] = comp_class
+
+    def get_comp_type_name(self):
+        return self.comp_type_name
+
+    def print_descriptions(self):
+        print(f'{self.comp_type_name}s')
+        i = 0
+        plugin = ''
+        for name, comp_class in self.components.items():
             usage = comp_class.usage()
             lines = usage.desc.split('\n')
-            print(f'  {name:<12} {lines[0]}')
+            if i >= self.num_orig_comps:
+                plugin = 'PLUGIN'
+            print(f'  {name:<12} {lines[0]} {plugin}')
+            i += 1
 
-    @classmethod
-    def get_usage(cls, name: str):
-        comp_class = cls.COMPONENTS.get(name)
+    def get_usage(self, name: str):
+        comp_class = self.components.get(name)
         if not comp_class:
             return None
-        
         return comp_class.usage()
 
-    @classmethod
-    def create(cls, token: str):
+    def create(self, token: str):
         pass

@@ -3,7 +3,7 @@
 
 from typing import Any, List, Callable
 import os
-from djk.base import Source, Sink, ParsedToken, TokenError, UsageError, ComponentFactory
+from djk.base import Source, Sink, ParsedToken, TokenError, ComponentFactory
 from djk.sinks.stdout import StdoutSink
 from djk.sinks.json_sink import JsonSink
 from djk.sinks.devnull import DevNullSink
@@ -15,9 +15,7 @@ from djk.sinks.dir_sink import DirSink
 from djk.sinks.expect import ExpectSink
 from djk.sinks.user_sink_factory import UserSinkFactory
 
-class SinkFactory(ComponentFactory):
-    TYPE = 'sink'
-    COMPONENTS = {
+COMPONENTS = {
         '-': StdoutSink,
         'devnull': DevNullSink,
         'graph': GraphSink,
@@ -27,8 +25,11 @@ class SinkFactory(ComponentFactory):
         'tsv': TSVSink,
         }
 
-    @classmethod
-    def create(cls, token: str) -> Callable[[Source], Sink]:
+class SinkFactory(ComponentFactory):
+    def __init__(self):
+        super().__init__(COMPONENTS, 'sink')   
+
+    def create(self, token: str) -> Callable[[Source], Sink]:
         token = token.strip()
         ptok = ParsedToken(token)
 
@@ -41,10 +42,10 @@ class SinkFactory(ComponentFactory):
             if sink:
                 return sink
         
-        sink_cls = cls.COMPONENTS.get(ptok.pre_colon) # <format>: directory case
+        sink_cls = self.components.get(ptok.pre_colon) # <format>: directory case
         if not sink_cls:
             # attempt case -> myfile.<format>
-            return cls._attempt_format_file(ptok)
+            return self._attempt_format_file(ptok)
         
          # case -> <format>:<path> local dir
         if sink_cls.is_format: 
@@ -69,8 +70,7 @@ class SinkFactory(ComponentFactory):
                                         "Expression must end in a sink (e.g. '-', 'out.json')"]
                                         )
 
-    @classmethod
-    def _attempt_format_file(cls, ptok: ParsedToken):
+    def _attempt_format_file(self, ptok: ParsedToken):
         is_gz = False
         path, ext = os.path.splitext(ptok.all_but_params)
         if '.gz' in ext:
@@ -79,7 +79,7 @@ class SinkFactory(ComponentFactory):
         
         file_ext = ext.lstrip('.')  # removes the leading dot
 
-        sink_cls = cls.COMPONENTS.get(file_ext)
+        sink_cls = self.components.get(file_ext)
         if not sink_cls:
             return None
         
