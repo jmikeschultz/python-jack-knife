@@ -13,7 +13,7 @@ class CSVSource(Source):
     is_format = True
     @classmethod
     def usage(cls):
-        return FormatUsage('csv', 'csv source for s3 and local files and directories', component_class=cls)
+        return FormatUsage('csv', component_class=cls)
 
     def __init__(self, lazy_file: LazyFile, delimiter: str = ","):
         self.lazy_file = lazy_file

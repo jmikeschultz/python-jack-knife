@@ -11,7 +11,7 @@ class JsonSource(Source):
     is_format = True
     @classmethod
     def usage(cls):
-        return FormatUsage('json', 'json lines source for s3 and local files/directories.', component_class=cls)
+        return FormatUsage('json', component_class=cls)
 
     def __init__(self, lazy_file: LazyFile):
         self.lazy_file = lazy_file

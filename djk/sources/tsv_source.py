@@ -9,7 +9,7 @@ class TSVSource(CSVSource):
     is_format = True
     @classmethod
     def usage(cls):
-        return FormatUsage('tsv', 'tsv source for s3 and local files and directories.', component_class=cls)
+        return FormatUsage('tsv', component_class=cls)
     
     def __init__(self, lazy_file: LazyFile):
         super().__init__(lazy_file, delimiter="\t")

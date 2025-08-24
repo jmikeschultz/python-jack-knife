@@ -10,7 +10,7 @@ class ParquetSource(Source):
     is_format = True  # enables format-based routing
     @classmethod
     def usage(cls):
-        return FormatUsage('parquet', 'parquet source for s3 and local files and directories.', component_class=cls)
+        return FormatUsage('parquet', component_class=cls)
 
     def __init__(self, lazy_file: LazyFile):
         self.lazy_file = lazy_file

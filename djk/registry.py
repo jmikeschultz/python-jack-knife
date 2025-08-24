@@ -40,7 +40,7 @@ class ComponentRegistry:
 
     def print_usage(self):
         print('Usage: pjk <source> [<pipe> ...] <sink>')
-        print('       pjk man <component> or pjk man --all')
+        print('       pjk man <component> | --all')
         print('       pjk examples')
         print()
         self.source_factory.print_descriptions()
