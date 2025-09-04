@@ -42,33 +42,44 @@ class SinkFactory(ComponentFactory):
             if sink:
                 return sink
         
-        sink_cls = self.components.get(ptok.pre_colon) # <format>: directory case
+        #if ptok.all_but_params.startswith('s3'):
+        #    return S3Sink.create(ptok, get_format_class_gz=self.get_format_class_gz)
+
+        # check for format sinks
+        sink = self._attempt_format(ptok)
+        if sink:
+            return sink
+
+        sink_cls = self.components.get(ptok.pre_colon)
+        usage = sink_cls.usage()
+        usage.bind(ptok)
+
+        return sink_cls(ptok, usage)
+
+        #raise TokenError.from_list(['pjk <source> [<pipe> ...] <sink>',
+        #                            "Expression must end in a sink (e.g. '-', 'out.json')"]
+        #                            )
+        
+    def _attempt_format(self, ptok: ParsedToken):
+        format = ptok.pre_colon
+        is_gz = False
+        if format.endswith('.gz'):
+            format = format[:-3]
+            is_gz = True
+
+        sink_cls = self.components.get(format) # <format>: directory case
         if not sink_cls:
             # attempt case -> myfile.<format>
             return self._attempt_format_file(ptok)
         
-         # case -> <format>:<path> local dir
+        # case -> <format>:<path> local dir
         if sink_cls.is_format: 
             dir_usage = DirSink.usage()
             dir_usage.bind(ptok)
-            return DirSink(ptok, dir_usage, sink_cls)        
+            return DirSink(ptok, dir_usage, sink_cls, is_gz)
 
-        usage = sink_cls.usage()
-        usage.bind(ptok)
+        return None
 
-        sink = sink_cls(ptok, usage)
-        if sink:
-            return sink
-
-        # when main is file path with format
-        path_no_ext, sink_class = cls._resolve_file_sinks(ptok.all_but_params)
-        if sink_class:
-            return sink_class(path_no_ext)
-
-        else:
-            raise TokenError.from_list(['pjk <source> [<pipe> ...] <sink>',
-                                        "Expression must end in a sink (e.g. '-', 'out.json')"]
-                                        )
 
     def _attempt_format_file(self, ptok: ParsedToken):
         is_gz = False

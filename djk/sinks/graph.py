@@ -19,9 +19,9 @@ class GraphSink(Sink):
             component_class=cls
         )
         usage.def_arg(name='kind', usage='hist|scatter|bar|line|cumulative')
-        usage.def_param(name='x', usage='Name of x-axis field')
-        usage.def_param(name='y', usage='Name of y-axis field')
-        usage.def_param(name='pause', usage='Seconds to show graph (default: wait for close)', is_num=True)
+        usage.def_param(name='x', usage='Name of x-axis field', default='x')
+        usage.def_param(name='y', usage='Name of y-axis field', default='y')
+        usage.def_param(name='pause', usage='Seconds to show graph', is_num=True)
         return usage
 
     def __init__(self, ptok: ParsedToken, usage: Usage):

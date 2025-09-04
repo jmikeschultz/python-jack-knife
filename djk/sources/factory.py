@@ -6,6 +6,7 @@ import queue
 from djk.base import Source, ParsedToken, ComponentFactory
 from djk.sources.json_source import JsonSource
 from djk.sources.csv_source import CSVSource
+from djk.sources.sql_source import SQLSource
 from djk.sources.tsv_source import TSVSource
 from djk.sources.s3_source import S3Source
 from djk.sources.source_list import SourceListSource
@@ -21,6 +22,7 @@ COMPONENTS = {
         'json': JsonSource,
         'csv': CSVSource,
         'tsv': TSVSource,
+        'sql': SQLSource,
         'parquet': ParquetSource,
     }
 
@@ -73,6 +75,14 @@ class SourceFactory(ComponentFactory):
             source = UserSourceFactory.create(ptok)
             if source:
                 return source
+
+        source_cls = self.components.get(ptok.pre_colon)
+        if source_cls:
+            usage = source_cls.usage()
+            usage.bind(ptok)
+        
+            source = source_cls(ptok, usage)
+            return source
 
         if ptok.all_but_params.startswith('s3'):
             return S3Source.create(ptok, get_format_class_gz=self.get_format_class_gz)

@@ -1,115 +1,210 @@
 # SPDX-License-Identifier: Apache-2.0
 # Copyright 2024 Mike Schultz
-
+#
 # djk/pipes/postgres_pipe.py
 
-import os
-import pg8000
+import base64
+import datetime as _dt
 import uuid
-import datetime
+from decimal import Decimal
+from typing import Any, Iterable, Dict, List, Optional
+
+import pg8000
+
 from djk.base import Pipe, ParsedToken, NoBindUsage, Usage, TokenError
+from djk.common import Lookups
+
 
 class DBClient:
+    """Simple shared-connection wrapper for pg8000."""
     _connection = None
 
-    def __init__(self, host, username, password, dbname='postgres', port=5432):
+    def __init__(self, host: str, username: str, password: Optional[str],
+                 dbname: str, port: int = 5432, ssl: bool = False):
         if DBClient._connection is None:
             try:
-                DBClient._connection = pg8000.connect(
-                    user=username,
-                    password=password,
-                    host=host,
-                    database=dbname,
-                    port=port
-                )
+                kwargs = dict(user=username, password=password, host=host, database=dbname, port=port)
+                if ssl:
+                    import ssl as _ssl
+                    kwargs["ssl_context"] = _ssl.create_default_context()
+                DBClient._connection = pg8000.connect(**kwargs)
+                DBClient._connection.autocommit = True
             except Exception as e:
                 print("Failed to connect to DB")
                 raise e
         self.conn = DBClient._connection
 
-    def query(self, sql, params=None):
-        cursor = self.conn.cursor()
-        cursor.execute(sql, params or ())
-        colnames = [desc[0] for desc in cursor.description]
-        rows = cursor.fetchall()
-        cursor.close()
-        return [dict(zip(colnames, normalize(row))) for row in rows]
-
     def close(self):
-        if self.conn:
-            self.conn.close()
-            DBClient._connection = None
+        if self.conn is not None:
+            try:
+                self.conn.close()
+            finally:
+                DBClient._connection = None
 
-def normalize(obj):
+
+def _iso_dt(x: _dt.datetime) -> str:
+    """ISO 8601; normalize UTC offset to 'Z'."""
+    s = x.isoformat()
+    return s.replace("+00:00", "Z")
+
+
+def normalize(obj: Any) -> Any:
+    """
+    Make values JSON/YAML-safe and portable (schema-agnostic):
+      - Decimal -> exact string (no sci-notation)
+      - date/datetime/time -> ISO-8601 string (datetime keeps offset; UTC -> 'Z')
+      - UUID -> string
+      - bytes -> base64 string
+      - lists/tuples/sets, dicts -> normalized recursively
+      - leaves int/float/str/bool/None as-is
+    """
+    if obj is None:
+        return None
+
+    if isinstance(obj, Decimal):
+        return format(obj, "f")  # exact value as string
+
+    if isinstance(obj, _dt.datetime):
+        return _iso_dt(obj)
+
+    if isinstance(obj, (_dt.date, _dt.time)):
+        return obj.isoformat()
+
     if isinstance(obj, uuid.UUID):
         return str(obj)
-    elif isinstance(obj, datetime.datetime):
-        return obj.isoformat()
-    elif isinstance(obj, datetime.date):
-        return obj.isoformat()
-    elif isinstance(obj, tuple):
-        return [normalize(x) for x in obj]
-    elif isinstance(obj, list):
-        return [normalize(x) for x in obj]
-    elif isinstance(obj, dict):
+
+    if isinstance(obj, (bytes, bytearray, memoryview)):
+        return base64.b64encode(bytes(obj)).decode("ascii")
+
+    if isinstance(obj, dict):
         return {k: normalize(v) for k, v in obj.items()}
+
+    if isinstance(obj, (list, tuple, set)):
+        return [normalize(v) for v in obj]
+
     return obj
+
+
+def _row_to_dict(cursor, row) -> Dict[str, Any]:
+    cols = [d[0] for d in cursor.description]
+    return {col: normalize(val) for col, val in zip(cols, row)}
+
 
 class PostgresPipe(Pipe):
     @classmethod
     def usage(cls):
         usage = Usage(
-            name='postgres',
-            desc="Postgres query pipe; reads SQL from record['query'] and DB name from record['db'] (default: postgres)",
-            component_class=cls
+            name="pgres",
+            desc="Postgres query pipe; executes SQL from input record['query'] (optional ['params']).",
+            component_class=cls,
         )
-        usage.def_param('no_header', usage='omit header record before query result', is_num=False, valid_values={'true', 'false'})
+        usage.def_arg(
+            "dbname",
+            "name of db. Entry in ~/.pjk/lookups.yaml containing host, user, password"
+        )
+        usage.def_param(
+            "header",
+            usage="emit header record before query results",
+            valid_values={"true", "false"}, default='true',
+        )
+
+        usage.def_example(expr_tokens=['myquery.sql', 'pgres:mydb'], expect=None)
+        usage.def_example(expr_tokens=["{'query': 'SELECT * from MY_TABLE;'}", 'pgres:mydb'], expect=None)
         return usage
 
     def __init__(self, ptok: ParsedToken, usage: Usage):
-        super().__init__(ptok)
+        super().__init__(ptok, usage)
 
-        self.query_field = 'query'
-        self.db_field = 'db'
-        self.db_host = os.environ.get("PG_HOST")
-        self.db_user = os.environ.get("PG_USER")
-        self.db_pass = os.environ.get("PG_PASS")
-        self.no_header = usage.get_param('no_header', default='false') == 'true'
-
-        if not all([self.db_host, self.db_user, self.db_pass]):
-            raise TokenError("PG_HOST, PG_USER, and PG_PASS must be set in environment")
-
-    def reset(self):
-        pass  # stateless across reset
-
-    def __iter__(self):
-        for input_record in self.left:
-            query = input_record.get(self.query_field)
-            dbname = input_record.get(self.db_field, 'postgres')
-
-            if not query:
-                yield {'_error': 'missing query'}
-                continue
-
-            client = DBClient(
-                host=self.db_host,
-                username=self.db_user,
-                password=self.db_pass,
-                dbname=dbname
+        lookups = Lookups()
+        self.dbname = usage.get_arg("dbname")
+        db_params = lookups.get(self.dbname)
+        if not db_params:
+            # f-string so dbname prints correctly
+            raise TokenError(
+                f"~/.pjk/lookups.yaml must contain entry for '{self.dbname}' with host, user, password."
             )
 
-            try:
-                cursor = client.conn.cursor()
-                cursor.execute(query)
-                colnames = [desc[0] for desc in cursor.description]
-                rows = cursor.fetchall()
-                cursor.close()
+        self.db_host = db_params.get("host")
+        self.db_user = db_params.get("user")
+        self.db_pass = db_params.get("password")
+        self.db_port = int(db_params.get("port", 5432))
+        self.db_ssl  = bool(db_params.get("ssl", False))
 
-                if not self.no_header:
-                    yield {'header': {'query': query, 'db': dbname}}
+        self.query_field  = "query"   # SQL string
+        self.params_field = "params"  # optional: list/tuple (positional) or dict (named)
+        self.do_header = usage.get_param("header") == "true"
 
-                for row in rows:
-                    yield {k: normalize(v) for k, v in zip(colnames, row)}
+    def reset(self):
+        # stateless across reset
+        pass
 
-            finally:
-                client.close()
+    def _make_header(self, cur, query: str, params=None) -> Dict[str, Any]:
+        """
+        Inspect the cursor and build a full header record.
+        Figures out result, rowcount, function automatically.
+        """
+        h = {
+            "query": query,
+            "db": self.dbname,
+            "dbhost": self.db_host,
+        }
+        if params:
+            h["params"] = params
+
+        if cur.description:
+            cols = [d[0] for d in cur.description]
+            if len(cols) == 1 and cols[0] == "ingest_event":
+                _ = cur.fetchone()  # consume void row
+                h["result"] = "ok"
+                h["function"] = "ingest_event"
+            else:
+                h["result"] = "ok"
+                h["rowcount"] = cur.rowcount if cur.rowcount != -1 else None
+        else:
+            h["result"] = "ok"
+            h["rowcount"] = cur.rowcount
+
+        return {"header": h}
+
+    def __iter__(self):
+        client = DBClient(
+            host=self.db_host,
+            username=self.db_user,
+            password=self.db_pass,
+            dbname=self.dbname,
+            port=self.db_port,
+            ssl=self.db_ssl,
+        )
+        try:
+            for input_record in self.left:
+                query = input_record.get(self.query_field)
+                if not query:
+                    yield {"_error": "missing query"}
+                    continue
+                params = input_record.get(self.params_field)
+
+                cur = client.conn.cursor()
+                try:
+                    # execute
+                    if params is None:
+                        cur.execute(query)
+                    else:
+                        if isinstance(params, (list, tuple, dict)):
+                            cur.execute(query, params)
+                        else:
+                            cur.execute(query, (params,))
+
+                    # yield header first
+                    if self.do_header:
+                        yield self._make_header(cur, query, params)
+
+                    # then stream rows if it was a real SELECT with results
+                    if cur.description:
+                        cols = [d[0] for d in cur.description]
+                        if not (len(cols) == 1 and cols[0] == "ingest_event"):
+                            for row in cur:
+                                yield _row_to_dict(cur, row)
+                finally:
+                    cur.close()
+        finally:
+            client.close()

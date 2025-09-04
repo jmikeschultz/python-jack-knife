@@ -16,13 +16,13 @@ class DirSink(Sink):
         usage.def_arg(name='dir', usage='Path to output directory')
         return usage
 
-    def __init__(self, ptok: ParsedToken, usage: Usage, sink_class: type, fileno: int = 0):
+    def __init__(self, ptok: ParsedToken, usage: Usage, sink_class: type, is_gz: bool, fileno: int = 0):
         super().__init__(ptok, usage)
         self.dir_path = usage.get_arg('dir')  # ✅ Use usage, not ptok directly
-
         self.ptok = ptok
         self.usage = usage
         self.sink_class = sink_class
+        self.is_gz = is_gz
         self.fileno = fileno
         self.num_files = 1
 
@@ -30,7 +30,7 @@ class DirSink(Sink):
 
     def process(self):
         file = os.path.join(self.dir_path, f'file-{self.fileno:04d}')
-        file_ptok = ParsedToken(file)
+        file_ptok = ParsedToken(f'{file}:{self.is_gz}')
         file_usage = self.sink_class.usage()
         file_usage.bind(file_ptok)
 
@@ -49,6 +49,7 @@ class DirSink(Sink):
             ptok=self.ptok,
             usage=self.usage,
             sink_class=self.sink_class,
+            is_gz=self.is_gz,
             fileno=self.num_files
         )
 

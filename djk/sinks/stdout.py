@@ -15,6 +15,7 @@ class StdoutSink(Sink):
             component_class=cls
         )
         usage.def_param('less', usage='use less to display (default=true)', valid_values=['true', 'false'])
+        usage.def_example(["{hello:'world!'}"], "{hello:'world!'}")
         return usage
     
     def __init__(self, ptok: ParsedToken, usage: Usage):

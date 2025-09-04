@@ -14,7 +14,6 @@ class JsonSink(Sink):
         self.path_no_ext = ptok.pre_colon # NOTE: ptok built by framework, doesn't use usage
         self.gz = ptok.get_arg(0) == 'True'# NOTE: ptok built by framework, doesn't use usage
 
-
     def process(self) -> None:
         path = self.path_no_ext + ('.json.gz' if self.gz else '.json')
         open_func = gzip.open if self.gz else open

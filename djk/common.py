@@ -2,6 +2,8 @@
 # Copyright 2024 Mike Schultz
 
 import sys, shutil, subprocess, contextlib, signal
+import os
+import yaml
 
 class SafeNamespace:
     def __init__(self, obj):
@@ -69,3 +71,42 @@ def highlight(text: str, color: str = 'bold', value: str = None) -> str:
     value = text if not value else value
     style = COLOR_CODES.get(color.lower(), COLOR_CODES['bold'])
     return text.replace(value, f"{style}{value}{RESET}")
+
+class Lookups:
+    def __init__(self):
+        self.lookups_yaml = os.path.expanduser('~/.pjk/lookups.yaml')
+        self._data = {}
+        self._load()
+
+    def _load(self):
+        """Load lookups from YAML file if it exists."""
+        if os.path.exists(self.lookups_yaml):
+            with open(self.lookups_yaml, 'r') as f:
+                self._data = yaml.safe_load(f) or {}
+        else:
+            self._data = {}
+
+    def save(self):
+        """Save current lookups back to YAML file."""
+        os.makedirs(os.path.dirname(self.lookups_yaml), exist_ok=True)
+        with open(self.lookups_yaml, 'w') as f:
+            yaml.safe_dump(self._data, f)
+
+    def get(self, key, default=None):
+        """Retrieve a lookup value by key."""
+        return self._data.get(key, default)
+
+    def set(self, key, value):
+        """Set a lookup value and persist it."""
+        self._data[key] = value
+        self.save()
+
+    def delete(self, key):
+        """Remove a key if it exists and save."""
+        if key in self._data:
+            del self._data[key]
+            self.save()
+
+    def all(self):
+        """Return the full lookup dictionary."""
+        return dict(self._data)

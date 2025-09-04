@@ -113,6 +113,6 @@ def load_user_components(path=os.path.expanduser("~/.pjk/plugins")):
                 elif is_pipe(obj, module):
                     pipes[name] = obj
                 elif is_source(obj, module):
-                    sinks[name] = obj
+                    sources[name] = obj
 
     return sources, pipes, sinks

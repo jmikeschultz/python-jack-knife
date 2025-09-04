@@ -128,8 +128,10 @@ class Usage:
     def def_arg(self, name: str, usage: str, is_num: bool = False, valid_values: Optional[Set[str]] = None):
         self.arg_defs.append((name, usage, is_num, valid_values))
 
-    def def_param(self, name:str, usage: str, is_num: bool = False, valid_values: Optional[Set[str]] = None):
-        self.param_usages[name] = (usage, is_num, valid_values)
+    def def_param(self, name:str, usage: str, is_num: bool = False, valid_values: Optional[Set[str]] = None, default:str = None):
+        self.param_usages[name] = (usage, is_num, valid_values, default)
+        if default:
+            self.params[name] = self._get_val(default, is_num, valid_values)
 
     def def_example(self, expr_tokens:list[str], expect:str):
         self.examples.append((expr_tokens, expect))
@@ -143,8 +145,8 @@ class Usage:
     def get_arg(self, name: str):
         return self.args.get(name, None)
     
-    def get_param(self, name: str, default: str = None):
-        return self.params.get(name, default)
+    def get_param(self, name: str):
+        return self.params.get(name)
     
     def get_usage_text(self):
         lines = []
@@ -167,7 +169,7 @@ class Usage:
         for name, usage, is_num, valid_values in self.arg_defs:
             token += f':<{name}>'
 
-        for name, (usage, is_num, valid_values) in self.param_usages.items():
+        for name, (usage, is_num, valid_values, default) in self.param_usages.items():
             value_display = name
             if valid_values:
                 value_display  = '|'.join(list(valid_values))
@@ -184,8 +186,8 @@ class Usage:
         if self.param_usages:
             notes.append('optional params:')
             for name, usage in self.param_usages.items():
-                text, is_num, valid_values = usage
-                notes.append(f'  {name} = {text}')
+                text, is_num, valid_values, default = usage
+                notes.append(f'  {name} = {text} (default={default})')
         return notes
 
     def bind(self, ptok: ParsedToken):
@@ -223,7 +225,7 @@ class Usage:
             if not str_val:
                 raise TokenError.from_list([f"missing value for '{name}' param.", '', self.get_usage_text()])
 
-            text, is_num, valid_values = usage
+            text, is_num, valid_values, default = usage
             try:
                 self.params[name] = self._get_val(str_val, is_num, valid_values)
             except (ValueError, TypeError) as e:
