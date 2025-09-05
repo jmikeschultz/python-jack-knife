@@ -15,6 +15,3 @@ pjk $DIR/test.log@format=json expect:'[{up:1,size:3},{up:2,size:4}]'
 
 mv $DIR/test.json.gz $DIR/test.csv
 pjk $DIR/test.csv@format=json.gz expect:'[{up:1,size:3},{up:2,size:4}]'
-
-pjk '[{x:2, y:1}, {x:3, y:2}, {x:5, y:7}]' graph:scatter@x=x@y=y@pause=1
-

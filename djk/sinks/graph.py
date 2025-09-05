@@ -21,7 +21,7 @@ class GraphSink(Sink):
         usage.def_arg(name='kind', usage='hist|scatter|bar|line|cumulative')
         usage.def_param(name='x', usage='Name of x-axis field', default='x')
         usage.def_param(name='y', usage='Name of y-axis field', default='y')
-        usage.def_param(name='pause', usage='Seconds to show graph', is_num=True)
+        usage.def_param(name='pause', usage='Seconds to show graph', is_num=True, default='-1')
         return usage
 
     def __init__(self, ptok: ParsedToken, usage: Usage):
@@ -48,3 +48,10 @@ class GraphSink(Sink):
             graph_bar_line(self, 'line')
         else:
             raise TokenError(f"Unsupported graph type: {self.kind}")
+        
+        if not self.pause:
+            plt.show()
+        else:
+            plt.show(block=False)   
+            plt.pause(int(self.pause))           
+            plt.close()            

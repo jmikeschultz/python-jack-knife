@@ -6,10 +6,6 @@ import numpy as np
 import matplotlib.pyplot as plt
 
 def graph_cumulative(obj):
-    if not (obj.x_field and obj.y_field):
-        print("x and y fields are required for cumulative plot.")
-        return
-
     # Filter and sort records by x
     records = [
         r for r in obj.records
@@ -44,10 +40,10 @@ def graph_cumulative(obj):
     plt.plot(x_vals, y_vals, marker='o', linestyle='-', label='Cumulative')
 
     # Apply user-specified styling functions (e.g. title, xlabel, etc.)
-    for name, val in obj.args_dict.items():
-        fn = getattr(plt, name, None)
-        if fn and callable(fn):
-            fn(val)
+    #for name, val in obj.args_dict.items():
+    #    fn = getattr(plt, name, None)
+    #    if fn and callable(fn):
+    #        fn(val)
 
     plt.xlabel(obj.x_field)
     plt.ylabel(f"cumulative({obj.y_field})")
@@ -57,5 +53,5 @@ def graph_cumulative(obj):
             ha='right', va='top', fontsize=10, color='gray')
     plt.grid(True, linestyle='--', alpha=0.6)
     plt.tight_layout()
-    plt.show()
+
 

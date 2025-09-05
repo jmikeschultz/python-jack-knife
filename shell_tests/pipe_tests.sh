@@ -31,7 +31,7 @@ pjk '[{hello: 1, size: 1}, {there:2, size:1}]' tail:1 \
 pjk '[{hello: 1, size: 1}, {there:2, size:1}]' as:size:id \
     expect:'[{hello: 1, id: 1}, {there:2, id:1}]'
 
-pjk '[{hello: 1, size: 1}, {there:2, size:1}]' rm:size \
+pjk '[{hello: 1, size: 1}, {there:2, size:1}]' drop:size \
     expect:'[{hello: 1}, {there:2}]'
 
 pjk '[{hello: 1, size: 1}, {there:2, size:1}]' sel:size,hello \

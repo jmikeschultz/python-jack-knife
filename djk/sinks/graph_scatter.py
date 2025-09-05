@@ -28,9 +28,3 @@ def graph_scatter(obj):
     plt.grid(True)
     plt.tight_layout()
 
-    if not obj.pause:
-        plt.show()
-    else:
-        plt.show(block=False)   
-        plt.pause(int(obj.pause))           
-        plt.close()            

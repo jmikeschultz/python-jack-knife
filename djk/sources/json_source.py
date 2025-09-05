@@ -5,10 +5,11 @@ import json
 from djk.base import Source, NoBindUsage
 from djk.sources.lazy_file import LazyFile
 from djk.sources.format_usage import FormatUsage
-
+from djk.log import logger
 
 class JsonSource(Source):
     is_format = True
+
     @classmethod
     def usage(cls):
         return FormatUsage('json', component_class=cls)
@@ -23,5 +24,12 @@ class JsonSource(Source):
                 self.num_recs += 1
                 try:
                     yield json.loads(line)
-                except json.JSONDecodeError:
-                    print(f'Skipping json line {self.num_recs} with format error: {line.strip()}')
+                except json.JSONDecodeError as e:
+                    print('json decode error, see ~/.pjk/logs')
+                    snippet = line.strip()
+                    if len(snippet) > 200:
+                        snippet = snippet[:200] + "…"
+                    logger.warning(
+                        f"Skipping invalid JSON at line {self.num_recs} "
+                        f"in {self.lazy_file.path}: {e} | data: {snippet}"
+                    )

@@ -4,30 +4,24 @@
 import matplotlib.pyplot as plt
 import numpy as np
 import matplotlib.pyplot as plt
+from collections import defaultdict
+
+def aggregate_ys(obj):
+    agg = defaultdict(float)
+    count = 0
+    for r in obj.records:
+        if obj.x_field in r and obj.y_field in r:
+            try:
+                agg[r[obj.x_field]] += r[obj.y_field]
+                count += 1
+            except Exception:
+                pass  # skip malformed record
+
+    return count, agg
 
 def graph_hist(obj):
-    if not obj.x_field:
-        print("No x field specified.")
-        return
-
-    if obj.y_field:
-        # Sum mode: aggregate y_field values per x_field bucket
-        from collections import defaultdict
-
-        agg = defaultdict(float)
-        count = 0
-        for r in obj.records:
-            if obj.x_field in r and obj.y_field in r:
-                try:
-                    agg[r[obj.x_field]] += r[obj.y_field]
-                    count += 1
-                except Exception:
-                    pass  # skip malformed record
-
-        if not agg:
-            print(f"No valid '{obj.x_field}' and '{obj.y_field}' data for bar chart.")
-            return
-
+    count, agg = aggregate_ys(obj)
+    if agg:
         x_vals = sorted(agg)
         y_vals = [agg[x] for x in x_vals]
 
@@ -74,5 +68,5 @@ def graph_hist(obj):
             ha='right', va='top', fontsize=10, color='gray')
     plt.grid(True, linestyle='--', alpha=0.6)
     plt.tight_layout()
-    plt.show()
+    #plt.show()
 

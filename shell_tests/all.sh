@@ -5,4 +5,4 @@
 ./map_join_errors.sh
 ./reduction.sh
 ./usage_errors.sh
-
+./sink_tests.sh

@@ -51,9 +51,11 @@ class SinkFactory(ComponentFactory):
             return sink
 
         sink_cls = self.components.get(ptok.pre_colon)
+        if not sink_cls:
+            return None
+        
         usage = sink_cls.usage()
         usage.bind(ptok)
-
         return sink_cls(ptok, usage)
 
         #raise TokenError.from_list(['pjk <source> [<pipe> ...] <sink>',

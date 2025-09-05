@@ -3,12 +3,11 @@
 
 #!/usr/bin/env python
 import sys
+import os
 import signal
 from djk.parser import ExpressionParser
 from djk.base import UsageError
 from djk.log import init as init_logging
-import sys
-import os
 from datetime import datetime, timezone
 import concurrent.futures
 from djk.registry import ComponentRegistry
