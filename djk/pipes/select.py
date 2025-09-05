@@ -11,7 +11,7 @@ class SelectFields(Pipe):
     @classmethod
     def usage(cls):
         usage = Usage(
-            name='select',
+            name='sel',
             desc='Keep only the specified fields from each record',
             component_class=cls
         )

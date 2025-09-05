@@ -58,11 +58,14 @@ def main():
     init_logging()
     tokens = sys.argv[1:]
 
+    # pjk man --all | --all+ | <component>
     if len(tokens) == 2 and tokens[0] == 'man':
         do_man(tokens[1], registry)
         return
-    if len(tokens) == 1 and tokens[0] == 'examples':
-        do_examples(registry)
+    
+    # pjk examples | examples+
+    if len(tokens) == 1 and tokens[0] in ['examples', 'examples+']:
+        do_examples(tokens[0], registry)
         return
 
     parser = ExpressionParser(registry)

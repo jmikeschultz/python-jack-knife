@@ -95,7 +95,7 @@ class PostgresPipe(Pipe):
     def usage(cls):
         usage = Usage(
             name="pgres",
-            desc="Postgres query pipe; executes SQL from input record['query'] (optional ['params']).",
+            desc="Postgres query pipe; executes SQL from input record['query'].",
             component_class=cls,
         )
         usage.def_arg(

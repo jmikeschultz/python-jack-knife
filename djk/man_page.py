@@ -8,6 +8,7 @@ from djk.parser import ExpressionParser
 from djk.base import Usage
 from djk.registry import ComponentRegistry
 from djk.common import pager_stdout, highlight
+from contextlib import nullcontext
 
 def smart_print(expr_tokens: list[str], name: str):
     import re
@@ -30,8 +31,9 @@ def smart_print(expr_tokens: list[str], name: str):
     print('pjk', expr_str)
 
 def do_man(name: str, registry: ComponentRegistry):
+    no_pager = name.endswith('+')
     if '--all' in name:
-        do_all_man(registry)
+        do_all_man(registry, no_pager=no_pager)
         return
 
     # source and sinks have common names so go through multiple times
@@ -45,8 +47,9 @@ def do_man(name: str, registry: ComponentRegistry):
     if not printed:
         print(f'unknown: {name}')
 
-def do_all_man(registry: ComponentRegistry):
-    with pager_stdout():
+def do_all_man(registry: ComponentRegistry, no_pager: bool = True):
+    cm = nullcontext() if no_pager else pager_stdout()
+    with cm:
         for factory in registry.get_factories():
             comp_type = factory.get_comp_type_name()
             for name in factory.components.keys():
@@ -75,8 +78,10 @@ def print_man(registry: ComponentRegistry, name: str, usage: Usage):
     for expr_tokens, expect in usage.get_examples(): # expect in InlineSource format
         print_example(registry, expr_tokens, expect, name)
 
-def do_examples(registry: ComponentRegistry):
-    with pager_stdout():
+def do_examples(token:str, registry: ComponentRegistry):
+    no_pager = token.endswith('+')
+    cm = nullcontext() if no_pager else pager_stdout()
+    with cm:
         for factory in registry.get_factories():
             comp_type = factory.get_comp_type_name()
             for name, comp_class in factory.components.items():

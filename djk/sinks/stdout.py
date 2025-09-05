@@ -14,7 +14,7 @@ class StdoutSink(Sink):
             desc='display records in yaml format to stdout through less',
             component_class=cls
         )
-        usage.def_param('less', usage='use less to display (default=true)', valid_values=['true', 'false'])
+        usage.def_param('less', usage='use less to display', valid_values=['true', 'false'], default='true')
         usage.def_example(["{hello:'world!'}"], "{hello:'world!'}")
         return usage
     
