@@ -1,3 +1,7 @@
 __pycache__/
 .pjk-history.txt
+dist/
+build
+*.egg-info
+.vscode/
 

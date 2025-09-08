@@ -1,6 +1,7 @@
 [project]
 name = "pjk"
-version = "0.1.0"
+# Let setuptools read version from djk/version.py
+dynamic = ["version"]
 description = "Composable data pipeline CLI"
 authors = [{ name = "Mike Schultz" }]
 requires-python = ">=3.8"
@@ -8,3 +9,14 @@ dependencies = []
 
 [project.scripts]
 pjk = "djk.main:main"
+
+[tool.setuptools.dynamic]
+version = { attr = "djk.version.__version__" }
+
+[tool.setuptools.packages.find]
+where = ["."]
+include = ["djk*"]
+
+[build-system]
+requires = ["setuptools>=68", "wheel", "build"]
+build-backend = "setuptools.build_meta"
