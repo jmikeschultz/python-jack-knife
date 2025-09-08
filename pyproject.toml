@@ -1,11 +1,23 @@
 [project]
 name = "pjk"
-# Let setuptools read version from djk/version.py
 dynamic = ["version"]
 description = "Composable data pipeline CLI"
 authors = [{ name = "Mike Schultz" }]
-requires-python = ">=3.8"
-dependencies = []
+requires-python = ">=3.9,<3.14"
+dependencies = [
+  "boto3==1.38.36",
+  "botocore==1.38.36",
+  "PyYAML>=6.0.2,<7",
+  "pandas>=2.0,<3",
+  "numpy>=1.25,<2",
+  "hjson==3.1.0",
+  "pg8000==1.31.4",
+
+  # Local (3.12/3.13) will take 20.x; Glue (3.9/3.10) will take 14.x.
+  "pyarrow>=14,<15; python_version < '3.12'",
+  "pyarrow>=20,<21; python_version >= '3.12'",
+  "matplotlib==3.10.3"
+]
 
 [project.scripts]
 pjk = "djk.main:main"
