@@ -5,6 +5,8 @@
 import sys
 import os
 import signal
+import shlex
+from typing import List
 from djk.parser import ExpressionParser
 from djk.base import UsageError
 from djk.log import init as init_logging
@@ -42,22 +44,24 @@ def execute_threaded(sinks):
                 print(f"Sink {sink_obj} raised an exception:")
                 print(e)
 
-def main():
+def execute(command: str):
+    tokens = shlex.split(command, comments=True, posix=True)
+    execute_tokens(tokens)
+
+def execute_tokens(tokens:List[str]):
+    init_logging()
     signal.signal(signal.SIGINT, lambda s, f: sys.exit(0))
 
-    if '--version' in sys.argv:
+    if '--version' in tokens:
         print(f"pjk version {__version__}")
         sys.exit(0)
     
     registry = ComponentRegistry()
        
-    if len(sys.argv) < 2:
+    if len(tokens) < 1:
         registry.print_usage()
         return
-
-    init_logging()
-    tokens = sys.argv[1:]
-
+    
     # pjk man --all | --all+ | <component>
     if len(tokens) == 2 and tokens[0] == 'man':
         do_man(tokens[1], registry)
@@ -93,6 +97,10 @@ def main():
     except UsageError as e:
         print(e, file=sys.stderr)
         sys.exit(2)  # Exit with a non-zero code, but no traceback
+
+def main():
+    tokens = sys.argv[1:]
+    execute_inner(tokens)
 
 if __name__ == "__main__":
     main()
