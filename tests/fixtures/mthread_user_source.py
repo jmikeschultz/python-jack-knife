@@ -1,7 +1,7 @@
 # SPDX-License-Identifier: Apache-2.0
 # Copyright 2024 Mike Schultz
 
-from djk.base import Source
+from pjk.base import Source
 
 class MySource(Source):
     def __init__(self, arg_string=""):
