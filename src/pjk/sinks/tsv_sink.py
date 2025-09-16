@@ -1,8 +1,8 @@
 # SPDX-License-Identifier: Apache-2.0
 # Copyright 2024 Mike Schultz
 
-from djk.sinks.csv_sink import CSVSink
-from djk.base import Source, ParsedToken, Usage
+from pjk.sinks.csv_sink import CSVSink
+from pjk.base import Source, ParsedToken, Usage
 
 class TSVSink(CSVSink):
     is_format = True

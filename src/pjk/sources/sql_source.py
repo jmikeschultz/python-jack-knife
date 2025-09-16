@@ -2,9 +2,9 @@
 # Copyright 2024 Mike Schultz
 
 import sys
-from djk.base import Source, NoBindUsage
-from djk.sources.format_usage import FormatUsage
-from djk.sources.lazy_file import LazyFile
+from pjk.base import Source, NoBindUsage
+from pjk.sources.format_usage import FormatUsage
+from pjk.sources.lazy_file import LazyFile
 
 
 class SQLSource(Source):

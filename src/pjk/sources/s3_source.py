@@ -3,9 +3,9 @@
 
 from threading import Lock
 from typing import Optional, Any, Iterator, Tuple
-from djk.base import Source, ParsedToken
-from djk.sources.lazy_file_s3 import LazyFileS3
-from djk.log import logger
+from pjk.base import Source, ParsedToken
+from pjk.sources.lazy_file_s3 import LazyFileS3
+from pjk.log import logger
 
 class _SharedS3State:
     """

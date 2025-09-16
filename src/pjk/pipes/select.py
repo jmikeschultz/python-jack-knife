@@ -3,7 +3,7 @@
 
 # djk/select_pipe.py
 
-from djk.base import Pipe, Usage, ParsedToken, UsageError
+from pjk.base import Pipe, Usage, ParsedToken, UsageError
 
 class SelectFields(Pipe):
     deep_copyable: bool = True

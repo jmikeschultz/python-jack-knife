@@ -1,7 +1,7 @@
 # SPDX-License-Identifier: Apache-2.0
 # Copyright 2024 Mike Schultz
 
-from djk.base import Sink, Source, ParsedToken, Usage
+from pjk.base import Sink, Source, ParsedToken, Usage
 from decimal import Decimal
 
 class DDBSink(Sink):

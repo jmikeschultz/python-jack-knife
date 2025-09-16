@@ -1,8 +1,8 @@
 # SPDX-License-Identifier: Apache-2.0
 # Copyright 2024 Mike Schultz
 
-from djk.base import Source, Sink, ParsedToken, Usage
-from djk.sources.inline_source import InlineSource
+from pjk.base import Source, Sink, ParsedToken, Usage
+from pjk.sources.inline_source import InlineSource
 import sys
 
 class ExpectSink(Sink):

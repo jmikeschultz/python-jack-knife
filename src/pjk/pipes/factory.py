@@ -2,23 +2,23 @@
 # Copyright 2024 Mike Schultz
 
 # djk/pipes/factory.py
-from djk.base import Usage, Pipe, ParsedToken
-from djk.common import ComponentFactory
-from djk.pipes.move_field import MoveField
-from djk.pipes.remove_field import RemoveField
-from djk.pipes.let_reduce import LetPipe
-from djk.pipes.let_reduce import ReducePipe
-from djk.pipes.head import HeadPipe
-from djk.pipes.tail import TailPipe
-from djk.pipes.sort import SortPipe
-from djk.pipes.where import WherePipe
-from djk.pipes.map import MapPipe
-from djk.pipes.join import JoinPipe
-from djk.pipes.filter import FilterPipe
-from djk.pipes.select import SelectFields
-from djk.pipes.denorm import DenormPipe
-from djk.pipes.postgres_pipe import PostgresPipe
-from djk.pipes.user_pipe_factory import UserPipeFactory
+from pjk.base import Usage, Pipe, ParsedToken
+from pjk.common import ComponentFactory
+from pjk.pipes.move_field import MoveField
+from pjk.pipes.remove_field import RemoveField
+from pjk.pipes.let_reduce import LetPipe
+from pjk.pipes.let_reduce import ReducePipe
+from pjk.pipes.head import HeadPipe
+from pjk.pipes.tail import TailPipe
+from pjk.pipes.sort import SortPipe
+from pjk.pipes.where import WherePipe
+from pjk.pipes.map import MapPipe
+from pjk.pipes.join import JoinPipe
+from pjk.pipes.filter import FilterPipe
+from pjk.pipes.select import SelectFields
+from pjk.pipes.denorm import DenormPipe
+from pjk.pipes.postgres_pipe import PostgresPipe
+from pjk.pipes.user_pipe_factory import UserPipeFactory
 
 COMPONENTS = {
         'head': HeadPipe,

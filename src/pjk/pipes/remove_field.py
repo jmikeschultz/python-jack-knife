@@ -3,7 +3,7 @@
 
 # djk/pipes/remove_field.py
 
-from djk.base import Pipe, ParsedToken, Usage, UsageError
+from pjk.base import Pipe, ParsedToken, Usage, UsageError
 
 class RemoveField(Pipe):
     @classmethod

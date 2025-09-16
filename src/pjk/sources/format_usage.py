@@ -1,4 +1,4 @@
-from djk.base import Source, NoBindUsage
+from pjk.base import Source, NoBindUsage
 
 class FormatUsage(NoBindUsage):
     def __init__(self, name: str, component_class: type, desc_override: str = None):

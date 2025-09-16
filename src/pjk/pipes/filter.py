@@ -1,7 +1,7 @@
 # SPDX-License-Identifier: Apache-2.0
 # Copyright 2024 Mike Schultz
 
-from djk.base import Pipe, Usage, UsageError, ParsedToken, KeyedSource
+from pjk.base import Pipe, Usage, UsageError, ParsedToken, KeyedSource
 
 class FilterPipe(Pipe):
     arity = 2  # left = record stream, right = keyed source

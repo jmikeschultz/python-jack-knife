@@ -1,13 +1,13 @@
 # SPDX-License-Identifier: Apache-2.0
 # Copyright 2024 Mike Schultz
 
-from djk.pipes.factory import PipeFactory
-from djk.sources.factory import SourceFactory
-from djk.sinks.factory import SinkFactory
-from djk.parser import ExpressionParser
-from djk.base import Usage
-from djk.registry import ComponentRegistry
-from djk.common import pager_stdout, highlight
+from pjk.pipes.factory import PipeFactory
+from pjk.sources.factory import SourceFactory
+from pjk.sinks.factory import SinkFactory
+from pjk.parser import ExpressionParser
+from pjk.base import Usage
+from pjk.registry import ComponentRegistry
+from pjk.common import pager_stdout, highlight
 from contextlib import nullcontext
 
 def smart_print(expr_tokens: list[str], name: str):

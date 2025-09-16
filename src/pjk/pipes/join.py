@@ -3,7 +3,7 @@
 
 # djk/pipes/join.py
 
-from djk.base import Pipe, Usage, UsageError, ParsedToken, KeyedSource
+from pjk.base import Pipe, Usage, UsageError, ParsedToken, KeyedSource
 
 class JoinPipe(Pipe):
     arity = 2  # left = record stream, right = KeyedSource

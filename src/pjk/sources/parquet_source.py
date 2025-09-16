@@ -2,9 +2,9 @@
 # Copyright 2024 Mike Schultz
 
 import pyarrow.parquet as pq
-from djk.base import Source, NoBindUsage
-from djk.sources.lazy_file import LazyFile
-from djk.sources.format_usage import FormatUsage
+from pjk.base import Source, NoBindUsage
+from pjk.sources.lazy_file import LazyFile
+from pjk.sources.format_usage import FormatUsage
 
 class ParquetSource(Source):
     is_format = True  # enables format-based routing

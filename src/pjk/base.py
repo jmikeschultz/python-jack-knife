@@ -288,8 +288,14 @@ class Source(ABC):
 
     @abstractmethod
     def __iter__(self):
-        """Subclasses must yield records via generator"""
-        pass
+        raise NotImplementedError("__iter__ must be implemented by subclasses")
+
+    def __next__(self):
+        # lazily create an internal iterator the first time next() is called
+        if not hasattr(self, "_iter"):
+            self._iter = iter(self)
+        return next(self._iter)
+
 
     def deep_copy(self):
         return None  # Default: not copyable unless overridden

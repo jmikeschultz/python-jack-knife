@@ -3,7 +3,7 @@
 
 import importlib.util
 from typing import Optional
-from djk.base import Source, Sink, UsageError, ParsedToken
+from pjk.base import Source, Sink, UsageError, ParsedToken
 
 class UserSinkFactory:
     @staticmethod

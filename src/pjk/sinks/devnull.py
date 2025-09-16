@@ -3,7 +3,7 @@
 
 # djk/sinks/devnull.py
 
-from djk.base import Sink, Source, ParsedToken, Usage
+from pjk.base import Sink, Source, ParsedToken, Usage
 
 class DevNullSink(Sink):
     @classmethod

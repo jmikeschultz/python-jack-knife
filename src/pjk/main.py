@@ -7,18 +7,18 @@ import os
 import signal
 import shlex
 from typing import List
-from djk.parser import ExpressionParser
-from djk.base import UsageError
-from djk.log import init as init_logging
+from pjk.parser import ExpressionParser
+from pjk.base import UsageError
+from pjk.log import init as init_logging
 from datetime import datetime, timezone
 import concurrent.futures
-from djk.registry import ComponentRegistry
-from djk.pipes.factory import PipeFactory
-from djk.sources.factory import SourceFactory
-from djk.sinks.factory import SinkFactory
-from djk.man_page import do_man, do_examples
-from djk.sinks.expect import ExpectSink
-from djk.version import __version__
+from pjk.registry import ComponentRegistry
+from pjk.pipes.factory import PipeFactory
+from pjk.sources.factory import SourceFactory
+from pjk.sinks.factory import SinkFactory
+from pjk.man_page import do_man, do_examples
+from pjk.sinks.expect import ExpectSink
+from pjk.version import __version__
 
 def write_history(tokens):
     log_path = ".pjk-history.txt"

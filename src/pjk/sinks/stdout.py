@@ -3,8 +3,8 @@
 
 import sys
 import yaml
-from djk.base import Sink, Source, ParsedToken, Usage
-from djk.common import pager_stdout
+from pjk.base import Sink, Source, ParsedToken, Usage
+from pjk.common import pager_stdout
 
 class StdoutSink(Sink):
     @classmethod

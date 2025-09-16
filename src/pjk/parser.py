@@ -5,10 +5,10 @@ from typing import Any, List, Callable
 import os
 import shlex
 from typing import Optional, Any, List
-from djk.base import Source, Pipe, Sink, TokenError, UsageError, ParsedToken, Usage
-from djk.pipes.user_pipe_factory import UserPipeFactory
-from djk.pipes.let_reduce import ReducePipe
-from djk.registry import ComponentRegistry
+from pjk.base import Source, Pipe, Sink, TokenError, UsageError, ParsedToken, Usage
+from pjk.pipes.user_pipe_factory import UserPipeFactory
+from pjk.pipes.let_reduce import ReducePipe
+from pjk.registry import ComponentRegistry
 
 def expand_macros(tokens: List[str]) -> List[str]:
     expanded = []

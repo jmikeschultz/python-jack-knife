@@ -3,7 +3,7 @@
 
 # djk/pipes/denorm.py
 
-from djk.base import Pipe, ParsedToken, Usage, UsageError
+from pjk.base import Pipe, ParsedToken, Usage, UsageError
 from typing import Iterator
 
 class Denormer:

@@ -4,7 +4,7 @@
 import os
 import gzip
 import json
-from djk.base import Sink, Source, ParsedToken, Usage
+from pjk.base import Sink, Source, ParsedToken, Usage
 
 class JsonSink(Sink):
     is_format = True

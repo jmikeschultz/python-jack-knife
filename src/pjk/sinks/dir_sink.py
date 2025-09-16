@@ -2,8 +2,8 @@
 # Copyright 2024 Mike Schultz
 
 import os
-from djk.base import Source, Sink, ParsedToken, Usage
-from djk.log import logger
+from pjk.base import Source, Sink, ParsedToken, Usage
+from pjk.log import logger
 
 class DirSink(Sink):
     @classmethod

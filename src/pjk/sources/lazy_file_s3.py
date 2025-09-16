@@ -4,7 +4,7 @@
 import io
 import gzip
 from typing import IO
-from djk.sources.lazy_file import LazyFile
+from pjk.sources.lazy_file import LazyFile
 
 class LazyFileS3(LazyFile):
     def __init__(self, bucket: str, key: str, is_gz: bool):

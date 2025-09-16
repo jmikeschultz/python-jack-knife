@@ -3,18 +3,18 @@
 
 from typing import Any, List, Callable
 import os
-from djk.base import Source, Sink, ParsedToken
-from djk.common import ComponentFactory
-from djk.sinks.stdout import StdoutSink
-from djk.sinks.json_sink import JsonSink
-from djk.sinks.devnull import DevNullSink
-from djk.sinks.graph import GraphSink
-from djk.sinks.csv_sink import CSVSink
-from djk.sinks.tsv_sink import TSVSink
-from djk.sinks.ddb import DDBSink
-from djk.sinks.dir_sink import DirSink
-from djk.sinks.expect import ExpectSink
-from djk.sinks.user_sink_factory import UserSinkFactory
+from pjk.base import Source, Sink, ParsedToken
+from pjk.common import ComponentFactory
+from pjk.sinks.stdout import StdoutSink
+from pjk.sinks.json_sink import JsonSink
+from pjk.sinks.devnull import DevNullSink
+from pjk.sinks.graph import GraphSink
+from pjk.sinks.csv_sink import CSVSink
+from pjk.sinks.tsv_sink import TSVSink
+from pjk.sinks.ddb import DDBSink
+from pjk.sinks.dir_sink import DirSink
+from pjk.sinks.expect import ExpectSink
+from pjk.sinks.user_sink_factory import UserSinkFactory
 
 COMPONENTS = {
         '-': StdoutSink,

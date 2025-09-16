@@ -2,13 +2,13 @@
 # Copyright 2024 Mike Schultz
 
 import os
-from djk.sinks.factory import SinkFactory
-from djk.pipes.factory import PipeFactory
-from djk.sources.factory import SourceFactory
+from pjk.sinks.factory import SinkFactory
+from pjk.pipes.factory import PipeFactory
+from pjk.sources.factory import SourceFactory
 import importlib.util
 import importlib
 import importlib.metadata
-from djk.base import Pipe, Source, Sink
+from pjk.base import Pipe, Source, Sink
 
 class ComponentRegistry:
     def __init__(self):

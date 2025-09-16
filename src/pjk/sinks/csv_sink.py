@@ -2,7 +2,7 @@
 # Copyright 2024 Mike Schultz
 
 import csv
-from djk.base import Sink, Source, ParsedToken, Usage
+from pjk.base import Sink, Source, ParsedToken, Usage
 
 class CSVSink(Sink):
     is_format = True

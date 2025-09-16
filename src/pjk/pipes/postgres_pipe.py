@@ -11,8 +11,8 @@ from typing import Any, Iterable, Dict, List, Optional
 
 import pg8000
 
-from djk.base import Pipe, ParsedToken, NoBindUsage, Usage, TokenError
-from djk.common import Lookups
+from pjk.base import Pipe, ParsedToken, NoBindUsage, Usage, TokenError
+from pjk.common import Lookups
 
 
 class DBClient:

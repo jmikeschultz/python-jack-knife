@@ -4,7 +4,7 @@
 # djk/pipes/group.py
 
 from typing import Optional
-from djk.base import ParsedToken, Usage, Pipe, KeyedSource
+from pjk.base import ParsedToken, Usage, Pipe, KeyedSource
 
 class MapPipe(Pipe, KeyedSource):
     @classmethod

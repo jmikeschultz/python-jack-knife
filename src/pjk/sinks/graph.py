@@ -1,12 +1,12 @@
 # SPDX-License-Identifier: Apache-2.0
 # Copyright 2024 Mike Schultz
 
-from djk.base import Sink, ParsedToken, Usage, TokenError
+from pjk.base import Sink, ParsedToken, Usage, TokenError
 
-from djk.sinks.graph_cumulative import graph_cumulative
-from djk.sinks.graph_hist import graph_hist
-from djk.sinks.graph_scatter import graph_scatter
-from djk.sinks.graph_bar_line import graph_bar_line
+from pjk.sinks.graph_cumulative import graph_cumulative
+from pjk.sinks.graph_hist import graph_hist
+from pjk.sinks.graph_scatter import graph_scatter
+from pjk.sinks.graph_bar_line import graph_bar_line
 
 class GraphSink(Sink):
     @classmethod

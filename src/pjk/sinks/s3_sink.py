@@ -2,8 +2,8 @@
 # Copyright 2025 Mike Schultz
 
 from typing import Optional, Type
-from djk.base import Source, Sink, ParsedToken, Usage
-from djk.log import logger
+from pjk.base import Source, Sink, ParsedToken, Usage
+from pjk.log import logger
 
 
 class S3Sink(Sink):

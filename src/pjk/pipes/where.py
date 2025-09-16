@@ -3,8 +3,8 @@
 
 # djk/pipes/where.py
 
-from djk.base import Pipe, ParsedToken, NoBindUsage, Usage, UsageError
-from djk.common import SafeNamespace
+from pjk.base import Pipe, ParsedToken, NoBindUsage, Usage, UsageError
+from pjk.common import SafeNamespace
 
 class WherePipe(Pipe):
     @classmethod

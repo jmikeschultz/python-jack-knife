@@ -4,9 +4,9 @@
 import os
 from typing import Any
 from queue import Queue, Empty
-from djk.base import Source, ParsedToken
-from djk.sources.lazy_file_local import LazyFileLocal
-from djk.log import logger
+from pjk.base import Source, ParsedToken
+from pjk.sources.lazy_file_local import LazyFileLocal
+from pjk.log import logger
 
 class DirSource(Source):
     def __init__(self, source_queue: Queue, in_source: Source = None):

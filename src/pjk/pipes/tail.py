@@ -3,7 +3,7 @@
 
 # djk/pipes/tail.py
 
-from djk.base import Pipe, ParsedToken, Usage
+from pjk.base import Pipe, ParsedToken, Usage
 
 class TailPipe(Pipe):
     @classmethod

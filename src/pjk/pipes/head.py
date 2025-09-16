@@ -4,7 +4,7 @@
 # djk/pipes/head.py
 
 from typing import Optional
-from djk.base import Pipe, ParsedToken, Usage
+from pjk.base import Pipe, ParsedToken, Usage
 
 class HeadPipe(Pipe):
     @classmethod

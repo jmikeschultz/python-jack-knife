@@ -3,8 +3,8 @@
 
 # djk/pipes/let_reduce.py
 
-from djk.base import Pipe, ParsedToken, NoBindUsage, Usage, UsageError, TokenError
-from djk.common import SafeNamespace, ReducingNamespace
+from pjk.base import Pipe, ParsedToken, NoBindUsage, Usage, UsageError, TokenError
+from pjk.common import SafeNamespace, ReducingNamespace
 import re
 import ast
 import json

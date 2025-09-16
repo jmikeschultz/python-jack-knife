@@ -3,7 +3,7 @@
 
 # djk/pipes/move_field.py
 
-from djk.base import Pipe, ParsedToken, Usage
+from pjk.base import Pipe, ParsedToken, Usage
 
 class MoveField(Pipe):
     @classmethod

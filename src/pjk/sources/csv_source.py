@@ -3,9 +3,9 @@
 
 import sys
 import csv
-from djk.base import Source, NoBindUsage
-from djk.sources.format_usage import FormatUsage
-from djk.sources.lazy_file import LazyFile
+from pjk.base import Source, NoBindUsage
+from pjk.sources.format_usage import FormatUsage
+from pjk.sources.lazy_file import LazyFile
 
 csv.field_size_limit(sys.maxsize)
 

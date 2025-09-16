@@ -5,7 +5,7 @@ import sys
 import yaml
 import subprocess
 import shutil
-from djk.base import Sink, Source, ParsedToken, Usage
+from pjk.base import Sink, Source, ParsedToken, Usage
 
 class YamlSink(Sink):
     @classmethod

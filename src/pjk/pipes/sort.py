@@ -3,7 +3,7 @@
 
 # djk/pipes/sort.py
 
-from djk.base import Pipe, ParsedToken, Usage, UsageError
+from pjk.base import Pipe, ParsedToken, Usage, UsageError
 
 class SortPipe(Pipe):
     @classmethod

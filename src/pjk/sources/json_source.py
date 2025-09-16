@@ -2,10 +2,10 @@
 # Copyright 2024 Mike Schultz
 
 import json
-from djk.base import Source, NoBindUsage
-from djk.sources.lazy_file import LazyFile
-from djk.sources.format_usage import FormatUsage
-from djk.log import logger
+from pjk.base import Source, NoBindUsage
+from pjk.sources.lazy_file import LazyFile
+from pjk.sources.format_usage import FormatUsage
+from pjk.log import logger
 
 class JsonSource(Source):
     is_format = True

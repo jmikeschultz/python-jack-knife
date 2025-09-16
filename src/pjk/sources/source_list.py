@@ -2,7 +2,7 @@
 # Copyright 2024 Mike Schultz
 
 from typing import Iterable
-from djk.base import Source
+from pjk.base import Source
 
 class SourceListSource(Source):
     def __init__(self, source_iter: Iterable[Source]):
