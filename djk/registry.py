@@ -5,10 +5,10 @@ import os
 from djk.sinks.factory import SinkFactory
 from djk.pipes.factory import PipeFactory
 from djk.sources.factory import SourceFactory
-#from djk.component_loader import load_user_components
 import importlib.util
+import importlib
+import importlib.metadata
 from djk.base import Pipe, Source, Sink
-
 
 class ComponentRegistry:
     def __init__(self):
@@ -18,13 +18,27 @@ class ComponentRegistry:
 
         sources, pipes, sinks = load_user_components()
         for name, comp in sources.items():
-            self.source_factory.add_component(name, comp)
+            self.source_factory.register(name, comp)
 
         for name, comp in pipes.items():
-            self.pipe_factory.add_component(name, comp)
+            self.pipe_factory.register(name, comp)
 
         for name, comp in sinks.items():
-            self.sink_factory.add_component(name, comp)
+            self.sink_factory.register(name, comp)
+
+        load_package_extras()
+
+    def register(self, name, comp):
+        if is_pipe(comp):
+            print('HELEELELELELELEEE')
+            if hasattr(comp, "usage"):
+                usage = comp.usage()
+                name = usage.name
+            self.pipe_factory.register(name, comp)
+        elif is_sink(comp):
+            self.sink_factory.register(name, comp)
+        elif is_source(comp):
+            self.source_factory(name, comp)
 
     def create_source(self, token: str):
         return self.source_factory.create(token)
@@ -116,3 +130,14 @@ def load_user_components(path=os.path.expanduser("~/.pjk/plugins")):
                     sources[name] = obj
 
     return sources, pipes, sinks
+
+def load_package_extras():
+    """
+    Discover and import all installed pjk extras (via entry points).
+    """
+    for ep in importlib.metadata.entry_points(group="pjk.package_extras"):
+        try:
+            importlib.import_module(ep.value)
+            print(f"[pjk] loaded package extra: {ep.name} -> {ep.value}")
+        except Exception as e:
+            print(f"[pjk] failed to load extra {ep.name}: {e}")

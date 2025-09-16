@@ -5,13 +5,11 @@ import re
 from datetime import date, datetime
 from collections import defaultdict
 
-import matplotlib.pyplot as plt
-import matplotlib.dates as mdates
-import numpy as np
-import pandas as pd
-
-
 def graph_bar_line(obj, type):
+    import matplotlib.pyplot as plt # lazy imports
+    import matplotlib.dates as mdates
+    import numpy as np
+    import pandas as pd
     """
     Plot grouped data as a bar or line chart. Automatically detects time-series X
     unless explicitly overridden via `obj.x_is_time = True/False`.

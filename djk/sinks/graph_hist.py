@@ -1,9 +1,6 @@
 # SPDX-License-Identifier: Apache-2.0
 # Copyright 2024 Mike Schultz
 
-import matplotlib.pyplot as plt
-import numpy as np
-import matplotlib.pyplot as plt
 from collections import defaultdict
 
 def aggregate_ys(obj):
@@ -20,6 +17,9 @@ def aggregate_ys(obj):
     return count, agg
 
 def graph_hist(obj):
+    import matplotlib.pyplot as plt # lazy imports
+    import numpy as np
+
     count, agg = aggregate_ys(obj)
     if agg:
         x_vals = sorted(agg)

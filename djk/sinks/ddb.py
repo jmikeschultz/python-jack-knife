@@ -2,7 +2,6 @@
 # Copyright 2024 Mike Schultz
 
 from djk.base import Sink, Source, ParsedToken, Usage
-import boto3
 from decimal import Decimal
 
 class DDBSink(Sink):
@@ -19,6 +18,7 @@ class DDBSink(Sink):
 
     def __init__(self, input_source: Source, ptok: ParsedToken, usage: Usage):
         super().__init__(input_source)
+        import boto3 # lazy import
 
         self.table_name = usage.get_arg('table')
         self.batch_size = int(usage.get_param('batch_size', default='10'))

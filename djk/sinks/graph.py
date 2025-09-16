@@ -1,9 +1,7 @@
 # SPDX-License-Identifier: Apache-2.0
 # Copyright 2024 Mike Schultz
 
-from djk.base import Sink, Source, ParsedToken, Usage, TokenError
-import matplotlib.pyplot as plt
-import numpy as np
+from djk.base import Sink, ParsedToken, Usage, TokenError
 
 from djk.sinks.graph_cumulative import graph_cumulative
 from djk.sinks.graph_hist import graph_hist
@@ -33,6 +31,8 @@ class GraphSink(Sink):
         self.pause = usage.get_param('pause')
 
     def process(self):
+        import matplotlib.pyplot as plt # lazy import
+
         for record in self.input:
             self.records.append(record)
 

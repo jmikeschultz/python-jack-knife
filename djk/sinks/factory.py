@@ -3,7 +3,8 @@
 
 from typing import Any, List, Callable
 import os
-from djk.base import Source, Sink, ParsedToken, TokenError, ComponentFactory
+from djk.base import Source, Sink, ParsedToken
+from djk.common import ComponentFactory
 from djk.sinks.stdout import StdoutSink
 from djk.sinks.json_sink import JsonSink
 from djk.sinks.devnull import DevNullSink

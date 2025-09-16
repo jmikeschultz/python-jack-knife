@@ -1,11 +1,9 @@
 # SPDX-License-Identifier: Apache-2.0
 # Copyright 2024 Mike Schultz
 
-import matplotlib.pyplot as plt
-import numpy as np
-import matplotlib.pyplot as plt
-
 def graph_cumulative(obj):
+    import matplotlib.pyplot as plt # lazy import
+    
     # Filter and sort records by x
     records = [
         r for r in obj.records

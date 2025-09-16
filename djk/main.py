@@ -100,7 +100,7 @@ def execute_tokens(tokens:List[str]):
 
 def main():
     tokens = sys.argv[1:]
-    execute_inner(tokens)
+    execute_tokens(tokens)
 
 if __name__ == "__main__":
     main()

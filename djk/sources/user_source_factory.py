@@ -2,11 +2,12 @@
 # Copyright 2024 Mike Schultz
 
 import importlib.util
+from typing import Optional
 from djk.base import Source, Pipe, Sink, ParsedToken, UsageError
 
 class UserSourceFactory:
     @staticmethod
-    def create(ptok: ParsedToken) -> Source | None:
+    def create(ptok: ParsedToken) -> Optional[Source]:
         script_path = ptok.pre_colon
         try:
             spec = importlib.util.spec_from_file_location("user_source", script_path)

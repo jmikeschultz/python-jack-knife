@@ -3,7 +3,6 @@
 
 from abc import ABC, abstractmethod
 from typing import Any, Optional, List, Set
-from djk.common import highlight
 
 class TokenError(ValueError):
     @classmethod
@@ -370,40 +369,3 @@ class IdentitySource(Source):
     def next(self):
         raise RuntimeError("IdentitySource should never be executed")
 
-class ComponentFactory:
-    def __init__(self, components: dict, comp_type_name: str):
-        self.num_orig = 0
-        self.components = components # name -> component_class
-        self.comp_type_name = comp_type_name
-        self.num_orig_comps = len(components)
-
-    def add_component(self, name, comp_class):
-        self.components[name] = comp_class
-
-    def get_comp_type_name(self):
-        return self.comp_type_name
-
-    def print_descriptions(self):
-        header = highlight(f'{self.comp_type_name}s')
-        print(header)
-
-        i = 0
-        plugin = ''
-        for name, comp_class in self.components.items():
-            usage = comp_class.usage()
-            lines = usage.desc.split('\n')
-            if i >= self.num_orig_comps:
-                plugin = '(~/.pjk/plugin)'
-            line = f'  {name:<12} {lines[0]} {plugin}'
-            line = highlight(line, 'bold', plugin) if plugin else line
-            print(line)
-            i += 1
-
-    def get_usage(self, name: str):
-        comp_class = self.components.get(name)
-        if not comp_class:
-            return None
-        return comp_class.usage()
-
-    def create(self, token: str):
-        pass

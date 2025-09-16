@@ -2,11 +2,12 @@
 # Copyright 2024 Mike Schultz
 
 import importlib.util
+from typing import Optional
 from djk.base import Source, Sink, UsageError, ParsedToken
 
 class UserSinkFactory:
     @staticmethod
-    def create_from_path(ptok: ParsedToken) -> Sink | None:
+    def create_from_path(ptok: ParsedToken) -> Optional[Sink]:
         script_path = ptok.pre_colon
         try:
             spec = importlib.util.spec_from_file_location("user_sink", script_path)

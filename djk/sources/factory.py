@@ -3,13 +3,13 @@
 
 import os
 import queue
-from djk.base import Source, ParsedToken, ComponentFactory
+from djk.base import Source, ParsedToken
+from djk.common import ComponentFactory
 from djk.sources.json_source import JsonSource
 from djk.sources.csv_source import CSVSource
 from djk.sources.sql_source import SQLSource
 from djk.sources.tsv_source import TSVSource
 from djk.sources.s3_source import S3Source
-from djk.sources.source_list import SourceListSource
 from djk.sources.inline_source import InlineSource
 from djk.sources.dir_source import DirSource
 from djk.sources.user_source_factory import UserSourceFactory

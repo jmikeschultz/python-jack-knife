@@ -2,7 +2,8 @@
 # Copyright 2024 Mike Schultz
 
 # djk/pipes/factory.py
-from djk.base import Usage, Pipe, ParsedToken, ComponentFactory
+from djk.base import Usage, Pipe, ParsedToken
+from djk.common import ComponentFactory
 from djk.pipes.move_field import MoveField
 from djk.pipes.remove_field import RemoveField
 from djk.pipes.let_reduce import LetPipe

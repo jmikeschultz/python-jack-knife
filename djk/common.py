@@ -110,3 +110,41 @@ class Lookups:
     def all(self):
         """Return the full lookup dictionary."""
         return dict(self._data)
+
+class ComponentFactory:
+    def __init__(self, components: dict, comp_type_name: str):
+        self.num_orig = 0
+        self.components = components # name -> component_class
+        self.comp_type_name = comp_type_name
+        self.num_orig_comps = len(components)
+
+    def register(self, name, comp_class):
+        self.components[name] = comp_class
+
+    def get_comp_type_name(self):
+        return self.comp_type_name
+
+    def print_descriptions(self):
+        header = highlight(f'{self.comp_type_name}s')
+        print(header)
+
+        i = 0
+        plugin = ''
+        for name, comp_class in self.components.items():
+            usage = comp_class.usage()
+            lines = usage.desc.split('\n')
+            if i >= self.num_orig_comps:
+                plugin = '(~/.pjk/plugin)'
+            line = f'  {name:<12} {lines[0]} {plugin}'
+            line = highlight(line, 'bold', plugin) if plugin else line
+            print(line)
+            i += 1
+
+    def get_usage(self, name: str):
+        comp_class = self.components.get(name)
+        if not comp_class:
+            return None
+        return comp_class.usage()
+
+    def create(self, token: str):
+        pass

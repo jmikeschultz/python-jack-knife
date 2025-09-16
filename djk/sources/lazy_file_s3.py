@@ -3,12 +3,12 @@
 
 import io
 import gzip
-import boto3
 from typing import IO
 from djk.sources.lazy_file import LazyFile
 
 class LazyFileS3(LazyFile):
     def __init__(self, bucket: str, key: str, is_gz: bool):
+        import boto3 # lazy import
         self.s3 = boto3.client('s3') # for each thread
         self.bucket = bucket
         self.key = key

@@ -1,7 +1,6 @@
 # SPDX-License-Identifier: Apache-2.0
 # Copyright 2024-2025 Mike Schultz
 
-import boto3
 from threading import Lock
 from typing import Optional, Any, Iterator, Tuple
 from djk.base import Source, ParsedToken
@@ -24,6 +23,7 @@ class _SharedS3State:
         override_format: Optional[str],
         get_format_class_gz: Any,
     ):
+        import boto3 # lazy import
         self.s3 = s3_client
         self.bucket = bucket
         self.prefix = prefix

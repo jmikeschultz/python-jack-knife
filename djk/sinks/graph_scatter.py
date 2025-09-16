@@ -1,11 +1,10 @@
 # SPDX-License-Identifier: Apache-2.0
 # Copyright 2024 Mike Schultz
 
-import matplotlib.pyplot as plt
-import numpy as np
-import matplotlib.pyplot as plt
-
 def graph_scatter(obj):
+    import matplotlib.pyplot as plt # lazy imports
+    import numpy as np
+
     valid_records = [r for r in obj.records if obj.x_field in r and obj.y_field in r]
     x_vals = [r[obj.x_field] for r in valid_records]
     y_vals = [r[obj.y_field] for r in valid_records]
