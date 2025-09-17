@@ -23,7 +23,6 @@ class _SharedS3State:
         override_format: Optional[str],
         get_format_class_gz: Any,
     ):
-        import boto3 # lazy import
         self.s3 = s3_client
         self.bucket = bucket
         self.prefix = prefix
@@ -123,6 +122,7 @@ class S3Source(Source):
         """
         Returns immediately with a lazily-backed S3Source (no pre-enqueue).
         """
+        import boto3 # lazy import
         s3_uri = ptok.all_but_params
         params = ptok.get_params()
         override = params.get("format")

@@ -1,8 +1,7 @@
 # SPDX-License-Identifier: Apache-2.0
 # Copyright 2024 Mike Schultz
 
-import pyarrow.parquet as pq
-from pjk.base import Source, NoBindUsage
+from pjk.base import Source
 from pjk.sources.lazy_file import LazyFile
 from pjk.sources.format_usage import FormatUsage
 
@@ -17,6 +16,7 @@ class ParquetSource(Source):
         self.num_recs = 0
 
     def __iter__(self):
+        import pyarrow.parquet as pq # lazy import
         with self.lazy_file.open(binary=True) as f:
             table = pq.read_table(f)
             batch = table.to_pydict()

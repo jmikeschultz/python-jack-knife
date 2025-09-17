@@ -7,9 +7,7 @@ import base64
 import datetime as _dt
 import uuid
 from decimal import Decimal
-from typing import Any, Iterable, Dict, List, Optional
-
-import pg8000
+from typing import Any, Dict, Optional
 
 from pjk.base import Pipe, ParsedToken, NoBindUsage, Usage, TokenError
 from pjk.common import Lookups
@@ -18,9 +16,10 @@ from pjk.common import Lookups
 class DBClient:
     """Simple shared-connection wrapper for pg8000."""
     _connection = None
-
+    
     def __init__(self, host: str, username: str, password: Optional[str],
                  dbname: str, port: int = 5432, ssl: bool = False):
+        import pg8000 # lazy import
         if DBClient._connection is None:
             try:
                 kwargs = dict(user=username, password=password, host=host, database=dbname, port=port)
