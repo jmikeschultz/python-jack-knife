@@ -1,96 +1,81 @@
 # SPDX-License-Identifier: Apache-2.0
 # Copyright 2025 Mike Schultz
 
+import io
 from typing import Optional, Type
-from pjk.base import Source, Sink, ParsedToken, Usage
+from pjk.base import Source, Sink
 from pjk.log import logger
+from pjk.sinks.s3_stream import S3MultipartWriter
 
 
 class S3Sink(Sink):
     """
-    Write records to S3 in the given <format>, partitioned into:
-      s3:{bucket}/{prefix}/file-0000
-      s3:{bucket}/{prefix}/file-0001
+    Write records to S3 in the given <format>.
+
+    - Folder mode (path without extension):
+        s3:bucket/prefix/ → file-0000.ext, file-0001.ext, ...
+    - Single-file mode (path ends with .ext or .ext.gz):
+        s3:bucket/prefix/output.csv[.gz]
+
     Args (via Usage):
       - path: 'bucket/path/to/files' (bucket required, prefix optional)
     """
 
     _FILENAME_BASE: str = "file"
     _FILENAME_DIGITS: int = 4
-    _SCHEME: str = "s3:"
-
-    @classmethod
-    def usage(cls):
-        usage = Usage(
-            name="<format>",
-            desc="Write records to S3 in the given <format> (e.g., csv)",
-            component_class=cls,
-        )
-        usage.def_arg(name="path", usage="bucket/path/to/files")
-        return usage
-
-    def __init__(
-        self,
-        ptok: ParsedToken,
-        usage: Usage,
-        sink_class: Type[Sink],
-        is_gz: bool,
-        fileno: int = 0,
-    ):
-        super().__init__(ptok, usage)
-
-        raw_path: Optional[str] = usage.get_arg("path")
-        if not raw_path:
-            raise ValueError("S3Sink requires 'path' argument like 'bucket/path/to/files'")
-
-        # Normalize: allow 's3:bucket/...' or '/bucket/...', strip extras
-        path = raw_path.strip()
-        if path.startswith(self._SCHEME):
-            path = path[len(self._SCHEME) :]
-        path = path.lstrip("/")
-
-        # Ensure a trailing slash so we can append filenames cleanly
-        self.base_path: str = path if path.endswith("/") else path + "/"
-
-        self.ptok = ptok
-        self.usage = usage
+    
+    def __init__(self, sink_class: Type[Sink], path_no_ext: str, is_gz: bool, fileno: int):
+        self.path_no_ext = path_no_ext if not path_no_ext.startswith('//') else path_no_ext[2:] # strip leading //
         self.sink_class = sink_class
         self.is_gz = is_gz
         self.fileno = fileno
-        self.num_files = 1  # next file index for deep_copy clones
+        self.is_single_file = fileno == -1
+        if self.path_no_ext.endswith('/') and not self.is_single_file:
+            self.path_no_ext = self.path_no_ext[:-1]
+
+        self.num_files = 1
 
     def _build_object_key(self, index: int) -> str:
-        file_name = f"{self._FILENAME_BASE}-{index:0{self._FILENAME_DIGITS}d}"
-        return f"{self.base_path}{file_name}"
+        if self.is_single_file:
+            file_name = f'{self.path_no_ext}.{self.sink_class.extension}'
+        else:
+            file_name = f"{self.path_no_ext}/{self._FILENAME_BASE}-{index:0{self._FILENAME_DIGITS}d}.{self.sink_class.extension}"
 
-    def _build_parsed_token_for_index(self, index: int) -> ParsedToken:
-        key = self._build_object_key(index)
-        token_str = f"{self._SCHEME}{key}:{self.is_gz}"
-        return ParsedToken(token_str)
+        if self.is_gz:
+            file_name += ".gz"
+
+        return file_name
 
     def process(self):
-        file_ptok = self._build_parsed_token_for_index(self.fileno)
+        object_key = self._build_object_key(self.fileno)
+        bucket, key = object_key.split("/", 1)
 
-        file_usage = self.sink_class.usage()
-        file_usage.bind(file_ptok)
+        # Open multipart writer and wrap in text mode
+        with S3MultipartWriter(bucket, key) as writer:
+            outfile = io.TextIOWrapper(writer, encoding="utf-8", newline="")
 
-        file_sink = self.sink_class(file_ptok, file_usage)
-        file_sink.add_source(self.input)
+            # Instantiate the format-specific sink
+            file_sink = self.sink_class(outfile)
+            file_sink.add_source(self.input)
 
-        logger.debug(
-            f"in process sinking to: s3:{self.base_path} (object index {self.fileno:0{self._FILENAME_DIGITS}d})"
-        )
-        file_sink.process()
+            logger.debug(f"S3Sink streaming to s3://{bucket}/{key}")
+            file_sink.process()
+
+            # TextIOWrapper.close() flushes into S3MultipartWriter.close()
+            outfile.close() 
 
     def deep_copy(self):
+        if self.is_single_file:
+            # Single-file mode: no fanout allowed
+            return None
+
         source_clone: Optional[Source] = self.input.deep_copy()
         if not source_clone:
             return None
 
         clone = S3Sink(
-            ptok=self.ptok,
-            usage=self.usage,
             sink_class=self.sink_class,
+            path_no_ext=self.path_no_ext,
             is_gz=self.is_gz,
             fileno=self.num_files,
         )

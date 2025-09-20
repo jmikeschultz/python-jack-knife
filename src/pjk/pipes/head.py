@@ -4,9 +4,9 @@
 # djk/pipes/head.py
 
 from typing import Optional
-from pjk.base import Pipe, ParsedToken, Usage
+from pjk.base import Pipe, ParsedToken, Usage, DeepCopyPipe
 
-class HeadPipe(Pipe):
+class HeadPipe(DeepCopyPipe):
     @classmethod
     def usage(cls):
         usage = Usage(
@@ -19,7 +19,7 @@ class HeadPipe(Pipe):
         return usage
 
     def __init__(self, ptok: ParsedToken, usage: Usage):
-        super().__init__(ptok)
+        super().__init__(ptok, usage)
         self.limit = usage.get_arg('limit')
         self.count = 0
 

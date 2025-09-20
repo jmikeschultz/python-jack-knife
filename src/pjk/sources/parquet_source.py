@@ -1,15 +1,11 @@
 # SPDX-License-Identifier: Apache-2.0
 # Copyright 2024 Mike Schultz
 
-from pjk.base import Source
 from pjk.sources.lazy_file import LazyFile
-from pjk.sources.format_usage import FormatUsage
+from pjk.sources.format_source import FormatSource
 
-class ParquetSource(Source):
-    is_format = True  # enables format-based routing
-    @classmethod
-    def usage(cls):
-        return FormatUsage('parquet', component_class=cls)
+class ParquetSource(FormatSource):
+    extension = 'parquet'
 
     def __init__(self, lazy_file: LazyFile):
         self.lazy_file = lazy_file

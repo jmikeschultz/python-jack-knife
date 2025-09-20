@@ -3,20 +3,13 @@
 
 import sys
 from pjk.base import Source, NoBindUsage
-from pjk.sources.format_usage import FormatUsage
+from pjk.sources.format_source import FormatSource
 from pjk.sources.lazy_file import LazyFile
 
 
-class SQLSource(Source):
-    is_format = True
-
-    @classmethod
-    def usage(cls):
-        return FormatUsage(
-            "sql",
-            component_class=cls,
-            desc_override="SQL source. Emits SQL in single record in 'query' field."
-        )
+class SQLSource(FormatSource):
+    extension = 'sql'
+    desc_override = "SQL source. Emits SQL in single record in 'query' field."
 
     def __init__(self, lazy_file: LazyFile):
         self.lazy_file = lazy_file

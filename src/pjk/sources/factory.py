@@ -16,6 +16,7 @@ from pjk.sources.user_source_factory import UserSourceFactory
 from pjk.sources.lazy_file import LazyFile
 from pjk.sources.lazy_file_local import LazyFileLocal
 from pjk.sources.parquet_source import ParquetSource
+from pjk.sources.format_source import FormatSource
 
 COMPONENTS = {
         'inline': InlineSource,
@@ -58,7 +59,7 @@ class SourceFactory(ComponentFactory):
             return None, None
         
         # make sure
-        if not format_class.is_format:
+        if not issubclass(format_class, FormatSource):
             return None, None # raise ?
 
         return format_class, is_gz

@@ -4,15 +4,11 @@
 import json
 from pjk.base import Source, NoBindUsage
 from pjk.sources.lazy_file import LazyFile
-from pjk.sources.format_usage import FormatUsage
+from pjk.sources.format_source import FormatSource
 from pjk.log import logger
 
-class JsonSource(Source):
-    is_format = True
-
-    @classmethod
-    def usage(cls):
-        return FormatUsage('json', component_class=cls)
+class JsonSource(FormatSource):
+    extension = 'json'
 
     def __init__(self, lazy_file: LazyFile):
         self.lazy_file = lazy_file

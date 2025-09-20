@@ -1,59 +1,62 @@
 # SPDX-License-Identifier: Apache-2.0
 # Copyright 2024 Mike Schultz
 
-import os
-from pjk.base import Source, Sink, ParsedToken, Usage
+import os, gzip
+from pjk.base import Sink, ParsedToken, Usage
+from typing import Optional, Type
+from .format_sink import Sink
 from pjk.log import logger
+import gzip
 
 class DirSink(Sink):
-    @classmethod
-    def usage(cls):
-        usage = Usage(
-            name='<format>',
-            desc='Write records to a local directory in the given <format> (e.g., csv)',
-            component_class=cls
-        )
-        usage.def_arg(name='dir', usage='Path to output directory')
-        return usage
-
-    def __init__(self, ptok: ParsedToken, usage: Usage, sink_class: type, is_gz: bool, fileno: int = 0):
-        super().__init__(ptok, usage)
-        self.dir_path = usage.get_arg('dir')  # ✅ Use usage, not ptok directly
-        self.ptok = ptok
-        self.usage = usage
+    def __init__(self, sink_class: Type[Sink], path_no_ext: str, is_gz: bool, fileno: int = 0):
+        super().__init__(None, None)
         self.sink_class = sink_class
+        self.path_no_ext = path_no_ext
         self.is_gz = is_gz
         self.fileno = fileno
         self.num_files = 1
 
-        os.makedirs(self.dir_path, exist_ok=True)
+        os.makedirs(self.path_no_ext, exist_ok=True)
 
     def process(self):
-        file = os.path.join(self.dir_path, f'file-{self.fileno:04d}')
-        file_ptok = ParsedToken(f'{file}:{self.is_gz}')
-        file_usage = self.sink_class.usage()
-        file_usage.bind(file_ptok)
+        # build the base filename
+        base = os.path.join(self.path_no_ext, f"file-{self.fileno:04d}")
 
-        file_sink = self.sink_class(file_ptok, file_usage)
+        # include extension here (format sink name + gz logic)
+        filename = f"{base}.{self.sink_class.extension}"
+        if self.is_gz:
+            filename += ".gz"
+
+        # open output file handle
+        outfile = gzip.open(filename, "wt", encoding="utf-8") if self.is_gz else open(filename, "wt", encoding="utf-8")
+
+        # create the format-specific sink with the open handle
+        file_sink = self.sink_class(outfile)
         file_sink.add_source(self.input)
 
-        logger.debug(f'in process sinking to: {file}')
+        logger.debug(f"in process sinking to local file: {filename}")
         file_sink.process()
+        outfile.close()
 
     def deep_copy(self):
+        # Ask the upstream source to duplicate itself
         source_clone = self.input.deep_copy()
-        if not source_clone:
+        if source_clone is None:
             return None
 
+        # Create a new DirSink with the next file index
         clone = DirSink(
-            ptok=self.ptok,
-            usage=self.usage,
             sink_class=self.sink_class,
+            path_no_ext=self.path_no_ext,
             is_gz=self.is_gz,
-            fileno=self.num_files
+            fileno=self.num_files,
         )
 
+        # Wire up the cloned source to the new sink
         clone.add_source(source_clone)
 
+        # Increment file counter for the next clone
         self.num_files += 1
         return clone
+

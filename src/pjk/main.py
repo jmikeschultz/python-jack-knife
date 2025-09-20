@@ -24,8 +24,12 @@ def write_history(tokens):
     log_path = ".pjk-history.txt"
     timestamp = datetime.now().strftime("%Y-%m-%d %H:%M")
     command = " ".join(tokens)
-    with open(log_path, "a") as f:
-        f.write(f"{timestamp}\tpjk {command}\n")
+
+    try:
+        with open(log_path, "a") as f:
+            f.write(f"{timestamp}\tpjk {command}\n")
+    except (PermissionError, OSError):
+        pass
 
 def execute_threaded(sinks):
     # Choose a max thread limit (explicitly)

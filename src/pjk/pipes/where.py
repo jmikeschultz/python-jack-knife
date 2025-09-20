@@ -3,10 +3,10 @@
 
 # djk/pipes/where.py
 
-from pjk.base import Pipe, ParsedToken, NoBindUsage, Usage, UsageError
+from pjk.base import Pipe, ParsedToken, NoBindUsage, Usage, UsageError, DeepCopyPipe
 from pjk.common import SafeNamespace
 
-class WherePipe(Pipe):
+class WherePipe(DeepCopyPipe):
     @classmethod
     def usage(cls):
         usage = NoBindUsage(
@@ -39,11 +39,3 @@ class WherePipe(Pipe):
             except Exception:
                 continue  # ignore eval errors
 
-    def deep_copy(self):
-        source_clone = self.left.deep_copy()
-        if source_clone:
-            pipe = WherePipe(self.ptok, self.usage)
-            pipe.add_source(source_clone)
-            return pipe
-        else:
-            return None

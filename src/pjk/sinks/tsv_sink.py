@@ -2,21 +2,11 @@
 # Copyright 2024 Mike Schultz
 
 from pjk.sinks.csv_sink import CSVSink
-from pjk.base import Source, ParsedToken, Usage
+from pjk.base import Usage
+from typing import IO
 
 class TSVSink(CSVSink):
-    is_format = True
+    extension = 'tsv'
 
-    @classmethod
-    def usage(cls):
-        usage = Usage(
-            name='tsv',
-            desc='Write records to a .tsv file (tab-separated values)',
-            component_class=cls
-        )
-        usage.def_arg(name='path', usage='Path prefix (no extension)')
-        return usage
-
-    def __init__(self, ptok: ParsedToken, usage: Usage):
-        path_no_ext = usage.get_arg('path')
-        super().__init__(path_no_ext, delimiter="\t", ext='tsv')
+    def __init__(self, outfile: IO[str]):
+        super().__init__(outfile, delimiter="\t")

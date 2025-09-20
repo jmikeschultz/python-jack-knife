@@ -4,16 +4,13 @@
 import sys
 import csv
 from pjk.base import Source, NoBindUsage
-from pjk.sources.format_usage import FormatUsage
+from pjk.sources.format_source import FormatSource
 from pjk.sources.lazy_file import LazyFile
 
 csv.field_size_limit(sys.maxsize)
 
-class CSVSource(Source):
-    is_format = True
-    @classmethod
-    def usage(cls):
-        return FormatUsage('csv', component_class=cls)
+class CSVSource(FormatSource):
+    extension = 'csv'
 
     def __init__(self, lazy_file: LazyFile, delimiter: str = ","):
         self.lazy_file = lazy_file

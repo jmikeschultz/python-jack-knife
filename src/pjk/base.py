@@ -276,8 +276,6 @@ class KeyedSource(ABC):
         return None
 
 class Source(ABC):
-    is_format = False
-
     @classmethod
     def usage(cls):
         return NoBindUsage(
@@ -296,7 +294,6 @@ class Source(ABC):
             self._iter = iter(self)
         return next(self._iter)
 
-
     def deep_copy(self):
         return None  # Default: not copyable unless overridden
 
@@ -307,6 +304,7 @@ class Pipe(Source):
     
     def __init__(self, ptok: ParsedToken, usage: Usage = None):
         self.ptok = ptok
+        self.usage = usage
         self.left = None  # left source for convience
         self.right = None # right source for convience
         self.inputs: List[Source] = []
@@ -339,9 +337,22 @@ class Pipe(Source):
 
         return clone
 
-class Sink(ABC):
-    is_format = False
+class DeepCopyPipe(Pipe):
+    def deep_copy(self):
+        """
+        Generic deep_copy: clone left source, re-instantiate
+        this pipe class with the same ptok/usage, and attach.
+        """
+        source_clone = self.left.deep_copy()
+        if not source_clone:
+            return None
 
+        # re-instantiate using the actual subclass
+        pipe = type(self)(self.ptok, self.usage)
+        pipe.add_source(source_clone)
+        return pipe
+
+class Sink(ABC):
     @classmethod
     def usage(cls):
         return NoBindUsage(
@@ -356,6 +367,11 @@ class Sink(ABC):
 
     def drain(self):
         self.process()
+        self.close()
+
+    # optional
+    def close(self):
+        pass
 
     def print_info(self):
         pass

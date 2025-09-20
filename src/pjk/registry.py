@@ -30,7 +30,6 @@ class ComponentRegistry:
 
     def register(self, name, comp):
         if is_pipe(comp):
-            print('HELEELELELELELEEE')
             if hasattr(comp, "usage"):
                 usage = comp.usage()
                 name = usage.name
@@ -131,11 +130,19 @@ def load_user_components(path=os.path.expanduser("~/.pjk/plugins")):
 
     return sources, pipes, sinks
 
+def iter_entry_points(group: str):
+    eps = importlib.metadata.entry_points()
+    if hasattr(eps, "select"):
+        # Python 3.10+ (importlib.metadata.EntryPoints)
+        return eps.select(group=group)
+    # Python 3.9 and older
+    return eps.get(group, [])
+
 def load_package_extras():
     """
     Discover and import all installed pjk extras (via entry points).
     """
-    for ep in importlib.metadata.entry_points(group="pjk.package_extras"):
+    for ep in iter_entry_points("pjk.package_extras"):
         try:
             importlib.import_module(ep.value)
             print(f"[pjk] loaded package extra: {ep.name} -> {ep.value}")
