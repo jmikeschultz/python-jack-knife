@@ -77,45 +77,50 @@ class FormatSink(Sink):
         usage = cls.usage()
         usage.bind_params(ptok) # only bind params
 
-        is_single_file = ext is not None
         is_gz = False
         format = None
 
-        if is_single_file:
+        if pre_colon and pre_colon != 's3': # local dir case
+            format, is_gz = cls.get_format_gz(pre_colon)
+            sink_class = sinks.get(format)
+            if not sink_class or not issubclass(sink_class, FormatSink):
+                return None
+            if ext:
+                raise Exception('fix this exception message, extensions not allowed for local directory sinks')
+            return DirSink(sink_class, path_no_ext, is_gz, fileno=0)
+
+        if ext and not pre_colon: # single local file case
             format, is_gz = cls.get_format_gz(ext)
-        
-        if pre_colon: # s3 and dir
-            if pre_colon == 's3':
-                if not format: # if not specified explicitly
-                    format, is_gz = cls.get_format_gz(usage.get_param('format'))
+            sink_class = sinks.get(format)
+            if not sink_class:
+                raise Exception('fix this exception message, extension for single file must be recognized format')
 
+            filename = f'{path_no_ext}.{ext}'
+
+            # open the output file stream
+            if is_gz:
+                outfile = gzip.open(filename, "wt", encoding="utf-8", newline="")
+            else:
+                outfile = open(filename, "wt", encoding="utf-8", newline="")
+
+            # instantiate the sink with the prepared stream
+            sink = sink_class(outfile)
+            return sink
+
+        if pre_colon == 's3':
+            if ext: # single file
+                format, is_gz = cls.get_format_gz(ext)
                 sink_class = sinks.get(format)
-                if not sink_class or not issubclass(sink_class, FormatSink):
-                    return None
-                fileno = -1 if is_single_file else 0 # -1 tells s3 single file, no threading
-                return S3Sink(sink_class, path_no_ext, is_gz, fileno)
-        
-            sink_class = sinks.get(pre_colon) # dir case
-            if sink_class and issubclass(sink_class, FormatSink):
-                if is_single_file:
-                    raise('fix this exception, error using format:dir with format extension')
-                return DirSink(sink_class, path_no_ext, is_gz, fileno=0)
-        
-        sink_class = sinks.get(format) # local single file
-        if not sink_class or not issubclass(sink_class, FormatSink):
-            return None
-        
-        if not is_single_file:
-            raise('fix this exception')
-        
-        filename = f'{path_no_ext}.{ext}'
-        # open the output file stream
-        if is_gz:
-            outfile = gzip.open(filename, "wt", encoding="utf-8", newline="")
-        else:
-            outfile = open(filename, "wt", encoding="utf-8", newline="")
+                if not sink_class:
+                    raise Exception('fix this exception message, extension for single file must be recognized format')    
+            else:
+                format, is_gz = cls.get_format_gz(usage.get_param('format'))
+                sink_class = sinks.get(format)
 
-        # instantiate the sink with the prepared stream
-        sink = sink_class(outfile)
-        return sink
+            fileno = -1 if ext else 0 # -1 tells s3 single file, no threading
+            return S3Sink(sink_class, path_no_ext, is_gz, fileno)
+        
+        return None
+        
+        
         

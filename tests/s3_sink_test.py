@@ -4,17 +4,19 @@
 import os
 import json
 import boto3
-import pytest
-
 from pjk.main import execute_tokens
-
-import boto3
-import json
 import gzip
 import io
 from typing import List, Dict
+import csv
 
-def read_s3_json_records(s3_path: str) -> List[Dict]:
+def read_s3_records(s3_path: str) -> List[Dict]:
+    """
+    Read one or more S3 objects (JSON lines, CSV, or TSV, plain or gzipped)
+    and return a flat list of dicts.
+
+    Format is inferred from the file extension.
+    """
     if not s3_path.startswith("s3://"):
         raise ValueError(f"Expected s3:// path, got {s3_path!r}")
 
@@ -26,13 +28,15 @@ def read_s3_json_records(s3_path: str) -> List[Dict]:
     s3 = boto3.client("s3")
     records: List[Dict] = []
 
-    # Heuristic: if path has an extension (.json, .json.gz), treat as single file
-    if prefix.endswith(".json") or prefix.endswith(".json.gz"):
+    # Determine if single file or folder prefix
+    if any(
+        prefix.endswith(ext)
+        for ext in [".json", ".json.gz", ".csv", ".csv.gz", ".tsv", ".tsv.gz"]
+    ):
         objects = [{"Key": prefix}]
     else:
-        # Treat as folder/prefix
         if not prefix.endswith("/"):
-            prefix = prefix + "/"
+            prefix += "/"
         paginator = s3.get_paginator("list_objects_v2")
         objects = []
         for page in paginator.paginate(Bucket=bucket, Prefix=prefix):
@@ -44,25 +48,40 @@ def read_s3_json_records(s3_path: str) -> List[Dict]:
         resp = s3.get_object(Bucket=bucket, Key=key)
         body = resp["Body"].read()
 
+        # Handle compression
         if key.endswith(".gz"):
             stream = io.TextIOWrapper(gzip.GzipFile(fileobj=io.BytesIO(body)), encoding="utf-8")
+            bare_key = key[:-3]  # strip ".gz"
         else:
             stream = io.StringIO(body.decode("utf-8"))
+            bare_key = key
 
-        for line in stream:
-            line = line.strip()
-            if not line:
-                continue
-            records.append(json.loads(line))
+        # Detect format from extension
+        if bare_key.endswith(".json"):
+            for line in stream:
+                line = line.strip()
+                if line:
+                    records.append(json.loads(line))
+        elif bare_key.endswith(".csv"):
+            reader = csv.DictReader(stream, delimiter=",")
+            for row in reader:
+                records.append(dict(row))
+        elif bare_key.endswith(".tsv"):
+            reader = csv.DictReader(stream, delimiter="\t")
+            for row in reader:
+                records.append(dict(row))
+        else:
+            raise ValueError(f"Unsupported format for key: {key}")
 
     return records
 
+def _normalize(record):
+    return {k: int(v) if isinstance(v, str) and v.isdigit() else v
+            for k, v in record.items()}
+
 def assert_records_match(inrecords, outrecords):
-    """
-    Assert two lists of dicts contain the same records, ignoring order.
-    """
-    inset = {json.dumps(r, sort_keys=True) for r in inrecords}
-    outset = {json.dumps(r, sort_keys=True) for r in outrecords}
+    inset = {json.dumps(_normalize(r), sort_keys=True) for r in inrecords}
+    outset = {json.dumps(_normalize(r), sort_keys=True) for r in outrecords}
     print()
     print('in:', inset)
     print('out:', outset)
@@ -86,8 +105,7 @@ def delete_s3_prefix(bucket: str, prefix: str):
                 s3.delete_objects(Bucket=bucket, Delete=chunk)
 
 
-@pytest.mark.integration
-def test_s3_sink_roundtrip(tmp_path):
+def format_roundtrip(format):
     """
     Integration test for S3Sink:
       - execute_tokens writes an inline record to S3
@@ -98,35 +116,45 @@ def test_s3_sink_roundtrip(tmp_path):
 
     delete_s3_prefix(bucket, 'pjk-test')
 
-    inrecs = [{'hello': 'world', 'num': 42}, {'up': 1}]
+    inrecs = [{'hello': 'world', 'num': 42}, {'hello': 'there', 'num': 254}]
     s = json.dumps(inrecs)
 
-    s3_path = f's3://{bucket}/pjk-test/test.json'
+    s3_path = f's3://{bucket}/pjk-test/test.{format}'
     execute_tokens([s, s3_path])
-    outrecs = read_s3_json_records(s3_path)
+    outrecs = read_s3_records(s3_path)
     assert_records_match(inrecs, outrecs)
 
-    s3_path = f's3://{bucket}/pjk-test/test.json.gz'
+    s3_path = f's3://{bucket}/pjk-test/test.{format}.gz'
     execute_tokens([s, s3_path])
-    outrecs = read_s3_json_records(s3_path)
+    outrecs = read_s3_records(s3_path)
+    assert_records_match(inrecs, outrecs)
+
+    s3_path = f's3://{bucket}/pjk-test/test_folder2'
+    execute_tokens([s, f'{s3_path}@format={format}'])
+    outrecs = read_s3_records(s3_path)
     assert_records_match(inrecs, outrecs)
 
     s3_path = f's3://{bucket}/pjk-test/test_folder'
     execute_tokens([s, s3_path])
-    outrecs = read_s3_json_records(s3_path)
+    outrecs = read_s3_records(s3_path)
     assert_records_match(inrecs, outrecs)
 
     s3_path = f's3://{bucket}/pjk-test/test_folder_gzipped'
-    execute_tokens([s, f'{s3_path}@format=json.gz'])
-    outrecs = read_s3_json_records(s3_path)
+    execute_tokens([s, f'{s3_path}@format={format}.gz'])
+    outrecs = read_s3_records(s3_path)
     assert_records_match(inrecs, outrecs)
 
     # fake folder with multiple files
-    s3_path = f's3://{bucket}/pjk-test/test_folder2/file1.json'
+    s3_path = f's3://{bucket}/pjk-test/test_folder2/file1.{format}'
     execute_tokens([s, s3_path])
-    inrecs2 = [{'foo': 'bar'}]
+    inrecs2 = [{'hello': 'you', 'num': 1}]
     s2 = json.dumps(inrecs2)
-    s3_path = f's3://{bucket}/pjk-test/test_folder2/file2.json'
+    s3_path = f's3://{bucket}/pjk-test/test_folder2/file2.{format}'
     execute_tokens([s2, s3_path])
-    outrecs = read_s3_json_records(f's3://{bucket}/pjk-test/test_folder2/')
+    outrecs = read_s3_records(f's3://{bucket}/pjk-test/test_folder2/')
     assert_records_match(inrecs + inrecs2, outrecs)
+
+def test_rountrips():
+    format_roundtrip('json')
+    format_roundtrip('csv') 
+    format_roundtrip('tsv')

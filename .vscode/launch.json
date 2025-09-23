@@ -5,14 +5,14 @@
       "name": "Run djk.main with args",
       "type": "python",
       "request": "launch",
-      "module": "djk.main",
+      "module": "pjk.main",
       "console": "integratedTerminal",
       "justMyCode": false,
       "env": {
-        "PYTHONPATH": "${workspaceFolder}"
+        "PYTHONPATH": "${workspaceFolder}/src"
       },
       "args": [
-        "/Users/mschultz1/Development/jmike/test.pjk"
+        "{up:1}", "s3://stg-use1-adtech-temp/pjk-test/test.foo@format=json"
       ]
     }
   ]

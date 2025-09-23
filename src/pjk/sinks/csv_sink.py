@@ -17,6 +17,6 @@ class CSVSink(FormatSink):
         for record in self.input:
             if writer is None:
                 # Initialize DictWriter with dynamic fieldnames from first record
-                writer = csv.DictWriter(self.outfile, fieldnames=record.keys())
+                writer = csv.DictWriter(self.outfile, fieldnames=record.keys(), delimiter=self.delimiter)
                 writer.writeheader()
             writer.writerow(record)
