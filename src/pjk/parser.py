@@ -94,7 +94,7 @@ class ExpressionParser:
 
                 else: # unrecognized token
                     # could be sink in WRONG position, let's see for better error message
-                    sink = self.registry.create_sink(token, None) 
+                    sink = self.registry.create_sink(token) 
                     if sink:
                         raise TokenError.from_list(['sink may only occur in final position.',
                                             'pjk <source> [<pipe> ...] <sink>'])

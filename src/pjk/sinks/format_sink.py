@@ -1,23 +1,21 @@
-from pjk.base import Sink, ParsedToken, Usage
+from pjk.base import Sink, ParsedToken, NoBindUsage
 from pjk.sinks.s3_sink import S3Sink
 from pjk.sinks.dir_sink import DirSink
 from typing import IO
 import re
 import gzip
 
-class SinkFormatUsage(Usage):
+class SinkFormatUsage(NoBindUsage):
     def __init__(self, name: str, component_class: type, desc_override: str = None):
-        desc = f'{name} source for s3 and local files/directories.\ns3 defaults to \'json\' format' if desc_override == None else desc_override
+        desc = f'{name} source for s3 and local files/directories.\ns3 defaults to \'json\', others require format param' if desc_override == None else desc_override
         super().__init__(name, desc, component_class)
 
-        #self.def_syntax("") # don't use generated syntax for these, rely on examples
-        self.def_arg('path', 'path to file or directory')
-        self.def_param('format', 'file format', is_num=False, valid_values={'json', 'csv', 'tsv'}, default='json')
+        self.def_syntax("") # don't use generated syntax for these, rely on examples
+        self.def_param('format', 'file format', is_num=False, valid_values={'json', 'csv', 'tsv', 'json.gz', 'tsv.gz', 'csv.gz'}, default='json')
         self.def_example(expr_tokens=["{hello: 'world'}", f"myfile.{name}"], expect=None)
         self.def_example(expr_tokens=["{hello: 'world}", f"{name}:mydir"], expect=None)
-        self.def_example(expr_tokens=["{hello: 'world'}", "s3://mybucket/myfile.json"], expect=None)
-        self.def_example(expr_tokens=["{hello: 'world'}", "s3://mybucket/myfiles"], expect=None)
-        
+        self.def_example(expr_tokens=["{hello: 'world'}", f"s3://mybucket/myfile.{name}"], expect=None)
+        self.def_example(expr_tokens=["{hello: 'world'}", f"s3://mybucket/myfiles@format={name}"], expect=None)
 
 class FormatSink(Sink):
     extension: str = None
@@ -35,6 +33,15 @@ class FormatSink(Sink):
 
     def close(self):
         self.outfile.close()
+
+    @classmethod
+    def get_format_gz(cls, input:str):
+        is_gz = False
+        format = input
+        if input.endswith('.gz'):
+            is_gz = True
+            format = input[:-3]
+        return format, is_gz
 
     @classmethod
     def create(cls, ptok: ParsedToken, sinks):
@@ -67,27 +74,20 @@ class FormatSink(Sink):
         path_no_ext = gd.get('path', None)
         ext = gd.get('ext', None)
 
-        if path_no_ext == '-':
-            return None # special case
-
         usage = cls.usage()
-        usage.bind(ptok) # just for params
+        usage.bind_params(ptok) # only bind params
 
         is_single_file = ext is not None
         is_gz = False
         format = None
 
         if is_single_file:
-            if ext.endswith('.gz'):
-                is_gz = True
-                format = ext[:-3]
-            else:
-                format = ext
+            format, is_gz = cls.get_format_gz(ext)
         
         if pre_colon: # s3 and dir
             if pre_colon == 's3':
                 if not format: # if not specified explicitly
-                    format = usage.get_param('format')
+                    format, is_gz = cls.get_format_gz(usage.get_param('format'))
 
                 sink_class = sinks.get(format)
                 if not sink_class or not issubclass(sink_class, FormatSink):

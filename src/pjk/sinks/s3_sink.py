@@ -2,6 +2,7 @@
 # Copyright 2025 Mike Schultz
 
 import io
+import gzip
 from typing import Optional, Type
 from pjk.base import Source, Sink
 from pjk.log import logger
@@ -50,19 +51,23 @@ class S3Sink(Sink):
         object_key = self._build_object_key(self.fileno)
         bucket, key = object_key.split("/", 1)
 
-        # Open multipart writer and wrap in text mode
         with S3MultipartWriter(bucket, key) as writer:
-            outfile = io.TextIOWrapper(writer, encoding="utf-8", newline="")
+            if self.is_gz:
+                # gzip needs a binary sink → use writer directly
+                with gzip.GzipFile(fileobj=writer, mode="wb") as gz:
+                    with io.TextIOWrapper(gz, encoding="utf-8", newline="") as outfile:
+                        file_sink = self.sink_class(outfile)
+                        file_sink.add_source(self.input)
+                        logger.debug(f"S3Sink streaming GZ to s3://{bucket}/{key}")
+                        file_sink.process()
+            else:
+                # plain text path
+                with io.TextIOWrapper(writer, encoding="utf-8", newline="") as outfile:
+                    file_sink = self.sink_class(outfile)
+                    file_sink.add_source(self.input)
+                    logger.debug(f"S3Sink streaming to s3://{bucket}/{key}")
+                    file_sink.process()
 
-            # Instantiate the format-specific sink
-            file_sink = self.sink_class(outfile)
-            file_sink.add_source(self.input)
-
-            logger.debug(f"S3Sink streaming to s3://{bucket}/{key}")
-            file_sink.process()
-
-            # TextIOWrapper.close() flushes into S3MultipartWriter.close()
-            outfile.close() 
 
     def deep_copy(self):
         if self.is_single_file:

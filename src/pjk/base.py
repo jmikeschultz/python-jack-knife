@@ -152,16 +152,17 @@ class Usage:
         lines.append(self.desc)
 
         syntax_str = self.get_token_syntax() # might be ''
-        if len(syntax_str) > 0:
-            lines.append('')
-            lines.append(f'syntax:')
-            lines.append(f'  {self.get_token_syntax()}')
-
+        if not syntax_str:
+            return '\n'.join(lines)
+        
+        lines.append('')
+        lines.append(f'syntax:')
+        lines.append(f'  {self.get_token_syntax()}')
         lines.extend(f"{line}" for line in self.get_arg_param_desc())
         return '\n'.join(lines)
 
     def get_token_syntax(self):
-        if self.syntax != None:
+        if not self.syntax:
             return self.syntax # else piece it together
 
         token = f'{self.name}'
@@ -216,7 +217,10 @@ class Usage:
                 self.args[name] = self._get_val(val_str, is_num, valid_values)
             except (ValueError, TypeError) as e:
                 raise TokenError.from_list([f"wrong value for '{name}' arg.", '', self.get_usage_text()])
-            
+
+        self.bind_params(ptok)
+        
+    def bind_params(self, ptok: ParsedToken):
         for name, str_val in ptok.get_params().items():
             usage = self.param_usages.get(name, None)
             if not usage:

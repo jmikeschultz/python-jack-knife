@@ -1,17 +1,18 @@
 # SPDX-License-Identifier: Apache-2.0
-# Copyright 2025 Mike Schultz
+# Copyright 2025
 
 import io
-import boto3, time
+import time
+import boto3
 from botocore.exceptions import BotoCoreError, ClientError
 
 
 class S3MultipartWriter(io.RawIOBase):
     """
-    File-like writer that streams to S3 using multipart upload.
-    - Buffers until part_size, then uploads a part.
-    - On close, flushes any remaining data (even < part_size).
-    - If no parts were uploaded, falls back to a simple put_object.
+    File-like writer for S3.
+    - Buffers to memory until >= part_size (default 8 MB).
+    - If total < 5 MB → upload once via put_object.
+    - If >= part_size → stream parts with multipart upload.
     """
 
     def __init__(self, bucket, key, part_size=8 * 1024 * 1024, max_retries=5):
@@ -19,11 +20,10 @@ class S3MultipartWriter(io.RawIOBase):
         self.s3 = boto3.client("s3")
         self.bucket = bucket
         self.key = key
-        self.part_size = part_size
-        self.max_retries = max_retries
+        self.part_size = max(5 * 1024 * 1024, int(part_size))
+        self.max_retries = max(1, int(max_retries))
 
-        resp = self.s3.create_multipart_upload(Bucket=bucket, Key=key)
-        self.upload_id = resp["UploadId"]
+        self.upload_id = None
         self.buffer = bytearray()
         self.parts = []
         self.part_number = 1
@@ -39,35 +39,46 @@ class S3MultipartWriter(io.RawIOBase):
     def write(self, b: bytes) -> int:
         if self._closed:
             raise ValueError("I/O operation on closed file")
+        if not isinstance(b, (bytes, bytearray)):
+            raise TypeError("write() requires bytes-like object")
+
         self.buffer.extend(b)
+
+        # If buffer is bigger than part_size, start multipart
         while len(self.buffer) >= self.part_size:
+            self._ensure_multipart()
             self._flush_part()
+
         return len(b)
 
     def flush(self):
-        if self._closed:
-            return
-        # upload any remaining buffer as a final part
-        if self.buffer:
-            self._flush_part(final=True)
+        # noop; final flush handled in close()
+        return
 
     def close(self):
         if self._closed:
             return
         try:
-            self.flush()
-            if self.parts:
-                # normal multipart completion
+            if self.upload_id is None:
+                # never started multipart → upload all bytes directly
+                body = bytes(self.buffer)
+                self.s3.put_object(Bucket=self.bucket, Key=self.key, Body=body)
+            else:
+                # multipart case → flush remaining as final part
+                if self.buffer:
+                    self._flush_part(final=True)
+
                 self.s3.complete_multipart_upload(
                     Bucket=self.bucket,
                     Key=self.key,
                     UploadId=self.upload_id,
-                    MultipartUpload={"Parts": self.parts},
+                    MultipartUpload={
+                        "Parts": [
+                            {"ETag": p["ETag"], "PartNumber": p["PartNumber"]}
+                            for p in self.parts
+                        ]
+                    },
                 )
-            else:
-                # no multipart parts uploaded, just do a simple put_object
-                body = bytes(self.buffer) if self.buffer else b""
-                self.s3.put_object(Bucket=self.bucket, Key=self.key, Body=body)
         except Exception:
             self.abort()
             raise
@@ -75,16 +86,21 @@ class S3MultipartWriter(io.RawIOBase):
             self._closed = True
             super().close()
 
+    def _ensure_multipart(self):
+        if self.upload_id is None:
+            resp = self.s3.create_multipart_upload(Bucket=self.bucket, Key=self.key)
+            self.upload_id = resp["UploadId"]
+
     def _flush_part(self, final=False):
         if not self.buffer:
             return
-        # for final flush, upload everything, even if smaller than part_size
+
         if final:
             part = bytes(self.buffer)
             self.buffer.clear()
         else:
             part = bytes(self.buffer[: self.part_size])
-            self.buffer = self.buffer[self.part_size :]
+            del self.buffer[: self.part_size]
 
         retries = 0
         while True:
@@ -109,9 +125,10 @@ class S3MultipartWriter(io.RawIOBase):
                 time.sleep(2**retries)
 
     def abort(self):
-        try:
-            self.s3.abort_multipart_upload(
-                Bucket=self.bucket, Key=self.key, UploadId=self.upload_id
-            )
-        except Exception:
-            pass
+        if self.upload_id:
+            try:
+                self.s3.abort_multipart_upload(
+                    Bucket=self.bucket, Key=self.key, UploadId=self.upload_id
+                )
+            except Exception:
+                pass

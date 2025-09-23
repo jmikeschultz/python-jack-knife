@@ -46,14 +46,10 @@ class SinkFactory(ComponentFactory):
             if sink:
                 return sink
         
-        sink = FormatSink.create(ptok, COMPONENTS)
-        if sink:
-            return sink
-
         sink_cls = self.components.get(ptok.pre_colon)
-        if not sink_cls:
-            return None
-        
-        usage = sink_cls.usage()
-        usage.bind(ptok)
-        return sink_cls(ptok, usage)
+        if sink_cls and not issubclass(sink_cls, FormatSink):
+            usage = sink_cls.usage()
+            usage.bind(ptok)
+            return sink_cls(ptok, usage)
+    
+        return FormatSink.create(ptok, COMPONENTS)
