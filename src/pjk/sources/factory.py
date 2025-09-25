@@ -78,24 +78,12 @@ class SourceFactory(ComponentFactory):
                 return source
 
         source_cls = self.components.get(ptok.pre_colon)
-        if source_cls:
+        if source_cls and not issubclass(source_cls, FormatSource):
             usage = source_cls.usage()
             usage.bind(ptok)
         
             source = source_cls(ptok, usage)
             return source
-
-        if ptok.all_but_params.startswith('s3'):
-            return S3Source.create(ptok, get_format_class_gz=self.get_format_class_gz)
-
-        if os.path.isdir(ptok.all_but_params):
-            return DirSource.create(ptok, get_format_class_gz=self.get_format_class_gz)
-
-        # individual file
-        if os.path.isfile(ptok.all_but_params):
-            source_class, is_gz = self.get_format_class_gz(ptok)
-            if source_class:
-                lazy_file = LazyFileLocal(ptok.all_but_params, is_gz)
-                return source_class(lazy_file)
-     
-        return None
+        
+        return FormatSource.create(ptok, COMPONENTS)
+    

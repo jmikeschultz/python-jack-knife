@@ -12,7 +12,11 @@
         "PYTHONPATH": "${workspaceFolder}/src"
       },
       "args": [
-        "{up:1}", "s3://stg-use1-adtech-temp/pjk-test/test.foo@format=json"
+        //"{up:1}", "s3://stg-use1-adtech-temp/pjk-test/test.foo@format=json"
+        "s3://stg-use1-adtech-temp/pjk-test-source/test.json.gz", "-"
+        //"{up:1}",  "s3://stg-use1-adtech-temp/tests/out_folder_gzipped@format=json.gz"
+        //"{up:1}",  "/tmp/foo.txt@format=csv"
+        //"/tmp/goo", "-"
       ]
     }
   ]

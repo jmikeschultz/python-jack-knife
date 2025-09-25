@@ -95,11 +95,11 @@ class FormatSink(Sink):
             if not sink_class:
                 raise Exception('fix this exception message, extension for single file must be recognized format')
 
-            filename = f'{path_no_ext}.{ext}'
+            filename = f'{path_no_ext}.{format}'
 
             # open the output file stream
             if is_gz:
-                outfile = gzip.open(filename, "wt", encoding="utf-8", newline="")
+                outfile = gzip.open(f'{filename}.gz', "wt", encoding="utf-8", newline="")
             else:
                 outfile = open(filename, "wt", encoding="utf-8", newline="")
 

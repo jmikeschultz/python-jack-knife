@@ -1,5 +1,5 @@
 # SPDX-License-Identifier: Apache-2.0
-# Copyright 2025
+# Copyright 2024 Mike Schultz
 
 import os
 import json
@@ -104,7 +104,6 @@ def delete_s3_prefix(bucket: str, prefix: str):
                 chunk = {"Objects": to_delete[i : i + 1000]}
                 s3.delete_objects(Bucket=bucket, Delete=chunk)
 
-
 def format_roundtrip(format):
     """
     Integration test for S3Sink:
@@ -116,7 +115,8 @@ def format_roundtrip(format):
 
     delete_s3_prefix(bucket, 'pjk-test')
 
-    inrecs = [{'hello': 'world', 'num': 42}, {'hello': 'there', 'num': 254}]
+    # using records all with same schema because of tsv and csv
+    inrecs = [{'hello': 'world', 'num': 42}, {'hello': f'{format}', 'num': 254}]
     s = json.dumps(inrecs)
 
     s3_path = f's3://{bucket}/pjk-test/test.{format}'

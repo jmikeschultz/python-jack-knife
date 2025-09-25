@@ -15,19 +15,12 @@ class _SharedS3State:
       - Each consumer reserves distinct work atomically.
     """
 
-    def __init__(
-        self,
-        s3_client,
-        bucket: str,
-        prefix: str,
-        override_format: Optional[str],
-        get_format_class_gz: Any,
-    ):
+    def __init__(self, s3_client, bucket: str, prefix: str, sources: dict, format_override: str):
         self.s3 = s3_client
         self.bucket = bucket
         self.prefix = prefix
-        self.override_format = override_format
-        self.get_format_class_gz = get_format_class_gz
+        self.sources = sources
+        self.format_override = format_override
 
         # Build a *single* lazy iterator over keys from the paginator.
         self._key_iter = self._iter_s3_keys()
@@ -47,18 +40,19 @@ class _SharedS3State:
                     yield key
 
     def _build_source_for_key(self, key: str) -> Source:
-        # Respect override format if provided.
-        file_token = key if not self.override_format else f"{key}@format={self.override_format}"
-        file_ptok = ParsedToken(file_token)
-
-        format_class, is_gz = self.get_format_class_gz(file_ptok)
-        if not format_class:
-            raise RuntimeError(f"No format for file: {key}")
-
         #logger.info(f"S3Source starting s3://{self.bucket}/{key}")  
 
+        parts = key.split('.')
+        is_gz = False
+
+        if parts[-1] == 'gz':
+            is_gz = True
+            parts.pop()
+
+        format = parts[-1] if self.format_override is None else self.format_override
+        source_class = self.sources.get(format)
         lazy_file = LazyFileS3(self.bucket, key, is_gz)
-        return format_class(lazy_file)
+        return source_class(lazy_file)
 
     def reserve_next_source(self) -> Optional[Source]:
         """
@@ -95,17 +89,16 @@ class S3Source(Source):
     def __iter__(self):
         while True:
             if self._current is None:
-                # Reserve the next unit of work lazily.
                 self._current = self._state.reserve_next_source()
                 if self._current is None:
                     return  # exhausted
 
-            try:
-                # Delegate to the inner file Source (whatever format_class produced).
-                yield from self._current
-            finally:
-                # Always move on to the next unit of work after finishing current.
-                self._current = None
+            # Explicitly iterate current once, then discard
+            for record in self._current:
+                yield record
+
+            # Move to next file
+            self._current = None
 
     def deep_copy(self):
         """
@@ -116,31 +109,16 @@ class S3Source(Source):
         if reserved is None:
             return None
         return S3Source(self._state, reserved)
-
+    
     @classmethod
-    def create(cls, ptok: ParsedToken, get_format_class_gz: Any):
-        """
-        Returns immediately with a lazily-backed S3Source (no pre-enqueue).
-        """
+    def create(cls, sources, path_no_ext: str,  ext: str, format_override: str = None):
         import boto3 # lazy import
-        s3_uri = ptok.all_but_params
-        params = ptok.get_params()
-        override = params.get("format")
+        path_no_ext = path_no_ext if not path_no_ext.startswith('//') else path_no_ext[2:]
+        bucket, _, prefix = path_no_ext.partition("/")
+        prefix = prefix if ext is None else f'{prefix}.{ext}'
 
-        raw = s3_uri[3:]  # strip 's3:'
-        raw = raw.removeprefix("//")
-        bucket, _, prefix = raw.partition("/")
-
-        # Build shared, lazy state. No listing performed yet.
         s3 = boto3.client("s3")
-        shared = _SharedS3State(
-            s3_client=s3,
-            bucket=bucket,
-            prefix=prefix,
-            override_format=override,
-            get_format_class_gz=get_format_class_gz,
-        )
-
-        # Return a source immediately (no blocking on S3).
-        # If there are zero keys, the first __iter__ call will end cleanly.
+        shared = _SharedS3State(s3_client=s3, bucket=bucket, prefix=prefix,
+                                sources=sources, format_override=format_override)
+        
         return cls(shared)

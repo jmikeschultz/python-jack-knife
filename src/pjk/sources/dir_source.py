@@ -40,28 +40,26 @@ class DirSource(Source):
         return DirSource(self.source_queue, next_source)
 
     @classmethod
-    def create(cls, ptok: ParsedToken, get_format_class_gz: Any):
-        params = ptok.get_params()
-        override = params.get('format', None)
-        path = ptok.all_but_params
-
+    def create(cls, sources: dict, path_no_ext: str, format_override: str = None):
         files = [
-            os.path.join(path, f)
-            for f in os.listdir(path)
-            if os.path.isfile(os.path.join(path, f))
+            os.path.join(path_no_ext, f)
+            for f in os.listdir(path_no_ext)
+            if os.path.isfile(os.path.join(path_no_ext, f))
         ]
 
         source_queue = Queue()
         for file in files:
-            file_token = file if not override else f"{file}@format={override}"
-            file_ptok = ParsedToken(file_token)
+            parts = file.split('.')
+            is_gz = False
 
-            format_class, is_gz = get_format_class_gz(file_ptok)
-            if format_class:
-                lazy_file = LazyFileLocal(file, is_gz)
-                source_queue.put(format_class(lazy_file))
-            else:
-                raise RuntimeError(f"No format for file: {file}")
+            if parts[-1] == 'gz':
+                is_gz = True
+                parts.pop()
+
+            format = parts[-1] if format_override is None else format_override
+            source_class = sources.get(format)
+            lazy_file = LazyFileLocal(file, is_gz)
+            source_queue.put(source_class(lazy_file))
 
         if source_queue.empty():
             return None
