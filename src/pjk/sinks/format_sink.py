@@ -7,11 +7,11 @@ import gzip
 
 class SinkFormatUsage(NoBindUsage):
     def __init__(self, name: str, component_class: type, desc_override: str = None):
-        desc = f'{name} source for s3 and local files/directories.\ns3 defaults to \'json\', others require format param' if desc_override == None else desc_override
+        desc = f'{name} source for s3 and local files/directories.\ns3 defaults to \'json.gz\', others require format param' if desc_override == None else desc_override
         super().__init__(name, desc, component_class)
 
         self.def_syntax("") # don't use generated syntax for these, rely on examples
-        self.def_param('format', 'file format', is_num=False, valid_values={'json', 'csv', 'tsv', 'json.gz', 'tsv.gz', 'csv.gz'}, default='json')
+        self.def_param('format', 'file format', is_num=False, valid_values={'json', 'csv', 'tsv', 'json.gz', 'tsv.gz', 'csv.gz'}, default='json.gz')
         self.def_example(expr_tokens=["{hello: 'world'}", f"myfile.{name}"], expect=None)
         self.def_example(expr_tokens=["{hello: 'world}", f"{name}:mydir"], expect=None)
         self.def_example(expr_tokens=["{hello: 'world'}", f"s3://mybucket/myfile.{name}"], expect=None)

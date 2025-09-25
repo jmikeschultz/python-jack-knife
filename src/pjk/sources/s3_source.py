@@ -108,7 +108,7 @@ class S3Source(Source):
         reserved = self._state.reserve_next_source()
         if reserved is None:
             return None
-        return S3Source(self._state, reserved)
+        return self.__class__(self._state, reserved)
     
     @classmethod
     def create(cls, sources, path_no_ext: str,  ext: str, format_override: str = None):
@@ -118,7 +118,7 @@ class S3Source(Source):
         prefix = prefix if ext is None else f'{prefix}.{ext}'
 
         s3 = boto3.client("s3")
-        shared = _SharedS3State(s3_client=s3, bucket=bucket, prefix=prefix,
+        state = _SharedS3State(s3_client=s3, bucket=bucket, prefix=prefix,
                                 sources=sources, format_override=format_override)
-        
-        return cls(shared)
+        reserved = state.reserve_next_source()
+        return cls(state, reserved)

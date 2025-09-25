@@ -1,7 +1,7 @@
 # SPDX-License-Identifier: Apache-2.0
 # Copyright 2024 Mike Schultz
 
-import os, gzip
+import os, gzip, shutil
 from pjk.base import Sink, ParsedToken, Usage
 from typing import Optional, Type
 from .format_sink import Sink
@@ -17,7 +17,16 @@ class DirSink(Sink):
         self.fileno = fileno
         self.num_files = 1
 
-        os.makedirs(self.path_no_ext, exist_ok=True)
+        if os.path.isdir(self.path_no_ext):
+            # remove everything inside
+            for entry in os.listdir(self.path_no_ext):
+                full = os.path.join(self.path_no_ext, entry)
+            if os.path.isfile(full) or os.path.islink(full):
+                os.unlink(full)
+            elif os.path.isdir(full):
+                shutil.rmtree(full)
+        else:
+            os.makedirs(self.path_no_ext, exist_ok=True)
 
     def process(self):
         # build the base filename
