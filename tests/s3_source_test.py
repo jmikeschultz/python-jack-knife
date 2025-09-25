@@ -1,7 +1,7 @@
 # SPDX-License-Identifier: Apache-2.0
 # Copyright 2024 Mike Schultz
 
-import os, json
+import os, json, sys
 from pjk.main import execute_tokens
 from s3_sink_test import delete_s3_prefix, assert_records_match
 import boto3, json, gzip, io
@@ -104,7 +104,10 @@ def format_roundtrip(format):
       - pjk executes with S3Source to pull them back out
       - compare to input records
     """
-    bucket = os.environ.get("PJK_TEST_BUCKET", "stg-use1-adtech-temp")
+    bucket = os.environ.get("PJK_TEST_BUCKET")
+    if not bucket:
+        print('need to set PJK_TEST_BUCKET environment variable')
+        sys.exit(-1)
     delete_s3_prefix(bucket, "pjk-test-source")
 
     # using records all with same schema because of tsv and csv

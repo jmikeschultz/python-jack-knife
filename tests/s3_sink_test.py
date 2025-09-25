@@ -2,6 +2,7 @@
 # Copyright 2024 Mike Schultz
 
 import os
+import sys
 import json
 import boto3
 from pjk.main import execute_tokens
@@ -111,8 +112,10 @@ def format_roundtrip(format):
       - boto3 fetches it back
       - assert the contents match
     """
-    bucket = os.environ.get("PJK_TEST_BUCKET", 'stg-use1-adtech-temp')
-
+    bucket = os.environ.get("PJK_TEST_BUCKET")
+    if not bucket:
+        print('need to set PJK_TEST_BUCKET environment variable')
+        sys.exit(-1)
     delete_s3_prefix(bucket, 'pjk-test')
 
     # using records all with same schema because of tsv and csv
