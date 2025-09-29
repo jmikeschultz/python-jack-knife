@@ -6,9 +6,10 @@ from pjk.main import execute_tokens
 from s3_sink_test import delete_s3_prefix, assert_records_match
 import boto3, json, gzip, io
 from typing import List, Dict
+import shutil
 import csv
 
-def write_s3_records(s3_path: str, records: List[Dict]):
+def write_s3_records(s3_path: str, records: List[Dict], format: str, is_gz):
     """
     Write list of dicts to S3 in one of the supported formats:
       - .json / .json.gz → newline-delimited JSON (NDJSON)
@@ -26,17 +27,16 @@ def write_s3_records(s3_path: str, records: List[Dict]):
         raise ValueError(f"S3 path must include a key: {s3_path}")
 
     # Detect compression
-    is_gz = key.endswith(".gz")
     bare_key = key[:-3] if is_gz else key
 
-    if bare_key.endswith(".json"):
+    if format == "json":
         # NDJSON
         body = "\n".join(json.dumps(r) for r in records) + "\n"
         payload = body.encode("utf-8")
 
-    elif bare_key.endswith(".csv") or bare_key.endswith(".tsv"):
+    elif format == "csv" or format == "tsv":
         # CSV/TSV with header
-        delimiter = "," if bare_key.endswith(".csv") else "\t"
+        delimiter = "," if format == "csv" else "\t"
         buf = io.StringIO()
         writer = csv.DictWriter(buf, fieldnames=records[0].keys(), delimiter=delimiter)
         writer.writeheader()
@@ -57,41 +57,19 @@ def write_s3_records(s3_path: str, records: List[Dict]):
     s3 = boto3.client("s3")
     s3.put_object(Bucket=bucket, Key=key, Body=payload)
 
-
-def write_s3_json_records(s3_path: str, records: List[Dict]):
-    """
-    Write list of dicts to S3 as newline-delimited JSON (NDJSON).
-    If path ends with .gz, data is gzipped.
-    """
-    if not s3_path.startswith("s3://"):
-        raise ValueError(f"Expected s3:// path, got {s3_path!r}")
-
-    bucket_key = s3_path[len("s3://"):]
-    bucket, _, key = bucket_key.partition("/")
-    if not key:
-        raise ValueError(f"S3 path must include a key: {s3_path}")
-
-    body = "\n".join(json.dumps(r) for r in records) + "\n"
-
-    if key.endswith(".gz"):
-        buf = io.BytesIO()
-        with gzip.GzipFile(fileobj=buf, mode="wb") as gz:
-            gz.write(body.encode("utf-8"))
-        payload = buf.getvalue()
-    else:
-        payload = body.encode("utf-8")
-
-    s3 = boto3.client("s3")
-    s3.put_object(Bucket=bucket, Key=key, Body=payload)
-
 def source_records_and_verify(s3_path, expected):
     """
     Run pipeline from s3_path → local temp JSON file, load records,
     and compare to expected using assert_records_match (normalizes ints).
     """
-    execute_tokens([s3_path, '/tmp/outtest.json'])
+    DIR="/tmp/.pjk-tests"
+    if os.path.isdir(DIR):
+        shutil.rmtree(DIR)
+    os.makedirs(DIR, exist_ok=True)
 
-    with open('/tmp/outtest.json') as f:
+    execute_tokens([s3_path, f'{DIR}/test.json'])
+
+    with open(f'{DIR}/test.json') as f:
         actual = [json.loads(line) for line in f]
 
     assert_records_match(expected, actual)
@@ -115,22 +93,31 @@ def format_roundtrip(format):
 
     # Single file
     s3_path = f"s3://{bucket}/pjk-test-source/test.{format}"
-    write_s3_records(s3_path, inrecs)
+    write_s3_records(s3_path, inrecs, format, is_gz=False)
     source_records_and_verify(s3_path, inrecs)
 
     # single gzipped file
     s3_path = f"s3://{bucket}/pjk-test-source/test.{format}.gz"
-    write_s3_records(s3_path, inrecs)
+    write_s3_records(s3_path, inrecs, format, is_gz=True)
     source_records_and_verify(s3_path, inrecs)
 
     # Folder prefix
     s3_path = f"s3://{bucket}/pjk-test-source/folder"
     s3_file1 = f"{s3_path}/file1.{format}"
     s3_file2 = f"{s3_path}/file2.{format}"
-    write_s3_records(s3_file1, inrecs)
+    write_s3_records(s3_file1, inrecs, format, is_gz=False)
     inrecs2 = [{'hello': 'you', 'num': 1}]
-    write_s3_records(s3_file2, inrecs2)
+    write_s3_records(s3_file2, inrecs2, format, is_gz=False)
     source_records_and_verify(s3_path, inrecs + inrecs2)
+
+    # test format override
+    s3_path = f"s3://{bucket}/pjk-test-source/test2.log"
+    write_s3_records(s3_path, inrecs, format, is_gz=False)
+    source_records_and_verify(f'{s3_path}@format={format}', inrecs)
+
+    s3_path = f"s3://{bucket}/pjk-test-source/test3.log"
+    write_s3_records(s3_path, inrecs, format, is_gz=True)
+    source_records_and_verify(f'{s3_path}@format={format}.gz', inrecs)
 
 def test_rountrips():
     format_roundtrip('json')

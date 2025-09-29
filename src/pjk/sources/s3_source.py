@@ -39,6 +39,14 @@ class _SharedS3State:
                 if isinstance(key, str) and key:
                     yield key
 
+    def get_format_gz(cls, input:str):
+        is_gz = False
+        format = input
+        if input.endswith('.gz'):
+            is_gz = True
+            format = input[:-3]
+        return format, is_gz
+
     def _build_source_for_key(self, key: str) -> Source:
         #logger.info(f"S3Source starting s3://{self.bucket}/{key}")  
 
@@ -50,6 +58,10 @@ class _SharedS3State:
             parts.pop()
 
         format = parts[-1] if self.format_override is None else self.format_override
+
+        if self.format_override:
+            format, is_gz = self.get_format_gz(self.format_override)
+
         source_class = self.sources.get(format)
         lazy_file = LazyFileS3(self.bucket, key, is_gz)
         return source_class(lazy_file)

@@ -12,6 +12,8 @@ class SourceFormatUsage(NoBindUsage):
         super().__init__(name, desc, component_class)
 
         self.def_syntax("") # no syntax for these
+        # default = None because for source, format is an OVERRIDE
+        self.def_param('format', 'file format', is_num=False, valid_values={'json', 'csv', 'tsv', 'json.gz', 'tsv.gz', 'csv.gz'}, default=None)
         self.def_example(expr_tokens=[f"myfile.{name}", "-"], expect=None)
         self.def_example(expr_tokens=["mydir", "-"], expect=None)
         self.def_example(expr_tokens=[f"s3://mybucket/myfile.{name}", "-"], expect=None)
@@ -79,16 +81,25 @@ class FormatSource(Source):
         usage = cls.usage()
         usage.bind_params(ptok) # just for params
         format_override = usage.get_param('format') # override what's specified in file extensions
-        
-        format, is_gz = cls.get_format_gz(ext) if ext else (None, False)
 
-        if not ext and os.path.isdir(path_no_ext):
-            return DirSource.create(sources, path_no_ext, format_override=format_override)
+        if not ext: # either local dir or s3
+            if pre_colon and pre_colon == 's3': # could be single file, thus pass in ext
+                return S3Source.create(sources, path_no_ext, ext, format_override=format_override)
             
+            if os.path.isdir(path_no_ext):
+                return DirSource.create(sources, path_no_ext, format_override=format_override)
+
+            return None
+
+        # else with ext, either local file or s3
+        format, is_gz = cls.get_format_gz(ext)
+
         if pre_colon and pre_colon == 's3': # could be single file, thus pass in ext
             return S3Source.create(sources, path_no_ext, ext, format_override=format_override)
         
-        format = format if format_override is None else format_override
+        if format_override:
+            format, is_gz = cls.get_format_gz(format_override)
+
         source_class = sources.get(format) # local single file
         if not source_class or not issubclass(source_class, FormatSource):
             return None
@@ -99,4 +110,5 @@ class FormatSource(Source):
         file = f'{path_no_ext}.{ext}'
         lazy_file = LazyFileLocal(file, is_gz)
         return source_class(lazy_file)
+        
         

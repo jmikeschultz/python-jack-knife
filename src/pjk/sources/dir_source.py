@@ -4,7 +4,7 @@
 import os
 from typing import Any
 from queue import Queue, Empty
-from pjk.base import Source, ParsedToken
+from pjk.base import Source
 from pjk.sources.lazy_file_local import LazyFileLocal
 from pjk.log import logger
 
@@ -38,6 +38,15 @@ class DirSource(Source):
             return None
 
         return DirSource(self.source_queue, next_source)
+    
+    @classmethod
+    def get_format_gz(cls, input:str):
+        is_gz = False
+        format = input
+        if input.endswith('.gz'):
+            is_gz = True
+            format = input[:-3]
+        return format, is_gz
 
     @classmethod
     def create(cls, sources: dict, path_no_ext: str, format_override: str = None):
@@ -56,7 +65,11 @@ class DirSource(Source):
                 is_gz = True
                 parts.pop()
 
-            format = parts[-1] if format_override is None else format_override
+            format = parts[-1]
+            
+            if format_override:
+                format, is_gz = cls.get_format_gz(format_override)
+
             source_class = sources.get(format)
             lazy_file = LazyFileLocal(file, is_gz)
             source_queue.put(source_class(lazy_file))
