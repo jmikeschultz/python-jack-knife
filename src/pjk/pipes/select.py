@@ -3,11 +3,9 @@
 
 # djk/select_pipe.py
 
-from pjk.base import Pipe, Usage, ParsedToken, UsageError
+from pjk.base import DeepCopyPipe, Usage, ParsedToken, UsageError
 
-class SelectFields(Pipe):
-    deep_copyable: bool = True
-
+class SelectFields(DeepCopyPipe):
     @classmethod
     def usage(cls):
         usage = Usage(

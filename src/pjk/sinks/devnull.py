@@ -24,8 +24,16 @@ class DevNullSink(Sink):
         for record in self.input:
             self.count += 1
 
-    def print_info(self):
-        print(f'num_recs:{self.count}')
-
     def deep_copy(self):
-        return None  # until we implement cross-thread coordination
+        # Ask the upstream source to duplicate itself
+        source_clone = self.input.deep_copy()
+        if source_clone is None:
+            return None
+
+        # Create a new DirSink with the next file index
+        clone = DevNullSink(self.ptok, self.usage)
+
+        # Wire up the cloned source to the new sink
+        clone.add_source(source_clone)
+
+        return clone

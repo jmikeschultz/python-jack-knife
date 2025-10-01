@@ -300,10 +300,14 @@ class Source(ABC):
 
     def deep_copy(self):
         return None  # Default: not copyable unless overridden
-
+    
+    def close(self):
+        pass
+    
+    def _get_sources(self, source_list: list):
+        pass
     
 class Pipe(Source):
-    deep_copyable: bool = False # default to false
     arity: int = 1
     
     def __init__(self, ptok: ParsedToken, usage: Usage = None):
@@ -326,20 +330,12 @@ class Pipe(Source):
         pass  # optional hook
 
     def deep_copy(self) -> Optional["Pipe"]:
-        if not self.deep_copyable:
-            return None
-        if not self.inputs:
-            raise RuntimeError(f"{self.__class__.__name__} has no inputs set")
-
-        clone = self.__class__(self.ptok, self.__class__.usage())
-
-        for input in self.inputs:
-            strand = input.deep_copy()
-            if strand is None:
-                return None
-            clone.add_source(strand)
-
-        return clone
+        return None
+    
+    def _get_sources(self, source_list: list):
+        for ix in self.inputs:
+            source_list.append(ix)
+            ix._get_sources(source_list)
 
 class DeepCopyPipe(Pipe):
     def deep_copy(self):
@@ -373,11 +369,14 @@ class Sink(ABC):
         self.process()
         self.close()
 
+        # get all inputs in the execution chain for closing
+        inputs = [self.input]
+        self.input._get_sources(inputs)
+        for input in inputs:
+            input.close()
+
     # optional
     def close(self):
-        pass
-
-    def print_info(self):
         pass
 
     def add_source(self, source: Source) -> None:

@@ -1,6 +1,6 @@
 # SPDX-License-Identifier: Apache-2.0
 # Copyright 2024 Mike Schultz
-
+import sys
 import importlib.util
 from typing import Optional
 from pjk.base import Source, Sink, UsageError, ParsedToken
@@ -15,6 +15,7 @@ class UserSinkFactory:
                 raise UsageError(f"Could not load Python file: {script_path}")
 
             module = importlib.util.module_from_spec(spec)
+            sys.modules[spec.name] = module
             spec.loader.exec_module(module)
         except Exception as e:
             raise UsageError(f"Failed to import {script_path}: {e}")

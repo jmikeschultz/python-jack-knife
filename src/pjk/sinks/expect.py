@@ -51,3 +51,6 @@ class ExpectSink(Sink):
             )
         except StopIteration:
             pass
+
+        command = ' '.join(sys.argv[1:-1])  # omit 'pjk' and 'expect'
+        print(f'{command} ==> OK!\n') # only prints on success

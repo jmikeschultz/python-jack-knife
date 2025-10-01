@@ -11,6 +11,7 @@ from pjk.parser import ExpressionParser
 from pjk.base import UsageError
 from pjk.log import init as init_logging
 from datetime import datetime, timezone
+import traceback
 import concurrent.futures
 from pjk.registry import ComponentRegistry
 from pjk.pipes.factory import PipeFactory
@@ -31,22 +32,29 @@ def write_history(tokens):
     except (PermissionError, OSError):
         pass
 
-def execute_threaded(sinks):
-    # Choose a max thread limit (explicitly)
-    max_workers = min(32, len(sinks))  # or set a fixed cap like 8
-
+def execute_threaded(sinks, stop_progress=None):
+    max_workers = min(32, len(sinks))
     with concurrent.futures.ThreadPoolExecutor(max_workers=max_workers) as executor:
-        futures = {
-            executor.submit(s.drain): s for s in sinks
-        }
+        futures = {executor.submit(s.drain): s for s in sinks}
 
         for future in concurrent.futures.as_completed(futures):
             sink_obj = futures[future]
             try:
-                future.result()  # This will re-raise any exception from s.drain()
+                future.result()  # re-raises worker exception with traceback
             except Exception as e:
-                print(f"Sink {sink_obj} raised an exception:")
-                print(e)
+                # stop progress UI first so it doesn't overwrite the traceback
+                if stop_progress:
+                    try: stop_progress()
+                    except Exception: pass
+
+                sys.stderr.write(f"Sink {sink_obj} raised an exception:\n")
+                traceback.print_exception(type(e), e, e.__traceback__, file=sys.stderr)
+
+                # cancel remaining work and bail
+                for f in futures:
+                    f.cancel()
+                # if on py3.9+, you can also: executor.shutdown(cancel_futures=True)
+                raise
 
 def execute(command: str):
     tokens = shlex.split(command, comments=True, posix=True)
@@ -94,7 +102,6 @@ def execute_tokens(tokens:List[str]):
             execute_threaded(sinks)
         else:
             sink.drain() # run single in main thread
-            sink.print_info() # rarely used, e.g. expect and devnull
 
         write_history(sys.argv[1:])
 

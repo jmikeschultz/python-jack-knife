@@ -8,6 +8,9 @@ from typing import Optional, Any, List
 from pjk.base import Source, Pipe, Sink, TokenError, UsageError, ParsedToken, Usage
 from pjk.pipes.user_pipe_factory import UserPipeFactory
 from pjk.pipes.let_reduce import ReducePipe
+from pjk.sinks.stdout import StdoutSink
+from pjk.sinks.expect import ExpectSink
+from pjk.pipes.pre_sink_progress import PreSinkProgressPipe
 from pjk.registry import ComponentRegistry
 
 def expand_macros(tokens: List[str]) -> List[str]:
@@ -58,6 +61,12 @@ class ExpressionParser:
         if not sink:
             raise TokenError.from_list(['expression must end in a sink.',
                             'pjk <source> [<pipe> ...] <sink>'])
+        
+        # insert a progress pipe for displaying progress if not stdout sink
+        if not isinstance(sink, (StdoutSink|ExpectSink)):
+            progress_pipe = PreSinkProgressPipe(batch_size=1000)
+            progress_pipe.add_source(source)
+            source = progress_pipe
 
         sink.add_source(source)
         return sink

@@ -111,7 +111,7 @@ def load_user_components(path=os.path.expanduser("~/.pjk/plugins")):
         try:
             spec.loader.exec_module(module)
         except Exception as e:
-            print(f"[djk] Failed to load {fname}: {e}")
+            print(f"[pjk] Failed to load {fname} from ~/.pjk/plugins: {e}")
             continue
 
         for obj in vars(module).values():
