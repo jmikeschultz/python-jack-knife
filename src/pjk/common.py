@@ -4,6 +4,7 @@
 import sys, shutil, subprocess, contextlib, signal
 import os
 import yaml
+from pjk.base import TokenError
 
 class SafeNamespace:
     def __init__(self, obj):
@@ -73,11 +74,12 @@ def highlight(text: str, color: str = 'bold', value: str = None) -> str:
     return text.replace(value, f"{style}{value}{RESET}")
 
 class Lookups:
-    def __init__(self):
+    def __init__(self, component_class):
         self.lookups_yaml = os.path.expanduser('~/.pjk/lookups.yaml')
+        self.class_name = type(component_class).__name__
         self._data = {}
         self._load()
-
+        
     def _load(self):
         """Load lookups from YAML file if it exists."""
         if os.path.exists(self.lookups_yaml):
@@ -93,8 +95,13 @@ class Lookups:
             yaml.safe_dump(self._data, f)
 
     def get(self, key, default=None):
-        """Retrieve a lookup value by key."""
-        return self._data.get(key, default)
+        lookup_key = f'{self.class_name}-{key}'
+        entry = self._data.get(lookup_key, default)
+        if not entry:
+            raise TokenError(
+                f"~/.pjk/lookups.yaml must contain entry for '{lookup_key}' with host, user, password."
+            )
+        return entry
 
     def set(self, key, value):
         """Set a lookup value and persist it."""
@@ -129,14 +136,14 @@ class ComponentFactory:
         print(header)
 
         i = 0
-        plugin = ''
+        # user and outside package components are also here, but printed from registry class
         for name, comp_class in self.components.items():
             usage = comp_class.usage()
             lines = usage.desc.split('\n')
             if i >= self.num_orig_comps:
-                plugin = '(~/.pjk/plugin)'
-            line = f'  {name:<12} {lines[0]} {plugin}'
-            line = highlight(line, 'bold', plugin) if plugin else line
+                break
+
+            line = f'  {name:<12} {lines[0]}'
             print(line)
             i += 1
 

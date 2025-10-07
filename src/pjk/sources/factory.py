@@ -9,7 +9,7 @@ from pjk.sources.json_source import JsonSource
 from pjk.sources.csv_source import CSVSource
 from pjk.sources.sql_source import SQLSource
 from pjk.sources.tsv_source import TSVSource
-from pjk.sources.s3_source import S3Source
+from pjk.sources.npy_source import NpySource
 from pjk.sources.inline_source import InlineSource
 from pjk.sources.dir_source import DirSource
 from pjk.sources.user_source_factory import UserSourceFactory
@@ -24,6 +24,7 @@ COMPONENTS = {
         'csv': CSVSource,
         'tsv': TSVSource,
         'sql': SQLSource,
+        'npy': NpySource,
         'parquet': ParquetSource,
     }
 

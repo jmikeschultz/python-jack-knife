@@ -10,7 +10,7 @@ class MoveField(Pipe):
     def usage(cls):
         usage = Usage(
             name='as',
-            desc='Move one field to another key in the record',
+            desc='rename a field in the record',
             component_class=cls
         )
         usage.def_arg(name='src', usage='Source field name')
@@ -20,7 +20,7 @@ class MoveField(Pipe):
         return usage
 
     def __init__(self, ptok: ParsedToken, usage: Usage):
-        super().__init__(ptok)
+        super().__init__(ptok, usage)
         self.src = usage.get_arg('src')
         self.dst = usage.get_arg('dst')
         self.count = 0

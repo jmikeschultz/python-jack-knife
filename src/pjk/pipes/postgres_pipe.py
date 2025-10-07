@@ -99,30 +99,26 @@ class PostgresPipe(Pipe):
         )
         usage.def_arg(
             "dbname",
-            "name of db. Entry in ~/.pjk/lookups.yaml containing host, user, password"
+            f"~/.pjk/lookups.yaml must containing entry '{cls.__name__}-<dbname>' with host, user, password"
         )
         usage.def_param(
             "header",
             usage="emit header record before query results",
-            valid_values={"true", "false"}, default='true',
+            valid_values={"true", "false"}, default='false',
         )
 
         usage.def_example(expr_tokens=['myquery.sql', 'pgres:mydb'], expect=None)
         usage.def_example(expr_tokens=["{'query': 'SELECT * from MY_TABLE;'}", 'pgres:mydb'], expect=None)
+        usage.def_example(expr_tokens=["{'query': 'SELECT * FROM pg_catalog.pg_tables;'}", 'pgres:mydb'], expect=None)
         return usage
 
     def __init__(self, ptok: ParsedToken, usage: Usage):
         super().__init__(ptok, usage)
 
-        lookups = Lookups()
+        lookups = Lookups(self)
         self.dbname = usage.get_arg("dbname")
-        db_params = lookups.get(self.dbname)
-        if not db_params:
-            # f-string so dbname prints correctly
-            raise TokenError(
-                f"~/.pjk/lookups.yaml must contain entry for '{self.dbname}' with host, user, password."
-            )
 
+        db_params = lookups.get(self.dbname)
         self.db_host = db_params.get("host")
         self.db_user = db_params.get("user")
         self.db_pass = db_params.get("password")

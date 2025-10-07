@@ -2,6 +2,7 @@
 # Copyright 2024 Mike Schultz
 
 import os
+import sys
 from pjk.sinks.factory import SinkFactory
 from pjk.pipes.factory import PipeFactory
 from pjk.sources.factory import SourceFactory
@@ -9,6 +10,7 @@ import importlib.util
 import importlib
 import importlib.metadata
 from pjk.base import Pipe, Source, Sink
+from pjk.common import highlight
 
 class ComponentRegistry:
     def __init__(self):
@@ -16,15 +18,23 @@ class ComponentRegistry:
         self.pipe_factory = PipeFactory()
         self.sink_factory = SinkFactory()
 
+        # just for displaying
+        self.user_sources = {}
+        self.user_pipes = {}
+        self.user_sinks = {}
+
         sources, pipes, sinks = load_user_components()
         for name, comp in sources.items():
             self.source_factory.register(name, comp)
+            self.user_sources[name] = comp
 
         for name, comp in pipes.items():
             self.pipe_factory.register(name, comp)
+            self.user_pipes[name] = comp
 
         for name, comp in sinks.items():
             self.sink_factory.register(name, comp)
+            self.user_sinks[name] = comp
 
         load_package_extras()
 
@@ -61,8 +71,19 @@ class ComponentRegistry:
         self.pipe_factory.print_descriptions()
         print()
         self.sink_factory.print_descriptions()
-
-        return
+        print()
+        print(highlight('user components (~/.pjk/plugins)'))
+        print_components(self.user_sources, 'source')
+        print_components(self.user_pipes, 'pipe') 
+        print_components(self.user_sinks, 'sink')
+    
+def print_components(components: dict,  ctype: str):
+    for name, comp_class in components.items():
+            usage = comp_class.usage()
+            lines = usage.desc.split('\n')
+            temp = highlight(ctype)
+            line = f'  {name:<17} {temp:<15} {lines[0]}'
+            print(line)
     
 def is_source(obj, module):
     return (
@@ -109,6 +130,7 @@ def load_user_components(path=os.path.expanduser("~/.pjk/plugins")):
             continue
         module = importlib.util.module_from_spec(spec)
         try:
+            sys.modules[spec.name] = module
             spec.loader.exec_module(module)
         except Exception as e:
             print(f"[pjk] Failed to load {fname} from ~/.pjk/plugins: {e}")

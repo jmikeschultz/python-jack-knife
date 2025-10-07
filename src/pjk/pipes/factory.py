@@ -12,12 +12,14 @@ from pjk.pipes.head import HeadPipe
 from pjk.pipes.tail import TailPipe
 from pjk.pipes.sort import SortPipe
 from pjk.pipes.where import WherePipe
-from pjk.pipes.map import MapPipe
+from pjk.pipes.map import MapByPipe
+from pjk.pipes.map import GroupByPipe
 from pjk.pipes.join import JoinPipe
 from pjk.pipes.filter import FilterPipe
 from pjk.pipes.select import SelectFields
 from pjk.pipes.denorm import DenormPipe
 from pjk.pipes.postgres_pipe import PostgresPipe
+from pjk.pipes.sample import SamplePipe
 from pjk.pipes.user_pipe_factory import UserPipeFactory
 
 COMPONENTS = {
@@ -25,7 +27,8 @@ COMPONENTS = {
         'tail': TailPipe,
         'join': JoinPipe,
         'filter': FilterPipe,
-        'map': MapPipe,            
+        'mapby': MapByPipe,            
+        'groupby': GroupByPipe,
         'as': MoveField,
         'drop': RemoveField,        
         'let': LetPipe,
@@ -33,6 +36,7 @@ COMPONENTS = {
         'sort': SortPipe,
         'where': WherePipe,
         'sel': SelectFields,
+        'sample': SamplePipe,
         'explode': DenormPipe,
         'pgres': PostgresPipe,
     }

@@ -35,7 +35,15 @@ class _ProgressDisplay:
     def _print_values_locked(self):
         elapsed = time.time() - self.state.start_time
         rps = (self.state.count / elapsed) if elapsed > 0 else 0.0
-        line = f"{self.state.count:12d} {rps:12.2f} {self.root.num_threads:12d} {elapsed:12.2f}"
+
+        # format elapsed as HH:MM:SS (no 24h wrap)
+        t = int(elapsed)
+        h = t // 3600
+        m = (t % 3600) // 60
+        s = t % 60
+        hms = f"{h:02d}:{m:02d}:{s:02d}"
+
+        line = f"{self.state.count:12d} {rps:12.2f} {self.root.num_threads:12d} {hms:>12}"
         print("\033[F" + line, file=self.state.stream, flush=True)
 
     def run(self):
@@ -130,13 +138,6 @@ class PreSinkProgressPipe(Pipe):
         # counting needs to be atomic across threads
         with self.state.lock:
             self.state.count += lc
-
-    def _update_progress_locked(self):
-        # retained for compatibility; display uses equivalent logic
-        elapsed = time.time() - self.state.start_time
-        rps = (self.state.count / elapsed) if elapsed > 0 else 0.0
-        line = f"{self.state.count:12d} {rps:12.2f} {self.num_threads:12d} {elapsed:12.2f}"
-        print("\033[F" + line, file=self.state.stream, flush=True)
 
     def close(self):
         # push leftover local batch

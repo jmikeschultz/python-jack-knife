@@ -15,10 +15,6 @@ class ExpectSink(Sink):
         self.expect_source = InlineSource(self.inline)
         self._expect_iter = iter(self.expect_source)
 
-    def print_info(self):
-        command = ' '.join(sys.argv[1:-1])  # omit 'pjk' and 'expect'
-        print(f'{command} ==> OK!\n') # only prints on success
-
     def process(self) -> None:
         command = ' '.join(sys.argv[1:-1])  # omit 'pjk' and 'expect'
 
@@ -52,5 +48,3 @@ class ExpectSink(Sink):
         except StopIteration:
             pass
 
-        command = ' '.join(sys.argv[1:-1])  # omit 'pjk' and 'expect'
-        print(f'{command} ==> OK!\n') # only prints on success

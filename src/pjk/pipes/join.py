@@ -20,13 +20,13 @@ class JoinPipe(Pipe):
             usage="'left', 'inner', or 'outer' join behavior",
             valid_values={'left', 'inner', 'outer'}
         )
-        usage.def_syntax("pjk <left_source> <map_source> map:<how>:<key> join:<mode> <sink>")
+        usage.def_syntax("pjk <left_source> <map_source> [mapby|groupby]:<key> join:<mode> <sink>")
 
         usage.def_example(expr_tokens=
         [
             "[{color:'blue'},{color:'green'}]",
             "[{color:'blue', price:50}, {color:'red', price:20}]",
-            'map:o:color',
+            'mapby:color',
             "join:left"
         ],
         expect="[{color:'blue', price:50}, {color:'green'}]")
@@ -34,7 +34,7 @@ class JoinPipe(Pipe):
         [
             "[{color:'blue'},{color:'green'}]",
             "[{color:'blue', price:50}, {color:'red', price:20}]",
-            'map:o:color',
+            'mapby:color',
             "join:inner"
         ],
         expect="[{color:'blue', price:50}]")
@@ -43,7 +43,7 @@ class JoinPipe(Pipe):
         [
             "[{color:'blue'},{color:'green'}]",
             "[{color:'blue', price:50}, {color:'red', price:20}]",
-            'map:o:color',
+            'mapby:color',
             "join:outer"
         ],
         expect="[{color:'blue', price:50}, {color:'green'}, {color:'red', price: 20}]")

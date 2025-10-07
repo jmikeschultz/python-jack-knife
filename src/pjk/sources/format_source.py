@@ -78,6 +78,11 @@ class FormatSource(Source):
         path_no_ext = gd.get('path', None)
         ext = gd.get('ext', None)
 
+        if pre_colon:
+            source_class = sources.get(pre_colon)
+            if pre_colon != 's3' and not source_class:
+                return None # the pipe case
+
         usage = cls.usage()
         usage.bind_params(ptok) # just for params
         format_override = usage.get_param('format') # override what's specified in file extensions

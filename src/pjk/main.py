@@ -22,6 +22,9 @@ from pjk.sinks.expect import ExpectSink
 from pjk.version import __version__
 
 def write_history(tokens):
+    if os.environ.get("PJK_NO_HISTORY") == "1":
+        return
+    
     log_path = ".pjk-history.txt"
     timestamp = datetime.now().strftime("%Y-%m-%d %H:%M")
     command = " ".join(tokens)

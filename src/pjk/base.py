@@ -162,7 +162,7 @@ class Usage:
         return '\n'.join(lines)
 
     def get_token_syntax(self):
-        if not self.syntax:
+        if self.syntax:
             return self.syntax # else piece it together
 
         token = f'{self.name}'

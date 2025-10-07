@@ -6,28 +6,25 @@
 from typing import Optional
 from pjk.base import ParsedToken, Usage, Pipe, KeyedSource
 
-class MapPipe(Pipe, KeyedSource):
+class MapByPipe(Pipe, KeyedSource):
     @classmethod
     def usage(cls):
         usage = Usage(
-            name='map',
-            desc="maps records to key, either overriding or grouping duplicates. Creates Keyed Source for join or filter.",
+            name='mapby',
+            desc="maps records to key, taking last instance of duplicates.\nCreates Keyed Source for join or filter.",
             component_class=cls
         )
-        usage.def_arg(name='how', usage="'o' for override, 'g' for group", valid_values={'o', 'g'})
         usage.def_arg(name='key', usage='comma separated fields to map by')
-        usage.def_example(expr_tokens=["[{id: 1, color:'blue'}, {id:1, color:'green'}, {id:2, color:'red'}]", 'map:o:id'],
+        usage.def_example(expr_tokens=["[{id: 1, color:'blue'}, {id:1, color:'green'}, {id:2, color:'red'}]", 'mapby:id'],
                           expect="[{id:2, color:'red'}, {id:1, color:'green'}]")
-        usage.def_example(expr_tokens=["[{id: 1, color:'blue'}, {id:1, color:'green'}, {id:2, color:'red'}]", 'map:g:id'], 
-                          expect="[{id:2, child:[{color:'red'}]}, {id:1, child:[{color:'blue'},{color: 'green'}]}]")
-        usage.def_example(expr_tokens=["[{id: 1, color:'blue', size:5}, {id:1, color:'green', size:10}]", 'map:o:id,color'], 
+        usage.def_example(expr_tokens=["[{id: 1, color:'blue', size:5}, {id:1, color:'green', size:10}]", 'mapby:id,color'], 
                           expect="[{id:1, color:'green', size: 10}, {id:1, color:'blue', size:5}]")
 
         return usage
 
-    def __init__(self, ptok: ParsedToken, usage: Usage):
+    def __init__(self, ptok: ParsedToken, usage: Usage, is_group: bool = False):
         super().__init__(ptok)
-        self.is_group = usage.get_arg('how') == 'g'
+        self.is_group = is_group
         self.fields = usage.get_arg('key').split(',')
         self.rec_map = {}
         self.matched_map = {}
@@ -89,3 +86,20 @@ class MapPipe(Pipe, KeyedSource):
         if not self.is_loaded:
             self.load()
         return list(self.rec_map.values())
+
+class GroupByPipe(MapByPipe):
+    @classmethod
+    def usage(cls):
+        usage = Usage(
+            name='groupby',
+            desc="groups records by key. Creates Keyed Source for join or filter.",
+            component_class=cls
+        )
+        usage.def_arg(name='key', usage='comma separated fields to map by')
+        usage.def_example(expr_tokens=["[{id: 1, color:'blue'}, {id:1, color:'green'}, {id:2, color:'red'}]", 'groupby:id'], 
+                          expect="[{id:2, child:[{color:'red'}]}, {id:1, child:[{color:'blue'},{color: 'green'}]}]")
+
+        return usage
+
+    def __init__(self, ptok: ParsedToken, usage: Usage, is_group: bool = False):
+        super().__init__(ptok, usage, True)

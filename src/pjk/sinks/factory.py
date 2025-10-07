@@ -2,8 +2,6 @@
 # Copyright 2024 Mike Schultz
 
 from typing import Callable
-import os
-import gzip
 from pjk.base import Source, Sink, ParsedToken
 from pjk.common import ComponentFactory
 from pjk.sinks.stdout import StdoutSink
@@ -13,8 +11,6 @@ from pjk.sinks.graph import GraphSink
 from pjk.sinks.csv_sink import CSVSink
 from pjk.sinks.tsv_sink import TSVSink
 from pjk.sinks.ddb import DDBSink
-from pjk.sinks.dir_sink import DirSink
-from pjk.sinks.s3_sink import S3Sink
 from pjk.sinks.expect import ExpectSink
 from pjk.sinks.format_sink import FormatSink
 from pjk.sinks.user_sink_factory import UserSinkFactory
@@ -34,7 +30,6 @@ class SinkFactory(ComponentFactory):
         super().__init__(COMPONENTS, 'sink')   
 
     def create(self, token: str) -> Callable[[Source], Sink]:
-        token = token.strip()
         ptok = ParsedToken(token)
 
         # non-usage sink (bind incompatible)
