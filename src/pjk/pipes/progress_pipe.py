@@ -1,28 +1,22 @@
 from typing import Iterator
-from pjk.base import Pipe
+from pjk.base import Source, Pipe, Sink
 from pjk.progress import papi
 
 # monitors flow of records wherever inserted
 
 class ProgressPipe(Pipe):
-    def __init__(self, component_instance = None, simple: bool = False):
+    def __init__(self, component: Source | Sink, simple: bool = False):
         super().__init__(None, None)
-        self.component_instance = component_instance
+        self.component = component
         self.simple = simple
 
-        label = self.get_component_label(component_instance)
-        self.counter = papi.get_counter(label, var_label='recs')
+        counter_label = 'recs_in' if isinstance(component, Sink) else 'recs_out'
+
+        self.counter = papi.get_counter(component, var_label=counter_label)
         #papi.add_rate(sink_name, self.counter, var_label='krecs/sec')
         if not simple:
-            papi.get_counter(label, var_label='threads').increment()
-            papi.add_elapsed_time(label, var_label='elapsed')
-
-    def get_component_label(self, component_instance):
-        if hasattr(type(component_instance), 'extension'):
-            return type(component_instance).extension
-        elif hasattr(component_instance, 'usage'):
-            return type(component_instance).usage().name
-        return type(component_instance).__name__
+            papi.get_counter(component, var_label='threads').increment()
+            papi.add_elapsed_time(component, var_label='elapsed')
 
     def __iter__(self) -> Iterator:
         # only counting here

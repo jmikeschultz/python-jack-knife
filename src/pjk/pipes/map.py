@@ -5,6 +5,7 @@
 
 from typing import Optional
 from pjk.base import ParsedToken, Usage, Pipe, KeyedSource
+from pjk.progress import papi
 
 class MapByPipe(Pipe, KeyedSource):
     @classmethod
@@ -34,6 +35,8 @@ class MapByPipe(Pipe, KeyedSource):
         self.is_loaded = False
         self.do_count = usage.get_param(name='count').lower() == 'true'
         self.counts = {}
+        self.missing_keys = papi.get_counter(self, 'missing_keys')
+        self.distinct_keys = papi.get_counter(self, 'distinct_keys')
 
     def reset(self):
         self.rec_map.clear()
@@ -65,6 +68,7 @@ class MapByPipe(Pipe, KeyedSource):
         for record in self.left:
             key_rec = self.get_key_rec(record)
             if not key_rec: # some fields missing, filter out rec
+                self.missing_keys.increment()
                 continue
 
             key = tuple(key_rec.values())
@@ -72,6 +76,7 @@ class MapByPipe(Pipe, KeyedSource):
 
             existing = self.rec_map.get(key)
             if not existing:
+                self.distinct_keys.increment()
                 if self.is_group:
                     key_rec['child'] = [record]
                     self.rec_map[key] = key_rec

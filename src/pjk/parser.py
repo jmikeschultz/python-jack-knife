@@ -63,7 +63,7 @@ class ExpressionParser:
                             'pjk <source> [<pipe> ...] <sink>'])
         
         # so each sink doesn't have to, maybe make a base class or mixin for sinks
-        progress_pipe = ProgressPipe(component_instance=sink)
+        progress_pipe = ProgressPipe(component=sink)
         progress_pipe.add_source(source)
 
         sink.add_source(progress_pipe)
@@ -87,7 +87,7 @@ class ExpressionParser:
                 source = self.registry.create_source(token)
                 if source:                    
                     stack_helper.add_operator(source, self.stack)
-                    progress_pipe = ProgressPipe(component_instance=source, simple=True)
+                    progress_pipe = ProgressPipe(component=source, simple=True)
                     stack_helper.add_operator(progress_pipe, self.stack)
                     continue
                 

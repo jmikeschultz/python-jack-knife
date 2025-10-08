@@ -2,6 +2,7 @@ import sys
 import time
 import threading
 from typing import Dict, Any
+from pjk.base import Source, Sink
 
 CSI = "\x1b["  # ANSI Control Sequence Introducer
 
@@ -89,28 +90,20 @@ class ProgressDisplay:
 
     def _render_lines(self, snap):
         lines = []
-        for k, v in snap.items():
-            lines.append(self._format_line(k, v))
+        for (comp_label, id), v in snap.items():
+            lines.append(self._format_line(comp_label, v))
         return lines
 
     @staticmethod
     def _format_line(key, rec):
-        KEY_W = 15     # left column (component key)
-        COL_W = 15     # width per name=value token
+        KEY_W = 15     # left column width
+        COL_W = 20     # width per name=value token (adjust if needed)
 
-        parts = [f"{key:<{KEY_W}}"]
+        parts = [f"{key:<{KEY_W}.{KEY_W}}"]           # left col, truncated if too long
         for name, val in rec.items():
-            # if val has .read(), use it (no getattr)
-            try:
-                v = val.read()
-            except AttributeError:
-                v = val
-
-            v_str = f"{v:.3f}" if isinstance(v, float) else str(v)
-            token = f"{name}={v_str}"          # keep name=value contiguous
-            parts.append(f"{token:<{COL_W}}")  # pad AFTER the token to align columns
+            token = f"{name}={val}"                   # __str__ handles formatting
+            parts.append(f"{token:<{COL_W}}") # left-justify, hard truncate at COL_W
         return " ".join(parts)
-
 
 class SafeCounter:
     """
@@ -157,20 +150,58 @@ class ElapsedTime:
         m, s = divmod(r, 60)
         return f"{h:02d}:{m:02d}:{s:02d}"
 
+class PercentageCounter(SafeCounter):
+    def __init__(self, denominator: SafeCounter):
+        super().__init__()
+        self.denominator = denominator
+
+    # read returns numerator
+
+    def __str__(self):
+        numer = self.read()
+        denom = self.denominator.read()
+        if not denom:
+            return f"{numer} (—%)"          # or "0.00%" or whatever you prefer
+        pcnt = 100.0 * float(numer) / float(denom)
+        return f"{numer} ({pcnt:.2f}%)"
+
 class ProgressAPI:
     def __init__(self):
         self._store: Dict[str, Dict[str, Any]] = {}
 
-    def get_counter(self, component_label: str, var_label: str) -> SafeCounter:
-        report = self._store.setdefault(component_label, {})
-        return report.setdefault(var_label, SafeCounter())
+    def get_counter(self, component: Source | Sink, var_label: str) -> SafeCounter:
+        return self._update_storage(component, var_label=var_label, value=SafeCounter())
     
-    def add_elapsed_time(self, component_label, var_label: str) -> ElapsedTime:
-        report = self._store.setdefault(component_label, {})
-        report.setdefault(var_label, ElapsedTime())
+    # returns the numerator counter
+    def get_percentage_counter(self, component: Source | Sink, var_label: str, denom_counter: SafeCounter):
+        return self._update_storage(component, var_label=var_label, value=PercentageCounter(denom_counter))
+    
+    def add_elapsed_time(self, component: Source | Sink, var_label: str) -> ElapsedTime:
+        return self._update_storage(component, var_label=var_label, value=ElapsedTime())
 
     def snapshot(self) -> Dict[str, Dict[str, Any]]:
         return self._store
+    
+    def _update_storage(self, component: Source | Sink, var_label, value: Any):
+        # we can have multiple instances of a component type in an expression so we need to
+        # differentiate by id when we put them in the _store.
+        component_label = self._get_component_label(component)
+
+        if not var_label:
+            return value # when var_label None, then we don't want the stat displayed
+        
+        store_key = (component_label, id(component))
+
+        report = self._store.setdefault(store_key, {})
+        return report.setdefault(var_label, value)
+    
+    def _get_component_label(self, component: Source | Sink):
+        if hasattr(type(component), 'extension'):
+            format = type(component).extension
+            return f'{format}-sink' if isinstance(component, Sink) else f'{format}-source'
+        elif hasattr(component, 'usage'):
+            return type(component).usage().name
+        return type(component).__name__
 
 # singleton
 papi = ProgressAPI()
