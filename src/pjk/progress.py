@@ -163,7 +163,7 @@ class PercentageCounter(SafeCounter):
         if not denom:
             return f"{numer} (—%)"          # or "0.00%" or whatever you prefer
         pcnt = 100.0 * float(numer) / float(denom)
-        return f"{numer} ({pcnt:.2f}%)"
+        return f"{numer} ({pcnt:.1f}%)"
 
 class ProgressAPI:
     def __init__(self):
