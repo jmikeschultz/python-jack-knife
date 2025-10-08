@@ -29,7 +29,7 @@ class ProgressPipe(Pipe):
         if not source_clone:
             return None
 
-        pipe = ProgressPipe(self.component_instance, self.simple)
+        pipe = ProgressPipe(self.component, self.simple)
         pipe.add_source(source_clone)
         return pipe
 

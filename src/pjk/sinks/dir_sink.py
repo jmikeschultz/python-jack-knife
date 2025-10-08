@@ -17,14 +17,18 @@ class DirSink(Sink):
         self.fileno = fileno
         self.num_files = 1
 
-        if os.path.isdir(self.path_no_ext):
+        if fileno == 0: # only root does it
+            self._prepare()
+
+    def _prepare(self):
+        if os.path.isdir(self.path_no_ext): # only root does it
             # remove everything inside
             for entry in os.listdir(self.path_no_ext):
                 full = os.path.join(self.path_no_ext, entry)
-            if os.path.isfile(full) or os.path.islink(full):
-                os.unlink(full)
-            elif os.path.isdir(full):
-                shutil.rmtree(full)
+                if os.path.isfile(full) or os.path.islink(full):
+                    os.unlink(full)
+                elif os.path.isdir(full):
+                    shutil.rmtree(full)
         else:
             os.makedirs(self.path_no_ext, exist_ok=True)
 

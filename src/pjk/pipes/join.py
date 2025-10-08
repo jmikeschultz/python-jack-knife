@@ -4,6 +4,7 @@
 # djk/pipes/join.py
 
 from pjk.base import Pipe, Usage, UsageError, ParsedToken, KeyedSource
+from pjk.progress import papi
 
 class JoinPipe(Pipe):
     arity = 2  # left = record stream, right = KeyedSource
@@ -58,6 +59,10 @@ class JoinPipe(Pipe):
         self._pending_right = None
         self._check_right = False
 
+        self.recs_in = papi.get_counter(self, None) # don't display
+        self.matches = papi.get_percentage_counter(self, 'matches', self.recs_in)
+        self.recs_out = papi.get_counter(self, 'recs_out')
+
     def reset(self):
         self._pending_right = None
         self._check_right = False
@@ -67,19 +72,25 @@ class JoinPipe(Pipe):
             raise UsageError("right source must be a KeyedSource")
 
         for left_rec in self.left:
+            self.recs_in.increment()
             match = self.right.lookup(left_rec)
 
             if match is not None:
+                self.matches.increment()
+                self.recs_out.increment()
                 merged = dict(left_rec)
                 merged.update(match)
                 yield merged
             elif self.mode == "left":
+                self.recs_out.increment()
                 yield left_rec
             elif self.mode == "outer":
+                self.recs_out.increment()
                 yield left_rec 
             elif self.mode == "inner":
                 continue
 
         if self.mode == "outer":
             for right_rec in self.right.get_unlookedup_records():
+                self.recs_out.increment()
                 yield right_rec
