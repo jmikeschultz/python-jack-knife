@@ -10,7 +10,7 @@ class TailPipe(Pipe):
     def usage(cls):
         usage = Usage(
             name='tail',
-            desc='take last records of input (when single-threaded)',
+            desc='take last records of input (single-threaded)',
             component_class=cls
         )
         usage.def_arg(name='limit', usage='number of records', is_num=True)

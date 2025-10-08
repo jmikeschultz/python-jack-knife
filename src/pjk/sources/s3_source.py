@@ -3,7 +3,7 @@
 
 from threading import Lock
 from typing import Optional, Any, Iterator, Tuple
-from pjk.base import Source, ParsedToken
+from pjk.base import Source
 from pjk.sources.lazy_file_s3 import LazyFileS3
 from pjk.log import logger
 
@@ -88,6 +88,7 @@ class _SharedS3State:
 
 
 class S3Source(Source):
+    extension = 's3' # ducklike hack so like FormatSource without the hassle
     """
     A Source that draws from a shared, lazy S3 key stream.
     - Iteration pulls a new inner Source on demand.

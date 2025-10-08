@@ -10,7 +10,7 @@ from pjk.pipes.user_pipe_factory import UserPipeFactory
 from pjk.pipes.let_reduce import ReducePipe
 from pjk.sinks.stdout import StdoutSink
 from pjk.sinks.expect import ExpectSink
-from pjk.pipes.pre_sink_progress import PreSinkProgressPipe
+from pjk.pipes.progress_pipe import ProgressPipe
 from pjk.registry import ComponentRegistry
 
 def expand_macros(tokens: List[str]) -> List[str]:
@@ -62,13 +62,11 @@ class ExpressionParser:
             raise TokenError.from_list(['expression must end in a sink.',
                             'pjk <source> [<pipe> ...] <sink>'])
         
-        # insert a progress pipe for displaying progress if not stdout sink
-        if not isinstance(sink, (StdoutSink|ExpectSink)):
-            progress_pipe = PreSinkProgressPipe(batch_size=1000)
-            progress_pipe.add_source(source)
-            source = progress_pipe
+        # so each sink doesn't have to, maybe make a base class or mixin for sinks
+        progress_pipe = ProgressPipe(component_instance=sink)
+        progress_pipe.add_source(source)
 
-        sink.add_source(source)
+        sink.add_source(progress_pipe)
         return sink
 
     def parse(self, tokens: List[str]) -> Sink:
@@ -87,10 +85,12 @@ class ExpressionParser:
                     return self.get_sink(stack_helper, token)
                     
                 source = self.registry.create_source(token)
-                if source:
+                if source:                    
                     stack_helper.add_operator(source, self.stack)
+                    progress_pipe = ProgressPipe(component_instance=source, simple=True)
+                    stack_helper.add_operator(progress_pipe, self.stack)
                     continue
-
+                
                 subexp = SubExpression.create(token)
                 if subexp:
                     stack_helper.add_operator(subexp, self.stack)

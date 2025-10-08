@@ -21,6 +21,7 @@ from pjk.sources.format_source import FormatSource
 COMPONENTS = {
         'inline': InlineSource,
         'json': JsonSource,
+        'jsonl': JsonSource,
         'csv': CSVSource,
         'tsv': TSVSource,
         'sql': SQLSource,
@@ -32,39 +33,6 @@ class SourceFactory(ComponentFactory):
     def __init__(self):
         super().__init__(COMPONENTS, 'source')
     
-
-    def get_format_class_gz(self, ptok: ParsedToken):
-        params = ptok.get_params()
-        override = params.get('format', None) # e.g. json or json.gz
-
-        lookup = None
-
-        is_gz = ptok.all_but_params.endswith('gz')
-        if override:
-            if override.endswith('.gz'):
-                is_gz = True
-                override = override.removesuffix('.gz')
-            lookup = override
-
-        else: # e.g. foo.json or foo.json.gz
-            path = ptok.all_but_params
-            if path.endswith('.gz'):
-                is_gz = True
-                path = path.removesuffix('.gz')
-
-            path, ext = os.path.splitext(path) # e.g path=foo.json
-            lookup = ext.removeprefix('.')
-            
-        format_class = self.components.get(lookup, None)
-        if not format_class:
-            return None, None
-        
-        # make sure
-        if not issubclass(format_class, FormatSource):
-            return None, None # raise ?
-
-        return format_class, is_gz
-
     def create(self, token: str) -> Source:
         token = token.strip()
 

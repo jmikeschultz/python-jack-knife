@@ -9,6 +9,8 @@ from pjk.sources.lazy_file_local import LazyFileLocal
 from pjk.log import logger
 
 class DirSource(Source):
+    extension = 'dir' # ducklike hack so like FormatSource without the hassle
+
     def __init__(self, source_queue: Queue, in_source: Source = None):
         self.source_queue = source_queue
         self.current = in_source

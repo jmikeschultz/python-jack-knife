@@ -10,15 +10,14 @@ from typing import List
 from pjk.parser import ExpressionParser
 from pjk.base import UsageError
 from pjk.log import init as init_logging
-from datetime import datetime, timezone
+from datetime import datetime
 import traceback
 import concurrent.futures
 from pjk.registry import ComponentRegistry
-from pjk.pipes.factory import PipeFactory
-from pjk.sources.factory import SourceFactory
-from pjk.sinks.factory import SinkFactory
+from pjk.sinks.stdout import StdoutSink
 from pjk.man_page import do_man, do_examples
 from pjk.sinks.expect import ExpectSink
+from pjk.progress import ProgressDisplay
 from pjk.version import __version__
 
 def write_history(tokens):
@@ -37,61 +36,69 @@ def write_history(tokens):
 
 def execute_threaded(sinks, stop_progress=None):
     max_workers = min(32, len(sinks))
-    with concurrent.futures.ThreadPoolExecutor(max_workers=max_workers) as executor:
-        futures = {executor.submit(s.drain): s for s in sinks}
-
+    executor = concurrent.futures.ThreadPoolExecutor(max_workers=max_workers)  # no 'with'
+    futures = {executor.submit(s.drain): s for s in sinks}
+    try:
         for future in concurrent.futures.as_completed(futures):
             sink_obj = futures[future]
-            try:
-                future.result()  # re-raises worker exception with traceback
-            except Exception as e:
-                # stop progress UI first so it doesn't overwrite the traceback
-                if stop_progress:
-                    try: stop_progress()
-                    except Exception: pass
+            future.result()  # re-raises worker exception with traceback
+    except KeyboardInterrupt:
+        # stop UI first, then cancel and non-blocking shutdown
+        if stop_progress:
+            try: stop_progress()
+            except Exception: pass
+        for f in futures:
+            f.cancel()
+        executor.shutdown(wait=False, cancel_futures=True)
+        os._exit(130)
 
-                sys.stderr.write(f"Sink {sink_obj} raised an exception:\n")
-                traceback.print_exception(type(e), e, e.__traceback__, file=sys.stderr)
-
-                # cancel remaining work and bail
-                for f in futures:
-                    f.cancel()
-                # if on py3.9+, you can also: executor.shutdown(cancel_futures=True)
-                raise
+    except Exception as e:
+        if stop_progress:
+            try: stop_progress()
+            except Exception: pass
+        sys.stderr.write(f"Sink {futures[future]} raised an exception:\n")
+        traceback.print_exception(type(e), e, e.__traceback__, file=sys.stderr)
+        for f in futures:
+            f.cancel()
+        executor.shutdown(wait=False, cancel_futures=True)
+        raise
+    else:
+        executor.shutdown(wait=True)
 
 def execute(command: str):
     tokens = shlex.split(command, comments=True, posix=True)
     execute_tokens(tokens)
 
-def execute_tokens(tokens:List[str]):
+def execute_tokens(tokens: List[str]):
     init_logging()
-    signal.signal(signal.SIGINT, lambda s, f: sys.exit(0))
+    # (remove the sys.exit SIGINT handler here)
 
     if '--version' in tokens:
         print(f"pjk version {__version__}")
         sys.exit(0)
-    
+
     registry = ComponentRegistry()
-       
+
     if len(tokens) < 1:
         registry.print_usage()
         return
-    
-    # pjk man --all | --all+ | <component>
+
     if len(tokens) == 2 and tokens[0] == 'man':
         do_man(tokens[1], registry)
         return
-    
-    # pjk examples | examples+
+
     if len(tokens) == 1 and tokens[0] in ['examples', 'examples+']:
         do_examples(tokens[0], registry)
         return
 
     parser = ExpressionParser(registry)
 
+    display = None
     try:
-        # Build initial sink
         sink = parser.parse(tokens)
+        if not isinstance(sink, (StdoutSink | ExpectSink)):
+            display = ProgressDisplay(interval=3.0)
+            display.start()
 
         sinks = [sink]
         max_threads = os.cpu_count()
@@ -102,15 +109,23 @@ def execute_tokens(tokens:List[str]):
             sinks.append(clone)
 
         if len(sinks) > 1:
-            execute_threaded(sinks)
+            # pass a stopper so we halt the UI before tracebacks / shutdown
+            execute_threaded(sinks, stop_progress=(display.stop if display else None))
         else:
-            sink.drain() # run single in main thread
+            sink.drain()
 
         write_history(sys.argv[1:])
 
     except UsageError as e:
         print(e, file=sys.stderr)
-        sys.exit(2)  # Exit with a non-zero code, but no traceback
+        sys.exit(2)
+    except KeyboardInterrupt:
+        pass
+    finally:
+        if display:
+            # short join so Ctrl-C is immediate
+            try: display.stop(timeout=0.1)
+            except Exception: pass
 
 def main():
     tokens = sys.argv[1:]

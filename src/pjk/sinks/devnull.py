@@ -18,11 +18,10 @@ class DevNullSink(Sink):
 
     def __init__(self, ptok: ParsedToken, usage: Usage):
         super().__init__(ptok, usage)
-        self.count = 0
 
     def process(self):
         for record in self.input:
-            self.count += 1
+            pass
 
     def deep_copy(self):
         # Ask the upstream source to duplicate itself
