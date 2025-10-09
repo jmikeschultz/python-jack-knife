@@ -6,8 +6,8 @@ from __future__ import annotations
 import random
 from typing import Iterable, List, Optional
 
-from pjk.base import Pipe, ParsedToken, Usage, TokenError
-
+from pjk.base import Pipe, ParsedToken, Usage
+from pjk.progress import papi
 
 class SamplePipe(Pipe):
     """
@@ -40,6 +40,7 @@ class SamplePipe(Pipe):
         # Preallocate reservoir
         self._A: List[Optional[dict]] = [None] * self.nsamples if self.nsamples > 0 else []
         self._seen: int = 0  # recno (1-based in algo below)
+        self.out_recs = papi.get_counter(self, var_label='out_recs')
 
     def reset(self):
         # New instance per run; nothing to reset between drains.
@@ -63,4 +64,5 @@ class SamplePipe(Pipe):
         # Emit the sampled records (compact out any None if input < nsamples)
         for rec in self._A:
             if rec is not None:
+                self.out_recs.increment()
                 yield rec

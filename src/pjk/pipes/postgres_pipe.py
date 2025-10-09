@@ -9,8 +9,9 @@ import uuid
 from decimal import Decimal
 from typing import Any, Dict, Optional
 
-from pjk.base import Pipe, ParsedToken, NoBindUsage, Usage, TokenError
+from pjk.base import Pipe, ParsedToken, Usage
 from pjk.common import Lookups
+from pjk.pipes.query_pipe import QueryPipe
 
 
 class DBClient:
@@ -89,28 +90,15 @@ def _row_to_dict(cursor, row) -> Dict[str, Any]:
     return {col: normalize(val) for col, val in zip(cols, row)}
 
 
-class PostgresPipe(Pipe):
-    @classmethod
-    def usage(cls):
-        usage = Usage(
-            name="pgres",
-            desc="Postgres query pipe; executes SQL from input record['query'].",
-            component_class=cls,
-        )
-        usage.def_arg(
-            "dbname",
-            f"~/.pjk/lookups.yaml must containing entry '{cls.__name__}-<dbname>' with host, user, password"
-        )
-        usage.def_param(
-            "header",
-            usage="emit header record before query results",
-            valid_values={"true", "false"}, default='false',
-        )
-
-        usage.def_example(expr_tokens=['myquery.sql', 'pgres:mydb'], expect=None)
-        usage.def_example(expr_tokens=["{'query': 'SELECT * from MY_TABLE;'}", 'pgres:mydb'], expect=None)
-        usage.def_example(expr_tokens=["{'query': 'SELECT * FROM pg_catalog.pg_tables;'}", 'pgres:mydb'], expect=None)
-        return usage
+class PostgresPipe(QueryPipe):
+    name = 'pgres'
+    desc = "Postgres query pipe; executes SQL from input."
+    arg0 = ("dbname", 'database name.')
+    examples = [
+        ['myquery.sql', 'pgres:mydb', '-'],
+        ["{'query': 'SELECT * from MY_TABLE;'}", 'pgres:mydb', '-'],
+        ["{'query': 'SELECT * FROM pg_catalog.pg_tables;'}", 'pgres:mydb']
+    ]
 
     def __init__(self, ptok: ParsedToken, usage: Usage):
         super().__init__(ptok, usage)
@@ -118,16 +106,14 @@ class PostgresPipe(Pipe):
         lookups = Lookups(self)
         self.dbname = usage.get_arg("dbname")
 
-        db_params = lookups.get(self.dbname)
-        self.db_host = db_params.get("host")
-        self.db_user = db_params.get("user")
-        self.db_pass = db_params.get("password")
-        self.db_port = int(db_params.get("port", 5432))
-        self.db_ssl  = bool(db_params.get("ssl", False))
+        self.db_host = self.lookup_params.get("host")
+        self.db_user = self.lookup_params.get("user")
+        self.db_pass = self.lookup_params.get("password")
+        self.db_port = int(self.lookup_params.get("port", 5432))
+        self.db_ssl  = bool(self.lookup_params.get("ssl", False))
 
-        self.query_field  = "query"   # SQL string
+        self.query_field  = usage.get_param('query_field')
         self.params_field = "params"  # optional: list/tuple (positional) or dict (named)
-        self.do_header = usage.get_param("header") == "true"
 
     def reset(self):
         # stateless across reset
@@ -139,7 +125,6 @@ class PostgresPipe(Pipe):
         Figures out result, rowcount, function automatically.
         """
         h = {
-            "query": query,
             "db": self.dbname,
             "dbhost": self.db_host,
         }
@@ -159,9 +144,9 @@ class PostgresPipe(Pipe):
             h["result"] = "ok"
             h["rowcount"] = cur.rowcount
 
-        return {"header": h}
+        return h
 
-    def __iter__(self):
+    def execute_query_returning_Q_xR_iterable(self, record):
         client = DBClient(
             host=self.db_host,
             username=self.db_user,
@@ -171,12 +156,12 @@ class PostgresPipe(Pipe):
             ssl=self.db_ssl,
         )
         try:
-            for input_record in self.left:
-                query = input_record.get(self.query_field)
-                if not query:
-                    yield {"_error": "missing query"}
-                    continue
-                params = input_record.get(self.params_field)
+            query = record.get(self.query_field)
+            if not query:
+                    record['_error'] = 'missing query'
+                    yield record
+            else:        
+                params = record.get(self.params_field)
 
                 cur = client.conn.cursor()
                 try:
@@ -190,8 +175,7 @@ class PostgresPipe(Pipe):
                             cur.execute(query, (params,))
 
                     # yield header first
-                    if self.do_header:
-                        yield self._make_header(cur, query, params)
+                    yield self._make_header(cur, query, params)
 
                     # then stream rows if it was a real SELECT with results
                     if cur.description:
