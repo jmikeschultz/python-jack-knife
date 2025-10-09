@@ -3,6 +3,7 @@ import time
 import threading
 from typing import Dict, Any
 from pjk.base import Source, Sink
+from pjk.common import highlight
 
 CSI = "\x1b["  # ANSI Control Sequence Introducer
 
@@ -90,20 +91,20 @@ class ProgressDisplay:
 
     def _render_lines(self, snap):
         lines = []
-        for (comp_label, id), v in snap.items():
-            lines.append(self._format_line(comp_label, v))
+        for (comp_label, id), prog_rec in snap.items():
+            lines.append(self._format_line(comp_label, prog_rec))
         return lines
 
     @staticmethod
-    def _format_line(key, rec):
+    def _format_line(key, prog_rec):
         KEY_W = 15     # left column width
         COL_W = 20     # width per name=value token (adjust if needed)
 
         parts = [f"{key:<{KEY_W}.{KEY_W}}"]           # left col, truncated if too long
-        for name, val in rec.items():
+        for name, val in prog_rec.items():
             token = f"{name}={val}"                   # __str__ handles formatting
             parts.append(f"{token:<{COL_W}}") # left-justify, hard truncate at COL_W
-        return " ".join(parts)
+        return highlight(" ".join(parts), 'bold', key)
 
 class SafeCounter:
     """
@@ -165,6 +166,21 @@ class PercentageCounter(SafeCounter):
         pcnt = 100.0 * float(numer) / float(denom)
         return f"{numer} ({pcnt:.1f}%)"
 
+# only the root thread updates
+class ProgressState:
+    def __init__(self, state: str):
+        self.state = state
+        self.root_tid = threading.get_ident()
+
+    def set(self, state):
+        tid = threading.get_ident()
+        if tid != self.root_tid:
+            return
+        self.state = state
+
+    def __str__(self) -> str:
+        return self.state
+    
 class ProgressAPI:
     def __init__(self):
         self._store: Dict[str, Dict[str, Any]] = {}
@@ -178,6 +194,9 @@ class ProgressAPI:
     
     def add_elapsed_time(self, component: Source | Sink, var_label: str) -> ElapsedTime:
         return self._update_storage(component, var_label=var_label, value=ElapsedTime())
+    
+    def get_progress_state(self, component: Source | Sink, var_label: str, state: str) -> ProgressState:
+        return self._update_storage(component, var_label=var_label, value=ProgressState(state))
 
     def snapshot(self) -> Dict[str, Dict[str, Any]]:
         return self._store
@@ -195,12 +214,24 @@ class ProgressAPI:
         report = self._store.setdefault(store_key, {})
         return report.setdefault(var_label, value)
     
+    # some hacking to get at reasonable labels
     def _get_component_label(self, component: Source | Sink):
+        in_component = component
+
+        if hasattr(component, 'sink_class'): # true of S3Sink,DirSink
+            component = component.sink_class # get inner component
+
+        if hasattr(component, 'extension'):
+            format = component.extension
+            return f'{format}-sink' if isinstance(in_component, Sink) else f'{format}-source'
+        
         if hasattr(type(component), 'extension'):
             format = type(component).extension
             return f'{format}-sink' if isinstance(component, Sink) else f'{format}-source'
-        elif hasattr(component, 'usage'):
+        
+        if hasattr(component, 'usage'):
             return type(component).usage().name
+        
         return type(component).__name__
 
 # singleton

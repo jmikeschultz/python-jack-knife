@@ -4,6 +4,7 @@
 # djk/pipes/sort.py
 
 from pjk.base import Pipe, ParsedToken, Usage, UsageError
+from pjk.progress import papi
 
 class SortPipe(Pipe):
     @classmethod
@@ -22,9 +23,6 @@ class SortPipe(Pipe):
         super().__init__(ptok)
 
         arg_string = usage.get_arg('field')
-        if not arg_string:
-            raise UsageError("sort:[+-]<field> requires direction and field name")
-
         if arg_string.startswith("-"):
             self.field = arg_string[1:]
             self.reverse = True
@@ -36,6 +34,7 @@ class SortPipe(Pipe):
 
         self._buffer = None
         self._index = 0
+        self.progress_state = papi.get_progress_state(self, 'state', 'waiting')
 
     def reset(self):
         self._buffer = None
@@ -43,12 +42,14 @@ class SortPipe(Pipe):
 
     def __iter__(self):
         if self._buffer is None:
+            self.progress_state.set('loading')
             self._buffer = list(self.left)
 
             # Partition into records with and without the sort field
             present = [r for r in self._buffer if r.get(self.field) is not None]
             missing = [r for r in self._buffer if r.get(self.field) is None]
 
+            self.progress_state.set('sorting')
             present.sort(
                 key=lambda r: r.get(self.field),
                 reverse=self.reverse
@@ -56,8 +57,9 @@ class SortPipe(Pipe):
 
             self._buffer = present + missing  # always push missing to the end
 
+        self.progress_state.set('yielding')
         while self._index < len(self._buffer):
             yield self._buffer[self._index]
             self._index += 1
-
+        self.progress_state.set('empty')
 
