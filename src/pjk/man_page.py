@@ -51,8 +51,9 @@ def do_all_man(registry: ComponentRegistry, no_pager: bool = True):
     cm = nullcontext() if no_pager else pager_stdout()
     with cm:
         for factory in registry.get_factories():
-            comp_type = factory.get_comp_type_name()
-            for name in factory.components.keys():
+            #comp_type = factory.get_comp_type_name()
+            component_tuples = factory.get_component_name_class_tuples() # all of them
+            for name, comp_class in component_tuples:
                 usage = factory.get_usage(name)
                 print_man(registry, name, usage)
                 print()
@@ -84,7 +85,7 @@ def do_examples(token:str, registry: ComponentRegistry):
     with cm:
         for factory in registry.get_factories():
             comp_type = factory.get_comp_type_name()
-            for name, comp_class in factory.components.items():
+            for name, comp_class in factory.get_component_name_class_tuples():
                 usage = comp_class.usage()
 
                 comp_type = usage.get_base_class(as_string=True)

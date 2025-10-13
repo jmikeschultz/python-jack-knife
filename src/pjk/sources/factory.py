@@ -11,10 +11,7 @@ from pjk.sources.sql_source import SQLSource
 from pjk.sources.tsv_source import TSVSource
 from pjk.sources.npy_source import NpySource
 from pjk.sources.inline_source import InlineSource
-from pjk.sources.dir_source import DirSource
 from pjk.sources.user_source_factory import UserSourceFactory
-from pjk.sources.lazy_file import LazyFile
-from pjk.sources.lazy_file_local import LazyFileLocal
 from pjk.sources.parquet_source import ParquetSource
 from pjk.sources.format_source import FormatSource
 
@@ -31,8 +28,11 @@ COMPONENTS = {
 
 class SourceFactory(ComponentFactory):
     def __init__(self):
-        super().__init__(COMPONENTS, 'source')
+        super().__init__(COMPONENTS)
     
+    def get_comp_type_name(self):
+        return 'source'
+
     def create(self, token: str) -> Source:
         token = token.strip()
 
@@ -46,7 +46,7 @@ class SourceFactory(ComponentFactory):
             if source:
                 return source
 
-        source_cls = self.components.get(ptok.pre_colon)
+        source_cls = self.get_component_class(ptok.pre_colon)
         if source_cls and not issubclass(source_cls, FormatSource):
             usage = source_cls.usage()
             usage.bind(ptok)

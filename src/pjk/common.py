@@ -4,7 +4,7 @@
 import sys, shutil, subprocess, contextlib, signal
 import os
 import yaml
-from pjk.base import TokenError
+from pjk.base import TokenError, Integration
 
 class SafeNamespace:
     def __init__(self, obj):
@@ -99,7 +99,7 @@ class Lookups:
         entry = self._data.get(lookup_key, default)
         if not entry:
             raise TokenError(
-                f"~/.pjk/lookups.yaml must contain entry for '{lookup_key}' with host, user, password."
+                f"~/.pjk/lookups.yaml does not contain entry for '{lookup_key}' with required params."
             )
         return entry
 
@@ -119,36 +119,37 @@ class Lookups:
         return dict(self._data)
 
 class ComponentFactory:
-    def __init__(self, components: dict, comp_type_name: str):
+    def __init__(self, core_components: dict):
         self.num_orig = 0
-        self.components = components # name -> component_class
-        self.comp_type_name = comp_type_name
-        self.num_orig_comps = len(components)
+        self._components = {}
+        for k, v in core_components.items():
+            if issubclass(v, Integration):
+                self.register(k, v, 'integration')
+            else:
+                self.register(k, v, 'core')
 
-    def register(self, name, comp_class):
-        self.components[name] = comp_class
+    def register(self, name, comp_class, origin: str):
+        self._components[name] = (comp_class, origin)
 
     def get_comp_type_name(self):
-        return self.comp_type_name
+        pass
 
-    def print_descriptions(self):
-        header = highlight(f'{self.comp_type_name}s')
-        print(header)
+    def get_component_name_class_tuples(self, origin: str = None) -> list:
+        ret = []
+        for k, (v, org) in self._components.items():
+            if not origin or origin == org:
+                ret.append((k, v))
+        return ret
 
-        i = 0
-        # user and outside package components are also here, but printed from registry class
-        for name, comp_class in self.components.items():
-            usage = comp_class.usage()
-            lines = usage.desc.split('\n')
-            if i >= self.num_orig_comps:
-                break
-
-            line = f'  {name:<12} {lines[0]}'
-            print(line)
-            i += 1
+    def get_component_class(self, name: str):
+        tuple = self._components.get(name)
+        if not tuple:
+            return None
+        component_class, origin = tuple
+        return component_class
 
     def get_usage(self, name: str):
-        comp_class = self.components.get(name)
+        comp_class = self.get_component_class(name)
         if not comp_class:
             return None
         return comp_class.usage()

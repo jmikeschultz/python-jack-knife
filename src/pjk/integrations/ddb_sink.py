@@ -1,10 +1,10 @@
 # SPDX-License-Identifier: Apache-2.0
 # Copyright 2024 Mike Schultz
 
-from pjk.base import Sink, Source, ParsedToken, Usage
+from pjk.base import Sink, Integration, Source, ParsedToken, Usage
 from decimal import Decimal
 
-class DDBSink(Sink):
+class DDBSink(Sink, Integration):
     @classmethod
     def usage(cls):
         usage = Usage(

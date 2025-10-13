@@ -9,7 +9,7 @@ class HeadPipe(Pipe):
     def usage(cls):
         usage = Usage(
             name='head',
-            desc='take first records of input (single-threaded)',
+            desc='take first records of input',
             component_class=cls
         )
         usage.def_example(expr_tokens=['[{id:1}, {id:2}]', 'head:1'], expect="{id:1}")

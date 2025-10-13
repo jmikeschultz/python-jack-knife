@@ -9,7 +9,7 @@ import uuid
 from decimal import Decimal
 from typing import Any, Dict, Optional
 
-from pjk.base import Pipe, ParsedToken, Usage
+from pjk.base import Integration, ParsedToken, Usage
 from pjk.common import Lookups
 from pjk.pipes.query_pipe import QueryPipe
 
@@ -90,7 +90,7 @@ def _row_to_dict(cursor, row) -> Dict[str, Any]:
     return {col: normalize(val) for col, val in zip(cols, row)}
 
 
-class PostgresPipe(QueryPipe):
+class PostgresPipe(QueryPipe,Integration):
     name = 'pgres'
     desc = "Postgres query pipe; executes SQL from input."
     arg0 = ("dbname", 'database name.')

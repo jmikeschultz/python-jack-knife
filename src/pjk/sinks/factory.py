@@ -10,7 +10,7 @@ from pjk.sinks.devnull import DevNullSink
 from pjk.sinks.graph import GraphSink
 from pjk.sinks.csv_sink import CSVSink
 from pjk.sinks.tsv_sink import TSVSink
-from pjk.sinks.ddb import DDBSink
+from pjk.integrations.ddb_sink import DDBSink
 from pjk.sinks.expect import ExpectSink
 from pjk.sinks.format_sink import FormatSink
 from pjk.sinks.user_sink_factory import UserSinkFactory
@@ -27,7 +27,10 @@ COMPONENTS = {
 
 class SinkFactory(ComponentFactory):
     def __init__(self):
-        super().__init__(COMPONENTS, 'sink')   
+        super().__init__(COMPONENTS)
+
+    def get_comp_type_name(self):
+        return 'sink'
 
     def create(self, token: str) -> Callable[[Source], Sink]:
         ptok = ParsedToken(token)
@@ -41,7 +44,7 @@ class SinkFactory(ComponentFactory):
             if sink:
                 return sink
         
-        sink_cls = self.components.get(ptok.pre_colon)
+        sink_cls = self.get_component_class(ptok.pre_colon)
         if sink_cls and not issubclass(sink_cls, FormatSink):
             usage = sink_cls.usage()
             usage.bind(ptok)

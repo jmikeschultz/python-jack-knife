@@ -18,7 +18,8 @@ from pjk.pipes.join import JoinPipe
 from pjk.pipes.filter import FilterPipe
 from pjk.pipes.select import SelectFields
 from pjk.pipes.denorm import DenormPipe
-from pjk.pipes.postgres_pipe import PostgresPipe
+from pjk.integrations.postgres_pipe import PostgresPipe
+from pjk.integrations.snowflake_pipe import SnowflakePipe
 from pjk.pipes.sample import SamplePipe
 from pjk.pipes.user_pipe_factory import UserPipeFactory
 
@@ -38,12 +39,16 @@ COMPONENTS = {
         'sel': SelectFields,
         'sample': SamplePipe,
         'explode': DenormPipe,
-        'pgres': PostgresPipe,
+        'postgres': PostgresPipe,
+        'snowflake': SnowflakePipe
     }
 
 class PipeFactory(ComponentFactory):
     def __init__(self):
-        super().__init__(COMPONENTS, 'pipe')
+        super().__init__(COMPONENTS)
+
+    def get_comp_type_name(self):
+        return 'pipe'
 
     def create(self, token: str) -> Pipe:
 
@@ -53,7 +58,7 @@ class PipeFactory(ComponentFactory):
             if pipe:
                 return pipe # else keep looking
 
-        pipe_cls = self.components.get(ptok.pre_colon)
+        pipe_cls = self.get_component_class(ptok.pre_colon)
 
         if not pipe_cls:
             return None

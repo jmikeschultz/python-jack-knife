@@ -279,6 +279,11 @@ class KeyedSource(ABC):
     def deep_copy(self):
         return None
 
+# mixin 
+# just for distinguishing components for display
+class Integration(ABC):
+    pass
+
 class Source(ABC):
     @classmethod
     def usage(cls):

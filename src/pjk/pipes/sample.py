@@ -24,7 +24,7 @@ class SamplePipe(Pipe):
     def usage(cls) -> Usage:
         u = Usage(
             name="sample",
-            desc="Randomly sample a fixed number of records from the input (single-threaded).",
+            desc="Randomly sample a fixed number of records from the input.",
             component_class=cls,
         )
         # Single positional arg: count
