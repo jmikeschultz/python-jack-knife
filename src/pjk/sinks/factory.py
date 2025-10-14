@@ -13,6 +13,7 @@ from pjk.sinks.tsv_sink import TSVSink
 from pjk.integrations.ddb_sink import DDBSink
 from pjk.sinks.expect import ExpectSink
 from pjk.sinks.format_sink import FormatSink
+from pjk.sinks.create_sink import CreateSink
 from pjk.sinks.user_sink_factory import UserSinkFactory
 
 COMPONENTS = {
@@ -23,6 +24,7 @@ COMPONENTS = {
         'json': JsonSink,
         'csv': CSVSink,
         'tsv': TSVSink,
+        'create': CreateSink
         }
 
 class SinkFactory(ComponentFactory):
@@ -43,6 +45,8 @@ class SinkFactory(ComponentFactory):
             sink = UserSinkFactory.create(ptok)
             if sink:
                 return sink
+            else:
+                return None
         
         sink_cls = self.get_component_class(ptok.pre_colon)
         if sink_cls and not issubclass(sink_cls, FormatSink):

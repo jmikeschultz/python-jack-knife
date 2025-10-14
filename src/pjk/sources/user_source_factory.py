@@ -28,6 +28,10 @@ class UserSourceFactory:
                 and value is not Source
                 and value.__module__ == module.__name__  # 🧠 only user-defined classes
             ):
-                return value(ptok)
+                
+                usage = value.usage()
+                usage.bind(ptok)
+                source = value(ptok, usage)
+                return source
 
         return None

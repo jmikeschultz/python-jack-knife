@@ -1,0 +1,29 @@
+# template for a pipe, used by 'create' sink
+from pjk.base import Pipe, ParsedToken, Usage
+
+class __NAME__Pipe(Pipe):
+    @classmethod
+    def usage(cls):
+        usage = Usage(
+            name='__NAME__',
+            desc='needs description',
+            component_class=cls
+        )
+        #usage.def_arg(name='myarg', usage='meaning of my arg', is_num=True)
+	#usage.def_param(name='myparam', usage='meaning of myparam', default='foo')
+        #usage.def_example(expr_tokens=['[{id:1}, {id:2}]', '__NAME__:foo'], expect="{id:1}")
+        return usage
+
+    def __init__(self, ptok: ParsedToken, usage: Usage):
+        super().__init__(ptok, usage)
+
+    def __iter__(self):
+        for record in self.left:
+            record['_pipe'] = 'hello world!'
+            yield record
+
+    def deep_copy(self):
+        return None
+
+    def reset(self):
+        pass
