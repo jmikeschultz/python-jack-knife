@@ -37,7 +37,8 @@ class MapByPipe(Pipe, KeyedSource):
         self.counts = {}
         self.missing_keys = papi.get_counter(self, 'missing_keys')
         self.recs_in = papi.get_counter(self, None) # don't display
-        self.distinct_keys = papi.get_percentage_counter(self, 'distinct_keys', self.recs_in)
+        # recs_out = distinct_keys
+        self.distinct_keys = papi.get_percentage_counter(self, 'recs_out', self.recs_in)
 
     def reset(self):
         self.rec_map.clear()

@@ -1,10 +1,11 @@
 from typing import Iterator
 from pjk.base import Source, Pipe, Sink
 from pjk.progress import papi
+from pjk.progress import ProgressIgnore
 
 # monitors flow of records wherever inserted
 
-class ProgressPipe(Pipe):
+class ProgressPipe(Pipe, ProgressIgnore): # ignores only the component register itself
     def __init__(self, component: Source | Sink, simple: bool = False):
         super().__init__(None, None)
         self.component = component

@@ -7,6 +7,27 @@ from pjk.common import highlight
 
 CSI = "\x1b["  # ANSI Control Sequence Introducer
 
+# mixin so progress will ignore
+class ProgressIgnore:
+    pass
+
+class Report:
+    def __init__(self):
+        self.name_value_tuples = []
+        self.parse_level = -1
+
+    def add_value(self, name, value):
+        self.name_value_tuples.append((name, value))
+
+    def get_name_value_tuples(self):
+        return self.name_value_tuples
+    
+    def set_parse_level(self, level: int):
+        self.parse_level = level
+
+    def get_parse_level(self):
+        return self.parse_level
+
 class ProgressDisplay:
     """Periodic renderer that prints all ProgressAPI entries in-place."""
 
@@ -65,8 +86,8 @@ class ProgressDisplay:
                 break
 
         # --- FINAL REFRESH ON SHUTDOWN ---
-        snap = self.api.snapshot()
-        lines = self._render_lines(snap)
+        reports = self.api.snapshot()
+        lines = self._render_lines(reports)
 
         if self._last_lines:
             self.stream.write(f"{CSI}{self._last_lines}F")
@@ -89,19 +110,21 @@ class ProgressDisplay:
 
     # --- formatting helpers ---
 
-    def _render_lines(self, snap):
+    def _render_lines(self, reports:dict):
         lines = []
-        for (comp_label, id), prog_rec in snap.items():
-            lines.append(self._format_line(comp_label, prog_rec))
+        for (comp_label, id), report in reports.items():
+            lines.append(self._format_line(comp_label, report))
         return lines
 
     @staticmethod
-    def _format_line(key, prog_rec):
+    def _format_line(key, report: Report):
         KEY_W = 15     # left column width
         COL_W = 20     # width per name=value token (adjust if needed)
 
-        parts = [f"{key:<{KEY_W}.{KEY_W}}"]           # left col, truncated if too long
-        for name, val in prog_rec.items():
+        indent = ' ' * report.get_parse_level()
+        label = f'{indent}{key}'
+        parts = [f"{label:<{KEY_W}.{KEY_W}}"]           # left col, truncated if too long
+        for name, val in report.get_name_value_tuples():
             token = f"{name}={val}"                   # __str__ handles formatting
             parts.append(f"{token:<{COL_W}}") # left-justify, hard truncate at COL_W
         return highlight(" ".join(parts), 'bold', key)
@@ -183,7 +206,9 @@ class ProgressState:
     
 class ProgressAPI:
     def __init__(self):
-        self._store: Dict[str, Dict[str, Any]] = {}
+        self._reports: Dict[tuple, Report] = {}
+        self._parse_depth: Dict[int, int] = {} # component id -> level
+        self.level = 0
 
     def get_counter(self, component: Source | Sink, var_label: str) -> SafeCounter:
         return self._update_storage(component, var_label=var_label, value=SafeCounter())
@@ -198,21 +223,35 @@ class ProgressAPI:
     def get_progress_state(self, component: Source | Sink, var_label: str, state: str) -> ProgressState:
         return self._update_storage(component, var_label=var_label, value=ProgressState(state))
 
-    def snapshot(self) -> Dict[str, Dict[str, Any]]:
-        return self._store
+    def snapshot(self) -> Dict[tuple, Report]: # component_label,id -> Report
+        for (comp_label, id), report in self._reports.items():
+            level = self._parse_depth.get(id, 0)
+            report.set_parse_level(level)
+        return self._reports
     
-    def _update_storage(self, component: Source | Sink, var_label, value: Any):
+    # could happen before or after update storage 
+    def register_component(self, component: Source | Sink, stack_level: int):
+        if isinstance(component, ProgressIgnore):
+            return # um, ignore
+
+        comp_id = id(component)
+        self._parse_depth[comp_id] = stack_level
+        self._update_storage(component, var_label=None, value=None) # just register, no values
+
+    def _update_storage(self, component: Source | Sink, var_label: str, value: Any):
         # we can have multiple instances of a component type in an expression so we need to
         # differentiate by id when we put them in the _store.
         component_label = self._get_component_label(component)
-
-        if not var_label:
-            return value # when var_label None, then we don't want the stat displayed
-        
         store_key = (component_label, id(component))
+        report = self._reports.setdefault(store_key, Report())
+        if not value: # when just registering component
+            return None
 
-        report = self._store.setdefault(store_key, {})
-        return report.setdefault(var_label, value)
+        if var_label:
+            # only when var_label not None, do we want the stat displayed
+            report.add_value(var_label, value)
+        
+        return value
     
     # some hacking to get at reasonable labels
     def _get_component_label(self, component: Source | Sink):
@@ -236,4 +275,3 @@ class ProgressAPI:
 
 # singleton
 papi = ProgressAPI()
-

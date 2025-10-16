@@ -1,17 +1,16 @@
 # SPDX-License-Identifier: Apache-2.0
 # Copyright 2024 Mike Schultz
 
-from typing import Any, List, Callable
 import os
 import shlex
-from typing import Optional, Any, List
+from typing import Any, List
 from pjk.base import Source, Pipe, Sink, TokenError, UsageError, ParsedToken, Usage
 from pjk.pipes.user_pipe_factory import UserPipeFactory
 from pjk.pipes.let_reduce import ReducePipe
-from pjk.sinks.stdout import StdoutSink
-from pjk.sinks.expect import ExpectSink
 from pjk.pipes.progress_pipe import ProgressPipe
 from pjk.registry import ComponentRegistry
+from pjk.progress import papi
+from pjk.progress import ProgressIgnore
 
 def expand_macros(tokens: List[str]) -> List[str]:
     expanded = []
@@ -35,18 +34,42 @@ def expand_macros(tokens: List[str]) -> List[str]:
             expanded.append(token)
     return expanded
 
+stack_level = -1
+class OperandStack:
+    def __init__(self):
+        self.stack: List[Any] = []
+
+    def push(self, op):
+        global stack_level
+        stack_level+=1
+        papi.register_component(op, stack_level)
+        self.stack.append(op)
+
+    def pop(self):
+        global stack_level
+        stack_level-=1
+        return self.stack.pop()
+    
+    def peek(self):
+        if not len(self.stack):
+            return None
+        return self.stack[-1]
+    
+    def empty(self):
+        return len(self.stack) == 0
+
 class ExpressionParser:
     def __init__(self, registry: ComponentRegistry):
-        self.stack: List[Any] = []
+        self.stack = OperandStack()
         self.registry = registry
 
     def get_sink(self, stack_helper, token):
-        if len(self.stack) < 1:
+        if self.stack.empty():
             raise TokenError.from_list(['expression must include source and sink.',
                                             'pjk <source> [<pipe> ...] <sink>'])
 
         source = self.stack.pop()
-        if len(self.stack) != 0:
+        if not self.stack.empty():
             raise TokenError.from_list(['A sink can only consume one source.',
                                         'pjk <source> [<pipe> ...] <sink>'])
 
@@ -143,29 +166,32 @@ class StackLoader:
         
         return ReducerAggregatorPipe(top_level_reducers=self.top_level_reducers)
 
-    def add_operator(self, op, stack):
-        if len(stack) > 0 and isinstance(stack[-1], Pipe):
-            target = stack[-1]
+    def add_operator(self, op, stack: OperandStack):
+        if not stack.empty() and isinstance(stack.peek(), SubExpression):
+            top = stack.peek()
 
-            if isinstance(target, SubExpression):
-                if isinstance(op, SubExpressionOver):
-                    subexp_begin = stack.pop()
-                    subexp_begin.set_over_arg(op.get_over_arg())
-                    op.add_source(subexp_begin)
-                    stack.append(op)
-                    return
-                else: # an operator within the subexpression
-                    target.add_subop(op)
-                    return
+            if isinstance(op, SubExpressionOver):
+                subexp_begin = stack.pop()
+                subexp_begin.set_over_arg(op.get_over_arg())
+                op.add_source(subexp_begin)
+                stack.push(op)
 
-        # order matters, sources are pipes
+                global stack_level
+                # SEEMS LIKE A HACK! FIXME.  The stack should handle this but its off by one
+                stack_level-=1 
+                return
+            else: # an operator within the subexpression
+                top.add_subop(op)
+                return
+
+        # order matters, because sources are pipes
         if isinstance(op, Pipe):
             arity = op.arity # class level attribute
-            if len(stack) < arity:
-                raise UsageError(f"'{op}' requires {arity} input(s)")
             for _ in range(arity):
+                if stack.empty():
+                    raise UsageError(f"'{op}' requires {arity} input(s)")
                 op.add_source(stack.pop())
-            stack.append(op)
+            stack.push(op)
 
             if isinstance(op, ReducePipe):
                 self.top_level_reducers.append(op)
@@ -173,15 +199,26 @@ class StackLoader:
             return
 
         elif isinstance(op, Source):
-            stack.append(op)
+            stack.push(op)
             return
             
 # special upstream source put in subexp stack for flexibility
 # when we don't know what that upstream source will be.
 class UpstreamSource(Source):
+    # used only by progress
+    @classmethod
+    def usage(cls) -> Usage:
+        u = Usage(
+            name="[",
+            desc="sub-expression begin.",
+            component_class=cls,
+        )
+        return u
+    
     def __init__(self):
         self.data = []
         self.inner_source = None
+        self.sub_recs_in = papi.get_counter(self, var_label='sub_recs_in')
 
     def set_source(self, source: Source):
         self.inner_source = source
@@ -198,12 +235,15 @@ class UpstreamSource(Source):
 
     def __iter__(self):
         if self.inner_source:
-            yield from self.inner_source
+            for rec in self.inner_source:
+                self.sub_recs_in.increment()
+                yield rec
         else:
             for item in self.data:
+                self.sub_recs_in.increment()
                 yield item
     
-class SubExpression(Pipe):
+class SubExpression(Pipe, ProgressIgnore):
     @classmethod
     def create(cls, token: str) -> Pipe:
         ptok = ParsedToken(token)
@@ -215,19 +255,20 @@ class SubExpression(Pipe):
 
     def __init__(self, ptok: ParsedToken, usage: Usage):
         super().__init__(ptok)
-        self.upstream_source = UpstreamSource()
         self.over_arg = None
         self.over_field = None
-        self.subexp_stack = [self.upstream_source]
         self.subexp_ops = []
         self.over_pipe = None
         self.stack_helper = StackLoader()
+        self.subexp_stack = OperandStack() 
+        self.upstream_source = UpstreamSource()
+        self.subexp_stack.push(self.upstream_source)
 
     def add_subop(self, op):
         self.subexp_ops.append(op)
         self.stack_helper.add_operator(op, self.subexp_stack)
 
-    def set_over_arg(self, over_arg):
+    def set_over_arg(self, over_arg):  #FIXME, this should take QueryPipe
         self.over_arg = over_arg
         if over_arg.endswith('.py'):
             self.over_field = 'child'
@@ -263,7 +304,8 @@ class SubExpression(Pipe):
                 op.reset()
 
             out_recs = []
-            for rec in self.subexp_stack[-1]:
+            top = self.subexp_stack.peek()
+            for rec in top:
                 out_recs.append(rec)
 
             record[self.over_field] = out_recs
@@ -278,8 +320,17 @@ class SubExpression(Pipe):
             yield record
 
 class SubExpressionOver(Pipe):
+    @classmethod
+    def usage(cls) -> Usage:
+        u = Usage(
+            name="over",
+            desc="sub-expression over.",
+            component_class=cls,
+        )
+        return u
+    
     def __init__(self, ptok: ParsedToken, usage: Usage):
-        super().__init__(ptok)
+        super().__init__(ptok, usage)
         self.over_arg = ptok.get_arg(0)
 
     def get_over_arg(self):
@@ -290,4 +341,3 @@ class SubExpressionOver(Pipe):
 
     def __iter__(self):
         yield from self.left
-

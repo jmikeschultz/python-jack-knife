@@ -2,6 +2,7 @@
 # Copyright 2024 Mike Schultz
 
 from pjk.base import Pipe, Usage, UsageError, ParsedToken, KeyedSource
+from pjk.progress import papi
 
 class FilterPipe(Pipe):
     arity = 2  # left = record stream, right = keyed source
@@ -41,6 +42,8 @@ class FilterPipe(Pipe):
         self.mode = usage.get_arg('mode')
         self.left = None
         self.right = None
+        self.recs_in = papi.get_counter(self, None) # don't display
+        self.recs_out = papi.get_percentage_counter(self, 'recs_out', self.recs_in)
 
     def reset(self):
         pass  # stateless
@@ -50,8 +53,9 @@ class FilterPipe(Pipe):
             raise UsageError("Right input to filter must be a KeyedSource")
 
         for record in self.left:
+            self.recs_in.increment()
             match = self.right.lookup(record)
             exists = match is not None
-
             if (self.mode == "+" and exists) or (self.mode == "-" and not exists):
+                self.recs_out.increment()
                 yield record
