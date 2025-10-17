@@ -3,6 +3,7 @@
 
 import sys, shutil, subprocess, contextlib, signal
 import os
+import re
 import yaml
 from pjk.base import TokenError, Integration
 
@@ -156,3 +157,6 @@ class ComponentFactory:
 
     def create(self, token: str):
         pass
+
+def is_valid_field_name(name: str):
+    return re.fullmatch(r'^[A-Za-z_][A-Za-z0-9_]*$', name)

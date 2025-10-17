@@ -57,6 +57,15 @@ class OperandStack:
     
     def empty(self):
         return len(self.stack) == 0
+    
+    def print(self, toadd):
+        print('---------')
+        if toadd:
+            print(f'{type(toadd).__name__}={id(toadd)}')
+        if len(self.stack) == 0:
+            print(f'Stack={id(self)} StackEmpty')
+        for op in self.stack:
+            print(f'Stack={id(self)} {type(op).__name__}={id(op)}')
 
 class ExpressionParser:
     def __init__(self, registry: ComponentRegistry):
@@ -69,6 +78,9 @@ class ExpressionParser:
                                             'pjk <source> [<pipe> ...] <sink>'])
 
         source = self.stack.pop()
+        if isinstance(source, SubExpression) and not source.terminated():
+            raise TokenError("Poorly formed sub-expression.  Begin token '[' without matching 'over' keyword." )
+
         if not self.stack.empty():
             raise TokenError.from_list(['A sink can only consume one source.',
                                         'pjk <source> [<pipe> ...] <sink>'])
@@ -167,13 +179,15 @@ class StackLoader:
         return ReducerAggregatorPipe(top_level_reducers=self.top_level_reducers)
 
     def add_operator(self, op, stack: OperandStack):
-        if not stack.empty() and isinstance(stack.peek(), SubExpression):
-            top = stack.peek()
+        #stack.print(op)
 
-            if isinstance(op, SubExpressionOver):
-                subexp_begin = stack.pop()
-                subexp_begin.set_over_arg(op.get_over_arg())
-                op.add_source(subexp_begin)
+        if not stack.empty() and isinstance(stack.peek(), SubExpression):
+            subexp = stack.peek()
+
+            if isinstance(op, SubExpressionOver) and subexp.recursion_depth() == 0:
+                subexp = stack.pop()
+                subexp.set_over_arg(op.get_over_arg())
+                op.add_source(subexp)
                 stack.push(op)
 
                 global stack_level
@@ -181,15 +195,22 @@ class StackLoader:
                 stack_level-=1 
                 return
             else: # an operator within the subexpression
-                top.add_subop(op)
+                subexp = stack.peek()
+                subexp.add_subop(op)
                 return
+
+        if isinstance(op, SubExpressionOver):
+            if stack.empty or not isinstance(stack.peek(), SubExpression):
+                raise TokenError("Poorly formed sub-expression.  'over' keyword without matching begin token '['.")
+            op.add_source(stack.pop())
+            stack.push(op)
 
         # order matters, because sources are pipes
         if isinstance(op, Pipe):
             arity = op.arity # class level attribute
             for _ in range(arity):
                 if stack.empty():
-                    raise UsageError(f"'{op}' requires {arity} input(s)")
+                    raise TokenError(f"'{op}' requires {arity} input(s)")
                 op.add_source(stack.pop())
             stack.push(op)
 
@@ -263,10 +284,21 @@ class SubExpression(Pipe, ProgressIgnore):
         self.subexp_stack = OperandStack() 
         self.upstream_source = UpstreamSource()
         self.subexp_stack.push(self.upstream_source)
+        self.recursions = 0 # number of subexpression within
 
     def add_subop(self, op):
         self.subexp_ops.append(op)
+        if isinstance(op, SubExpression):
+            self.recursions += 1
+        elif isinstance(op, SubExpressionOver):
+            self.recursions -= 1
         self.stack_helper.add_operator(op, self.subexp_stack)
+
+    def recursion_depth(self):
+        return self.recursions
+    
+    def terminated(self):
+        return self.over_arg or self.over_field
 
     def set_over_arg(self, over_arg):  #FIXME, this should take QueryPipe
         self.over_arg = over_arg
