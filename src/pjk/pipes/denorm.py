@@ -5,6 +5,7 @@
 
 from pjk.base import Pipe, ParsedToken, Usage, UsageError
 from typing import Iterator
+from pjk.progress import papi
 
 class Denormer:
     def __init__(self, record, field):
@@ -23,7 +24,7 @@ class Denormer:
         elif isinstance(data, dict):
             self.subrec_list = [data]
         else:
-            raise UsageError("can only denorm sub-records")
+            raise UsageError("can only explode sub-records")
 
     def __iter__(self) -> Iterator[dict]:
         for subrec in self.subrec_list:
@@ -53,8 +54,8 @@ class DenormPipe(Pipe):
         super().__init__(ptok)
 
         self.field = usage.get_arg('field')
-        if not self.field:
-            raise UsageError("denorm must include a field name")
+        self.recs_in = papi.get_counter(self, None) # don't display
+        self.recs_out = papi.get_percentage_counter(self, 'recs_out', self.recs_in)
 
         self._pending_iter = None
 
@@ -63,6 +64,8 @@ class DenormPipe(Pipe):
 
     def __iter__(self):
         for record in self.left:
+            self.recs_in.increment()
             denormer = Denormer(record, self.field)
             for out in denormer:
+                self.recs_out.increment()
                 yield out

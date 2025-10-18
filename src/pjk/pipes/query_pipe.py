@@ -18,7 +18,7 @@ class QueryPipe(Pipe):
             desc=cls.desc,
             component_class=cls
         )
-        u.def_arg(name=cls.arg0[0], usage=f'{cls.arg0[1]} ~/.pjk/lookups.yaml must containing entry {cls.__name__}-<{cls.arg0[0]}>\n   containing necessary parameters.')
+        u.def_arg(name=cls.arg0[0], usage=f"{cls.arg0[1]} ~/.pjk/lookups.yaml must contain entry '{cls.__name__}-<{cls.arg0[0]}'>\n  with necessary parameters.")
         u.def_param("query_field", usage="field of query.", default="query")
         u.def_param("count", usage="Number of search results, (databases may ignore)", is_num=True, default="10")
         u.def_param("shape", usage='the shape of ouput records', is_num=False,

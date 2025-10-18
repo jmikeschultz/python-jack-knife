@@ -210,7 +210,8 @@ class StackLoader:
             arity = op.arity # class level attribute
             for _ in range(arity):
                 if stack.empty():
-                    raise TokenError(f"'{op}' requires {arity} input(s)")
+                    name = type(op).usage().name
+                    raise TokenError(f"'{name}' requires {arity} input(s)")
                 op.add_source(stack.pop())
             stack.push(op)
 
