@@ -24,6 +24,7 @@ def test_one():
                     "[",
                     "let:foo:bar",
                     "over:ferry",
+                    "sort:-foo",
                     f"expect:{ONE_ANSWER}"])
     
 def test_syntax_error():
