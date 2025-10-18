@@ -43,5 +43,6 @@ def test_syntax_error2():
                     "[",
                     "let:foo:bar",
                     "over:ferry",
+                    "sort:-foo",
                     "devnull"])
         assert e.value == 2
