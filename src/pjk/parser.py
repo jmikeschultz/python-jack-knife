@@ -189,8 +189,11 @@ class StackLoader:
 
             if isinstance(op, SubExpressionOver) and subexp.recursion_depth() == 0:
                 subexp = stack.pop()
-                op.bind(subexp)
+                op.add_source(subexp)
                 stack.push(op)
+
+                global stack_level
+                stack_level -=1 # not sure why this can't be handled exclusively by the stack
                 return
             
             else: # an operator within the subexpression
@@ -281,16 +284,12 @@ class SubExpressionOver(Pipe):
     def reset(self):
         pass  # stateless
 
-    def bind(self, subexp: "SubExpression"):
-        subexp.prepare()
-        self.add_source(subexp)
-
     def __iter__(self):
         if not isinstance(self.left, SubExpression):
             raise Exception('this actually cannot happen, but did')
 
         for record in self.left:
-            self.left.process(record, self.over_arg)
+            self.left.subexp_process(record, self.over_arg)
             yield record
 
 class SubExpression(Pipe, ProgressIgnore):
@@ -342,15 +341,15 @@ class SubExpression(Pipe, ProgressIgnore):
     def __iter__(self):
         yield from self.left # pass thru to subexp_over which then calls process
 
-    def prepare(self):
-        self.subexp_left = self.subexp_stack.pop()
-
-    def process(self, record: dict, over_field: str):
+    def subexp_process(self, record: dict, over_field: str):
         #for record in self.left:
         #    if self.over_pipe:
         #        one = UpstreamSource()
         #        one.add_item(record)
         #        self.over_pipe.set_sources([one])
+
+        if not self.subexp_left:
+            self.subexp_left = self.subexp_stack.pop()
 
         field_data = record.pop(over_field, None)
         if not field_data:
@@ -366,6 +365,7 @@ class SubExpression(Pipe, ProgressIgnore):
             op.reset()
 
         out_recs = []
+
         for rec in self.subexp_left:
             out_recs.append(rec)
 
