@@ -55,6 +55,9 @@ class OperandStack:
             return None
         return self.stack[-1]
     
+    def clear(self):
+        self.stack.clear()
+    
     def empty(self):
         return len(self.stack) == 0
     
@@ -78,7 +81,7 @@ class ExpressionParser:
                                             'pjk <source> [<pipe> ...] <sink>'])
 
         source = self.stack.pop()
-        if isinstance(source, SubExpression) and not source.terminated():
+        if isinstance(source, SubExpression):
             raise TokenError("Poorly formed sub-expression.  Begin token '[' without matching 'over' keyword." )
 
         if not self.stack.empty():
@@ -186,14 +189,10 @@ class StackLoader:
 
             if isinstance(op, SubExpressionOver) and subexp.recursion_depth() == 0:
                 subexp = stack.pop()
-                subexp.set_over_arg(op.get_over_arg())
-                op.add_source(subexp)
+                op.bind(subexp)
                 stack.push(op)
-
-                global stack_level
-                # SEEMS LIKE A HACK! FIXME.  The stack should handle this but its off by one
-                stack_level-=1 
                 return
+            
             else: # an operator within the subexpression
                 subexp = stack.peek()
                 subexp.add_subop(op)
@@ -265,93 +264,6 @@ class UpstreamSource(Source):
                 self.sub_recs_in.increment()
                 yield item
     
-class SubExpression(Pipe, ProgressIgnore):
-    @classmethod
-    def create(cls, token: str) -> Pipe:
-        ptok = ParsedToken(token)
-        if ptok.pre_colon == '[':
-            return SubExpression(ptok, None)
-        if ptok.pre_colon == 'over':
-            return SubExpressionOver(ptok, None)
-        return None
-
-    def __init__(self, ptok: ParsedToken, usage: Usage):
-        super().__init__(ptok)
-        self.over_arg = None
-        self.over_field = None
-        self.subexp_ops = []
-        self.over_pipe = None
-        self.stack_helper = StackLoader()
-        self.subexp_stack = OperandStack() 
-        self.upstream_source = UpstreamSource()
-        self.subexp_stack.push(self.upstream_source)
-        self.recursions = 0 # number of subexpression within
-
-    def add_subop(self, op):
-        self.subexp_ops.append(op)
-        if isinstance(op, SubExpression):
-            self.recursions += 1
-        elif isinstance(op, SubExpressionOver):
-            self.recursions -= 1
-        self.stack_helper.add_operator(op, self.subexp_stack)
-
-    def recursion_depth(self):
-        return self.recursions
-    
-    def terminated(self):
-        return self.over_arg or self.over_field
-
-    def set_over_arg(self, over_arg):  #FIXME, this should take QueryPipe
-        self.over_arg = over_arg
-        if over_arg.endswith('.py'):
-            self.over_field = 'child'
-            self.over_pipe = UserPipeFactory.create(over_arg)
-            self.upstream_source.set_source(self.over_pipe)
-            self.subexp_ops.append(self.over_pipe)
-        else:
-            self.over_field = over_arg
-
-    def reset(self):
-        for op in self.subexp_ops:
-            if isinstance(op, Pipe):
-                op.reset()
-
-    def __iter__(self):
-        for record in self.left:
-            if self.over_pipe:
-                one = UpstreamSource()
-                one.add_item(record)
-                self.over_pipe.set_sources([one])
-            else:
-                field_data = record.pop(self.over_field, None)
-                if not field_data:
-                    yield record
-                    continue
-                if isinstance(field_data, list):
-                    self.upstream_source.set_list(field_data)
-                else:
-                    self.upstream_source.set_list([field_data])
-
-            # Reset sub-pipe stack
-            for op in self.subexp_ops:
-                op.reset()
-
-            out_recs = []
-            top = self.subexp_stack.peek()
-            for rec in top:
-                out_recs.append(rec)
-
-            record[self.over_field] = out_recs
-
-            for op in self.subexp_ops:
-                get_subexp = getattr(op, "get_subexp_result", None)
-                if get_subexp:
-                    name, value = get_subexp()
-                    if name:
-                        record[name] = value
-
-            yield record
-
 class SubExpressionOver(Pipe):
     @classmethod
     def usage(cls) -> Usage:
@@ -366,11 +278,101 @@ class SubExpressionOver(Pipe):
         super().__init__(ptok, usage)
         self.over_arg = ptok.get_arg(0)
 
-    def get_over_arg(self):
-        return self.over_arg
-
     def reset(self):
         pass  # stateless
 
+    def bind(self, subexp: "SubExpression"):
+        subexp.prepare()
+        self.add_source(subexp)
+
     def __iter__(self):
-        yield from self.left
+        if not isinstance(self.left, SubExpression):
+            raise Exception('this actually cannot happen, but did')
+
+        for record in self.left:
+            self.left.process(record, self.over_arg)
+            yield record
+
+class SubExpression(Pipe, ProgressIgnore):
+    @classmethod
+    def create(cls, token: str) -> Pipe:
+        ptok = ParsedToken(token)
+        if ptok.pre_colon == '[':
+            return SubExpression(ptok, None)
+        if ptok.pre_colon == 'over':
+            return SubExpressionOver(ptok, None)
+        return None
+
+    def __init__(self, ptok: ParsedToken, usage: Usage):
+        super().__init__(ptok)
+        self.subexp_ops = []
+        self.stack_helper = StackLoader()
+        self.subexp_stack = OperandStack() 
+        self.upstream_source = UpstreamSource()
+        self.subexp_stack.push(self.upstream_source)
+        self.recursions = 0 # number of subexpression within
+        self.subexp_left = None
+
+    def add_subop(self, op):
+        self.subexp_ops.append(op)
+        if isinstance(op, SubExpression):
+            self.recursions += 1
+        elif isinstance(op, SubExpressionOver):
+            self.recursions -= 1
+        self.stack_helper.add_operator(op, self.subexp_stack)
+
+    def recursion_depth(self):
+        return self.recursions
+    
+    #def bind(self, subex_over: SubExpressionOver):
+    #    self.over_arg = subex_over.get_over_arg()
+    #    if self.over_arg.endswith('.py'):
+    #        self.over_field = 'child'
+    #        self.over_pipe = UserPipeFactory.create(self.over_arg)
+    #        self.upstream_source.set_source(self.over_pipe)
+    #        self.subexp_ops.append(self.over_pipe)
+    #    else:
+    #        self.over_field = self.over_arg
+
+    def reset(self):
+        for op in self.subexp_ops:
+            if isinstance(op, Pipe):
+                op.reset()
+
+    def __iter__(self):
+        yield from self.left # pass thru to subexp_over which then calls process
+
+    def prepare(self):
+        self.subexp_left = self.subexp_stack.pop()
+
+    def process(self, record: dict, over_field: str):
+        #for record in self.left:
+        #    if self.over_pipe:
+        #        one = UpstreamSource()
+        #        one.add_item(record)
+        #        self.over_pipe.set_sources([one])
+
+        field_data = record.pop(over_field, None)
+        if not field_data:
+            return
+
+        if isinstance(field_data, list):
+            self.upstream_source.set_list(field_data)
+        else:
+            self.upstream_source.set_list([field_data])
+
+        # Reset sub-pipe stack
+        for op in self.subexp_ops:
+            op.reset()
+
+        out_recs = []
+        for rec in self.subexp_left:
+            out_recs.append(rec)
+
+        record[over_field] = out_recs
+
+        for op in self.subexp_ops:
+            if isinstance(op, ReducePipe):
+                name, value = op.get_subexp_result()
+                if name:
+                    record[name] = value
