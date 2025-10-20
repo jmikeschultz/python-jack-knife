@@ -11,6 +11,8 @@ from pjk.parser import ExpressionParser
 from pjk.base import UsageError
 from pjk.log import init as init_logging
 from datetime import datetime
+from pathlib import Path
+import shutil
 import traceback
 import concurrent.futures
 from pjk.registry import ComponentRegistry
@@ -65,13 +67,20 @@ def execute_threaded(sinks, stop_progress=None):
     else:
         executor.shutdown(wait=True)
 
+def initialize():
+    init_logging()
+
+    src = Path("src/pjk/resources/component_configs.tmpl")
+    dst_dir = Path.home() / ".pjk"
+    dst_dir.mkdir(parents=True, exist_ok=True)
+    shutil.copy(src, dst_dir / src.name)
+
 def execute(command: str):
     tokens = shlex.split(command, comments=True, posix=True)
     execute_tokens(tokens)
 
 def execute_tokens(tokens: List[str]):
-    init_logging()
-    # (remove the sys.exit SIGINT handler here)
+    initialize()
 
     if '--version' in tokens:
         print(f"pjk version {__version__}")

@@ -5,7 +5,7 @@ import sys, shutil, subprocess, contextlib, signal
 import os
 import re
 import yaml
-from pjk.base import TokenError, Integration
+from pjk.base import TokenError, Integration, Source, Pipe
 
 class SafeNamespace:
     def __init__(self, obj):
@@ -74,50 +74,30 @@ def highlight(text: str, color: str = 'bold', value: str = None) -> str:
     style = COLOR_CODES.get(color.lower(), COLOR_CODES['bold'])
     return text.replace(value, f"{style}{value}{RESET}")
 
-class Lookups:
-    def __init__(self, component_class):
-        self.lookups_yaml = os.path.expanduser('~/.pjk/lookups.yaml')
+class Config:
+    def __init__(self, component_class: Source|Pipe, instance: str):
+        self.configs_yaml = os.path.expanduser('~/.pjk/component_configs.yaml')
         self.class_name = type(component_class).__name__
+        self.instance = instance
         self._data = {}
         self._load()
         
     def _load(self):
-        """Load lookups from YAML file if it exists."""
-        if os.path.exists(self.lookups_yaml):
-            with open(self.lookups_yaml, 'r') as f:
+        if os.path.exists(self.configs_yaml):
+            with open(self.configs_yaml, 'r') as f:
                 self._data = yaml.safe_load(f) or {}
         else:
             self._data = {}
 
-    def save(self):
-        """Save current lookups back to YAML file."""
-        os.makedirs(os.path.dirname(self.lookups_yaml), exist_ok=True)
-        with open(self.lookups_yaml, 'w') as f:
-            yaml.safe_dump(self._data, f)
-
-    def get(self, key, default=None):
-        lookup_key = f'{self.class_name}-{key}'
-        entry = self._data.get(lookup_key, default)
+    def lookup(self, param: str, default=None):
+        instance_key = f'{self.class_name}-{self.instance}'
+        entry = self._data.get(instance_key, default)
         if not entry:
             raise TokenError(
-                f"~/.pjk/lookups.yaml does not contain entry for '{lookup_key}' with required params."
+                f"~/.pjk/component_configs.yaml does not contain entry for '{instance_key}' with required params."
             )
-        return entry
-
-    def set(self, key, value):
-        """Set a lookup value and persist it."""
-        self._data[key] = value
-        self.save()
-
-    def delete(self, key):
-        """Remove a key if it exists and save."""
-        if key in self._data:
-            del self._data[key]
-            self.save()
-
-    def all(self):
-        """Return the full lookup dictionary."""
-        return dict(self._data)
+        
+        return entry.get(param, default)
 
 class ComponentFactory:
     def __init__(self, core_components: dict):

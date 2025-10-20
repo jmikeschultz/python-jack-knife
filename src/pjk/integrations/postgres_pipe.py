@@ -10,7 +10,7 @@ from decimal import Decimal
 from typing import Any, Dict, Optional
 
 from pjk.base import Integration, ParsedToken, Usage
-from pjk.common import Lookups
+from pjk.common import Config
 from pjk.pipes.query_pipe import QueryPipe
 
 
@@ -91,26 +91,25 @@ def _row_to_dict(cursor, row) -> Dict[str, Any]:
 
 
 class PostgresPipe(QueryPipe,Integration):
-    name = 'pgres'
+    name = 'postgres'
     desc = "Postgres query pipe; executes SQL from input."
     arg0 = ("dbname", 'database name.')
     examples = [
-        ['myquery.sql', 'pgres:mydb', '-'],
-        ["{'query': 'SELECT * from MY_TABLE;'}", 'pgres:mydb', '-'],
-        ["{'query': 'SELECT * FROM pg_catalog.pg_tables;'}", 'pgres:mydb']
+        ['myquery.sql', 'postgres:mydb', '-'],
+        ["{'query': 'SELECT * from MY_TABLE;'}", 'postgres:mydb', '-'],
+        ["{'query': 'SELECT * FROM pg_catalog.pg_tables;'}", 'postgres:mydb']
     ]
 
     def __init__(self, ptok: ParsedToken, usage: Usage):
         super().__init__(ptok, usage)
 
-        lookups = Lookups(self)
         self.dbname = usage.get_arg("dbname")
-
-        self.db_host = self.lookup_params.get("host")
-        self.db_user = self.lookup_params.get("user")
-        self.db_pass = self.lookup_params.get("password")
-        self.db_port = int(self.lookup_params.get("port", 5432))
-        self.db_ssl  = bool(self.lookup_params.get("ssl", False))
+        config = Config(self, "dbname") # explicit "dbname" for scaping
+        self.db_host = config.lookup("host")
+        self.db_user = config.lookup("user")
+        self.db_pass = config.lookup("password")
+        self.db_port = int(config.lookup("port", 5432))
+        self.db_ssl  = bool(config.lookup("ssl", False))
 
         self.query_field  = usage.get_param('query_field')
         self.params_field = "params"  # optional: list/tuple (positional) or dict (named)

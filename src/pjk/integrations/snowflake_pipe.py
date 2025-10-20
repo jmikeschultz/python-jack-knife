@@ -9,8 +9,9 @@ import uuid
 from decimal import Decimal
 from typing import Any, Dict, Optional
 
-from pjk.base import ParsedToken, Usage, TokenError, Integration
+from pjk.base import ParsedToken, TokenError, Usage, Integration
 from pjk.pipes.query_pipe import QueryPipe
+from pjk.common import Config
 
 
 # ---------- utilities ----------
@@ -53,23 +54,6 @@ def normalize(obj: Any) -> Any:
 def _row_to_dict(cursor, row) -> Dict[str, Any]:
     cols = [d[0] for d in cursor.description]
     return {col: normalize(val) for col, val in zip(cols, row)}
-
-
-def _get_any(params: Dict[str, Any], *keys: str) -> Optional[Any]:
-    """
-    Fetch a value from params using any of the provided keys,
-    trying case variants and optional SNOWFLAKE_ prefix.
-    """
-    variants = []
-    for k in keys:
-        variants.extend([
-            k, k.lower(), k.upper(),
-            f"snowflake_{k}".lower(), f"SNOWFLAKE_{k}".upper()
-        ])
-    for v in variants:
-        if v in params:
-            return params[v]
-    return None
 
 
 # ---------- client ----------
@@ -141,29 +125,28 @@ class SnowflakeClient:
 class SnowflakePipe(QueryPipe, Integration):
     """
     Snowflake query pipe; executes SQL found in input record['query'] and streams rows.
-    Connection/session settings are pulled from ~/.pjk/lookups.yaml under the arg name.
+    Connection/session settings are pulled from ~/.pjk/component_configs.yaml under the arg name.
     """
     name = 'snowflake'
     desc = "Snowflake query pipe; executes an SQL query for each input record."
     arg0 = ('dbname', 'database name.')
     examples = [
-        ["{'query': 'SELECT CURRENT_ROLE();'}", "snow:EDLDB", "-"],
-        ["myquery.sql", "snow:EDLDB", "-"]
+        ["{'query': 'SELECT CURRENT_ROLE();'}", "snowflake:EDLDB", "-"],
+        ["myquery.sql", "snowflake:EDLDB", "-"]
     ]
 
     def __init__(self, ptok: ParsedToken, usage: Usage):
         super().__init__(ptok, usage)
 
-        self.dbname = usage.get_arg(type(self).arg0[0])
-
-        # Accept both bare keys and SNOWFLAKE_* variants in lookups.yaml
-        self.sf_account  = _get_any(self.lookup_params, "account")
-        self.sf_user     = _get_any(self.lookup_params, "user")
-        self.sf_auth     = _get_any(self.lookup_params, "authenticator")
-        self.sf_role     = _get_any(self.lookup_params, "role")
-        self.sf_wh       = _get_any(self.lookup_params, "warehouse")
+        self.dbname = usage.get_arg('dbname')
+        config = Config(self, 'dbname') #explicit for create_config_template 
+        self.sf_account  = config.lookup("account")
+        self.sf_user     = config.lookup("user")
+        self.sf_auth     = config.lookup("authenticator")
+        self.sf_role     = config.lookup("role")
+        self.sf_wh       = config.lookup("warehouse")
+        self.sf_schema   = config.lookup("schema")
         self.sf_db       = self.dbname
-        self.sf_schema   = _get_any(self.lookup_params, "schema")
 
         # Basic validation
         missing = [k for k, v in [
@@ -176,7 +159,7 @@ class SnowflakePipe(QueryPipe, Integration):
         ] if not v]
         if missing:
             raise TokenError(
-                f"lookups entry '{self.dbname}' missing: {', '.join(missing)}"
+                f"config entry '{self.dbname}' missing: {', '.join(missing)}"
             )
 
         self.query_field = usage.get_param('query_field')

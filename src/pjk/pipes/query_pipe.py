@@ -1,11 +1,9 @@
-from pjk.base import Pipe, ParsedToken, Usage, TokenError
-from pjk.common import Lookups
+from pjk.base import Pipe, ParsedToken, Usage
 from typing import Any, Dict, Iterable, Optional
 from abc import abstractmethod
 
 
 class QueryPipe(Pipe):
-    requires_lookups = True
     name: str = None
     desc: str = None
     arg0: tuple[Optional[str], Optional[str]] = (None, None)
@@ -18,7 +16,7 @@ class QueryPipe(Pipe):
             desc=cls.desc,
             component_class=cls
         )
-        u.def_arg(name=cls.arg0[0], usage=f"{cls.arg0[1]} ~/.pjk/lookups.yaml must contain entry '{cls.__name__}-<{cls.arg0[0]}'>\n  with necessary parameters.")
+        u.def_arg(name=cls.arg0[0], usage=f"{cls.arg0[1]} ~/.pjk/component_configs.yaml must contain entry '{cls.__name__}-<{cls.arg0[0]}'>\n  with necessary parameters.")
         u.def_param("query_field", usage="field of query.", default="query")
         u.def_param("count", usage="Number of search results, (databases may ignore)", is_num=True, default="10")
         u.def_param("shape", usage='the shape of ouput records', is_num=False,
@@ -32,13 +30,6 @@ class QueryPipe(Pipe):
 
     def __init__(self, ptok: ParsedToken, usage: Usage):
         super().__init__(ptok, usage)
-
-        self.lookup_params = None
-        if type(self).requires_lookups:
-            lookups = Lookups(self)
-            lookup_name = usage.get_arg(type(self).arg0[0])
-            self.lookup_params = lookups.get(lookup_name)
-
         self.output_shape = usage.get_param('shape')
 
     @abstractmethod
