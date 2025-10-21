@@ -74,7 +74,7 @@ class QueryPipe(Pipe):
                         q_out = self._make_q_object(in_rec, out_rec)
                         continue
                     r_list.append(out_rec)
-                q_out['result'] = r_list
+                q_out['child'] = r_list
                 yield q_out
 
 
