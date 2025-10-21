@@ -75,7 +75,9 @@ def highlight(text: str, color: str = 'bold', value: str = None) -> str:
     return text.replace(value, f"{style}{value}{RESET}")
 
 class Config:
-    def __init__(self, component_class: Source|Pipe, instance: str):
+    def __init__(self, instance_type: str, component_class: Source|Pipe, instance: str):
+        # instance = name of the instance, e.g. 'myindexcollection', instance_type = 'index'
+        # instance_type only used by automatic config template maker MUST BE STRING LITERAL!
         self.configs_yaml = os.path.expanduser('~/.pjk/component_configs.yaml')
         self.class_name = type(component_class).__name__
         self.instance = instance
@@ -91,7 +93,7 @@ class Config:
 
     def lookup(self, param: str, default=None):
         instance_key = f'{self.class_name}-{self.instance}'
-        entry = self._data.get(instance_key, default)
+        entry = self._data.get(instance_key, None)
         if not entry:
             raise TokenError(
                 f"~/.pjk/component_configs.yaml does not contain entry for '{instance_key}' with required params."

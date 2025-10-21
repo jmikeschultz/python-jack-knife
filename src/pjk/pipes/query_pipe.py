@@ -17,7 +17,6 @@ class QueryPipe(Pipe):
             component_class=cls
         )
         u.def_arg(name=cls.arg0[0], usage=f"{cls.arg0[1]} ~/.pjk/component_configs.yaml must contain entry '{cls.__name__}-<{cls.arg0[0]}'>\n  with necessary parameters.")
-        u.def_param("query_field", usage="field of query.", default="query")
         u.def_param("count", usage="Number of search results, (databases may ignore)", is_num=True, default="10")
         u.def_param("shape", usage='the shape of ouput records', is_num=False,
                        valid_values={'xR', 'Q_xR', 'Qxr'}, default='xR')
@@ -31,6 +30,7 @@ class QueryPipe(Pipe):
     def __init__(self, ptok: ParsedToken, usage: Usage):
         super().__init__(ptok, usage)
         self.output_shape = usage.get_param('shape')
+        self.count = usage.get_param('count')
 
     @abstractmethod
     def execute_query_returning_Q_xR_iterable(self, record) -> Iterable[Dict[str, Any]]:

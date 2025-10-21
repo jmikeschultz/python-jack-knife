@@ -104,7 +104,7 @@ class PostgresPipe(QueryPipe,Integration):
         super().__init__(ptok, usage)
 
         self.dbname = usage.get_arg("dbname")
-        config = Config(self, "dbname") # explicit "dbname" for scaping
+        config = Config('dbname', self, self.dbname)
         self.db_host = config.lookup("host")
         self.db_user = config.lookup("user")
         self.db_pass = config.lookup("password")

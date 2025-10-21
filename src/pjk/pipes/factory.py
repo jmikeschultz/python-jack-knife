@@ -20,6 +20,7 @@ from pjk.pipes.select import SelectFields
 from pjk.pipes.denorm import DenormPipe
 from pjk.integrations.postgres_pipe import PostgresPipe
 from pjk.integrations.snowflake_pipe import SnowflakePipe
+from pjk.integrations.opensearch_query_pipe import OpenSearchQueryPipe
 from pjk.pipes.sample import SamplePipe
 from pjk.pipes.user_pipe_factory import UserPipeFactory
 
@@ -40,7 +41,8 @@ COMPONENTS = {
         'sample': SamplePipe,
         'explode': DenormPipe,
         'postgres': PostgresPipe,
-        'snowflake': SnowflakePipe
+        'snowflake': SnowflakePipe,
+        'os_query': OpenSearchQueryPipe
     }
 
 class PipeFactory(ComponentFactory):

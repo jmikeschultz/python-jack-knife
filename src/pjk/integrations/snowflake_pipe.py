@@ -139,7 +139,7 @@ class SnowflakePipe(QueryPipe, Integration):
         super().__init__(ptok, usage)
 
         self.dbname = usage.get_arg('dbname')
-        config = Config(self, 'dbname') #explicit for create_config_template 
+        config = Config('dbname', self, self.dbname)
         self.sf_account  = config.lookup("account")
         self.sf_user     = config.lookup("user")
         self.sf_auth     = config.lookup("authenticator")

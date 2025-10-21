@@ -2,6 +2,8 @@ PostgresPipe-<dbname>:
   host: <host>
   user: <user>
   password: <password>
+  port: <port>
+  ssl: <ssl>
 
 SnowflakePipe-<dbname>:
   account: <account>
@@ -10,4 +12,16 @@ SnowflakePipe-<dbname>:
   role: <role>
   warehouse: <warehouse>
   schema: <schema>
+
+OpenSearchQueryPipe-<index>:
+  os_host: <os_host>
+  os_auth_use_aws: <os_auth_use_aws>
+  os_scheme: <os_scheme>
+  os_username: <os_username>
+  os_region: <os_region>
+  os_password: <os_password>
+  os_verify_certs: <os_verify_certs>
+  os_service: <os_service>
+  os_ssl_assert_hostname: <os_ssl_assert_hostname>
+  os_ssl_show_warn: <os_ssl_show_warn>
 

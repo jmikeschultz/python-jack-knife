@@ -70,10 +70,12 @@ def execute_threaded(sinks, stop_progress=None):
 def initialize():
     init_logging()
 
+    '''
     src = Path("src/pjk/resources/component_configs.tmpl")
     dst_dir = Path.home() / ".pjk"
     dst_dir.mkdir(parents=True, exist_ok=True)
     shutil.copy(src, dst_dir / src.name)
+    '''
 
 def execute(command: str):
     tokens = shlex.split(command, comments=True, posix=True)
