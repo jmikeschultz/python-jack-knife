@@ -60,9 +60,9 @@ class FormatSource(Source):
         """
 
         pattern = re.compile(
-            r'^(?:(?P<pre_colon>[^:]+):)?'            # optional precolon
-            r'(?P<path>[^:]+?)'                      # main path
-            r'(?:\.(?P<ext>\w+(?:\.gz)?))?$'         # optional extension, e.g. json, csv, json.gz
+            r'^(?:(?P<pre_colon>[^:]+):)?'     # take everything up to the first colon (if any)
+            r'(?P<path>.+?)'                   # then the rest of the path, allowing colons
+            r'(?:\.(?P<ext>[A-Za-z0-9]+(?:\.gz)?))?$'  # optional .json / .csv / .json.gz etc., at the very end
         )
 
         # we don't use framework token parsing (except for params) cuz too complicated
