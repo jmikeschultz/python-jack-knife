@@ -1,10 +1,9 @@
 # template for Source used by create sink
 
 from pjk.components import Source
-from pjk.usage import Usage, ParsedToken
+from pjk.usage import Usage, ParsedToken, CONFIG_FILE
 import yaml
 from pathlib import Path
-
 import yaml
 from pathlib import Path
 
@@ -34,14 +33,14 @@ class ConfigsSource(Source):
     def usage(cls):
         usage = Usage(
             name='configs',
-            desc='A source of pjk configuration in ~/.pjk/component_configs.yaml',
+            desc=f'A source of pjk configuration in {CONFIG_FILE}',
             component_class=cls
     	)
         usage.def_example(expr_tokens=['configs', '-'], expect=None)
         return usage
 
     def __init__(self, ptok: ParsedToken, usage: Usage):
-        self.config_recs = YamlRecords('~/.pjk/component_configs.yaml')
+        self.config_recs = YamlRecords(CONFIG_FILE)
 
     def __iter__(self):
         yield from self.config_recs
