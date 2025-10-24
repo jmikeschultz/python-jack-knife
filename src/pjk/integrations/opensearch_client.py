@@ -4,19 +4,19 @@ class OpenSearchClient:
 
     @classmethod
     def get_client(cls, u: Usage):
-        aws_auth = u.get_config_param("os_auth_use_aws")
-        scheme = u.get_config_param("os_scheme")
-        verify_certs = u.get_config_param("os_verify_certs")
-        ca_certs = u.get_config_param("os_ca_certs")
-        region = u.get_config_param("os_region")
-        service = u.get_config_param("os_service")
-        username = u.get_config_param("os_username")
-        password = u.get_config_param("os_password")
-        timeout = u.get_config_param("os_timeout")
-        ssl_assert_hostname = u.get_config_param("os_ssl_assert_hostname")
-        ssl_show_warn = u.get_config_param("os_ssl_show_warn")
-        host = u.get_config_param("os_host")
-        port = u.get_config_param("os_port")
+        aws_auth = u.get_config("os_auth_use_aws")
+        scheme = u.get_config("os_scheme")
+        verify_certs = u.get_config("os_verify_certs")
+        ca_certs = u.get_config("os_ca_certs")
+        region = u.get_config("os_region")
+        service = u.get_config("os_service")
+        username = u.get_config("os_username")
+        password = u.get_config("os_password")
+        timeout = u.get_config("os_timeout")
+        ssl_assert_hostname = u.get_config("os_ssl_assert_hostname")
+        ssl_show_warn = u.get_config("os_ssl_show_warn")
+        host = u.get_config("os_host")
+        port = u.get_config("os_port")
 
         # Reasonable port defaults
         if port is None:

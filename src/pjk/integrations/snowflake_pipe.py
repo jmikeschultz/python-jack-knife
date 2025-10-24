@@ -147,13 +147,13 @@ class SnowflakePipe(QueryPipe, Integration):
 
     def __init__(self, ptok: ParsedToken, u: Usage):
         super().__init__(ptok, u)
-        self.sf_account  = u.get_config_param("account")
-        self.sf_user     = u.get_config_param("user")
-        self.sf_auth     = u.get_config_param("authenticator")
-        self.sf_role     = u.get_config_param("role")
-        self.sf_wh       = u.get_config_param("warehouse")
-        self.sf_schema   = u.get_config_param("schema")
-        self.sf_db       = u.get_config_param('db_name')
+        self.sf_account  = u.get_config("account")
+        self.sf_user     = u.get_config("user")
+        self.sf_auth     = u.get_config("authenticator")
+        self.sf_role     = u.get_config("role")
+        self.sf_wh       = u.get_config("warehouse")
+        self.sf_schema   = u.get_config("schema")
+        self.sf_db       = u.get_config('db_name')
 
         self.params_field = "params"  # optional: list/tuple (positional) or dict (named)
 

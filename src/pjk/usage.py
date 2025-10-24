@@ -270,7 +270,7 @@ class Usage:
             except (ValueError, TypeError) as e:
                 raise TokenError.from_list([f"wrong value type for '{name}' param.", '', self.get_usage_text()])
 
-    def get_config_param(self, name: str):
+    def get_config(self, name: str):
         return configs.lookup(self, name)
 
     def _get_val(self, val_str: str, is_num: bool, valid_values: Optional[Set[str]] = None):

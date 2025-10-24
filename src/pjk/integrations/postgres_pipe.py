@@ -113,12 +113,12 @@ class PostgresPipe(QueryPipe,Integration):
     def __init__(self, ptok: ParsedToken, u: Usage):
         super().__init__(ptok, u)
 
-        self.db_name = u.get_config_param('db_name')
-        self.db_host = u.get_config_param("host")
-        self.db_user = u.get_config_param("user")
-        self.db_pass = u.get_config_param("password")
-        self.db_port = u.get_config_param("port")
-        self.db_ssl  = u.get_config_param("ssl")
+        self.db_name = u.get_config('db_name')
+        self.db_host = u.get_config("host")
+        self.db_user = u.get_config("user")
+        self.db_pass = u.get_config("password")
+        self.db_port = u.get_config("port")
+        self.db_ssl  = u.get_config("ssl")
 
         self.params_field = "params"  # optional: list/tuple (positional) or dict (named)
 

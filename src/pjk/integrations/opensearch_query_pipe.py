@@ -54,7 +54,7 @@ class OpenSearchQueryPipe(QueryPipe, Integration):
     def __init__(self, ptok: ParsedToken, usage: Usage):
         super().__init__(ptok, usage)
 
-        self.index = usage.get_config_param("index_name")
+        self.index = usage.get_config("index_name")
         self.client = OpenSearchClient.get_client(usage)
 
         # Iteration state
