@@ -6,7 +6,8 @@ from __future__ import annotations
 import random
 from typing import Iterable, List, Optional
 
-from pjk.base import Pipe, ParsedToken, Usage
+from pjk.components import Pipe
+from pjk.usage import ParsedToken, Usage
 from pjk.progress import papi
 
 class SamplePipe(Pipe):

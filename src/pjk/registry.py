@@ -11,7 +11,7 @@ from pjk.sources.format_source import FormatSource
 import importlib.util
 import importlib
 import importlib.metadata
-from pjk.base import Pipe, Source, Sink, Integration
+from pjk.components import Pipe, Source, Sink, Integration
 from pjk.common import ComponentFactory, highlight
 from typing import List
 

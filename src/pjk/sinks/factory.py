@@ -2,7 +2,8 @@
 # Copyright 2024 Mike Schultz
 
 from typing import Callable
-from pjk.base import Source, Sink, ParsedToken
+from pjk.components import Source, Sink
+from pjk.usage import ParsedToken
 from pjk.common import ComponentFactory
 from pjk.sinks.stdout import StdoutSink
 from pjk.sinks.json_sink import JsonSink

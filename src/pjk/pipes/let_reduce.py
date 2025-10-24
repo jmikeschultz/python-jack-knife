@@ -3,7 +3,8 @@
 
 # djk/pipes/let_reduce.py
 
-from pjk.base import Pipe, ParsedToken, NoBindUsage, Usage, UsageError, TokenError
+from pjk.components import Pipe
+from pjk.usage import ParsedToken, Usage, UsageError, TokenError, NoBindUsage
 from pjk.common import SafeNamespace, ReducingNamespace
 import re
 import ast

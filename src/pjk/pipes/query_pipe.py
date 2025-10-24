@@ -1,4 +1,5 @@
-from pjk.base import Pipe, ParsedToken, Usage
+from pjk.components import Pipe
+from pjk.usage import ParsedToken, Usage
 from typing import Any, Dict, Iterable, Optional
 from abc import abstractmethod
 
@@ -19,7 +20,7 @@ class QueryPipe(Pipe):
         u.def_arg(name=cls.arg0[0], usage=f"{cls.arg0[1]} ~/.pjk/component_configs.yaml must contain entry '{cls.__name__}-<{cls.arg0[0]}'>\n  with necessary parameters.")
         u.def_param("count", usage="Number of search results, (databases may ignore)", is_num=True, default="10")
         u.def_param("shape", usage='the shape of ouput records', is_num=False,
-                       valid_values={'xR', 'Q_xR', 'Qxr'}, default='xR')
+                       valid_values={'xO', 'S_xO', 'Sxo'}, default='xO')
 
         for e in cls.examples:
             u.def_example(expr_tokens=e, expect=None)
@@ -31,9 +32,10 @@ class QueryPipe(Pipe):
         super().__init__(ptok, usage)
         self.output_shape = usage.get_param('shape')
         self.count = usage.get_param('count')
+        self.query_field = 'query' # for all subclasses
 
     @abstractmethod
-    def execute_query_returning_Q_xR_iterable(self, record) -> Iterable[Dict[str, Any]]:
+    def execute_query_returning_S_xO_iterable(self, record) -> Iterable[Dict[str, Any]]:
         pass
 
     def _make_q_object(self, in_rec: dict, result_header: dict):
@@ -44,9 +46,9 @@ class QueryPipe(Pipe):
 
     def __iter__(self):
         for in_rec in self.left:
-            iter = self.execute_query_returning_Q_xR_iterable(in_rec)
+            iter = self.execute_query_returning_S_xO_iterable(in_rec)
 
-            if self.output_shape == 'Q_xR':
+            if self.output_shape == 'S_xO':
                 q_done = False
                 for out_rec in iter:
                     if not q_done:
@@ -55,7 +57,7 @@ class QueryPipe(Pipe):
                         continue
                     yield out_rec
 
-            elif self.output_shape == 'xR':
+            elif self.output_shape == 'xO':
                 q_done = False
                 for out_rec in iter:
                     if not q_done:
@@ -63,7 +65,7 @@ class QueryPipe(Pipe):
                         continue
                     yield out_rec
 
-            elif self.output_shape == 'Qxr':
+            elif self.output_shape == 'Sxo':
                 q_done = False
                 q_out = {}
                 r_list = []

@@ -3,7 +3,9 @@
 
 # djk/pipes/where.py
 
-from pjk.base import Pipe, ParsedToken, NoBindUsage, Usage, UsageError, DeepCopyPipe
+from pjk.usage import NoBindUsage
+from pjk.components import Pipe, DeepCopyPipe
+from pjk.usage import ParsedToken, Usage, UsageError
 from pjk.common import SafeNamespace
 from pjk.progress import papi
 

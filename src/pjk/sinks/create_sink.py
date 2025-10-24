@@ -1,7 +1,8 @@
 # SPDX-License-Identifier: Apache-2.0
 # Copyright 2024 Mike Schultz
 
-from pjk.base import Sink, ParsedToken, Usage
+from pjk.components import Sink
+from pjk.usage import ParsedToken, Usage
 from importlib.resources import files
 from pathlib import Path
 from typing import Dict

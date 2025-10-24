@@ -3,7 +3,8 @@
 
 # djk/pipes/denorm.py
 
-from pjk.base import Pipe, ParsedToken, Usage, UsageError
+from pjk.components import Pipe
+from pjk.usage import ParsedToken, Usage, UsageError
 from typing import Iterator
 from pjk.progress import papi
 

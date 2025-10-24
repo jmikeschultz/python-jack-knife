@@ -1,4 +1,6 @@
-from pjk.base import Source, NoBindUsage, ParsedToken
+from pjk.usage import NoBindUsage
+from pjk.components import Source
+from pjk.usage import ParsedToken
 from pjk.sources.s3_source import S3Source
 from pjk.sources.dir_source import DirSource
 from pjk.sources.lazy_file_local import LazyFileLocal

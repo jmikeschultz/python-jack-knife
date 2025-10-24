@@ -2,7 +2,8 @@
 # Copyright 2024 Mike Schultz
 
 import sys
-from pjk.base import Source, NoBindUsage
+from pjk.usage import NoBindUsage
+from pjk.components import Source
 from pjk.sources.format_source import FormatSource
 from pjk.sources.lazy_file import LazyFile
 

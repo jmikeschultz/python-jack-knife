@@ -2,7 +2,8 @@
 # Copyright 2024 Mike Schultz
 
 import os, gzip, shutil
-from pjk.base import Sink, ParsedToken, Usage
+from pjk.components import Sink
+from pjk.usage import ParsedToken, Usage
 from typing import Optional, Type
 from .format_sink import Sink
 from pjk.log import logger

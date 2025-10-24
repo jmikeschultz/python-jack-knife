@@ -9,7 +9,8 @@ import uuid
 from decimal import Decimal
 from typing import Any, Dict, Optional
 
-from pjk.base import ParsedToken, TokenError, Usage, Integration
+from pjk.components import Integration
+from pjk.usage import ParsedToken, TokenError, Usage
 from pjk.pipes.query_pipe import QueryPipe
 from pjk.common import Config
 
@@ -128,25 +129,25 @@ class SnowflakePipe(QueryPipe, Integration):
     Connection/session settings are pulled from ~/.pjk/component_configs.yaml under the arg name.
     """
     name = 'snowflake'
-    desc = "Snowflake query pipe; executes an SQL query for each input record."
-    arg0 = ('dbname', 'database name.')
+    desc = "Snowflake query pipe; executes SQL over input record['query']."
+    arg0 = ('instance', 'instance of the database.')
     examples = [
         ["{'query': 'SELECT CURRENT_ROLE();'}", "snowflake:EDLDB", "-"],
         ["myquery.sql", "snowflake:EDLDB", "-"]
     ]
 
-    def __init__(self, ptok: ParsedToken, usage: Usage):
+    def __init__(self, ptok: ParsedToken, usage: Usage, in_config: Config = None):
         super().__init__(ptok, usage)
 
-        self.dbname = usage.get_arg('dbname')
-        config = Config('dbname', self, self.dbname)
+        instance = usage.get_arg('instance')
+        config = in_config if in_config else Config(self, instance)
         self.sf_account  = config.lookup("account")
         self.sf_user     = config.lookup("user")
         self.sf_auth     = config.lookup("authenticator")
         self.sf_role     = config.lookup("role")
         self.sf_wh       = config.lookup("warehouse")
         self.sf_schema   = config.lookup("schema")
-        self.sf_db       = self.dbname
+        self.sf_db       = config.lookup('db_name')
 
         # Basic validation
         missing = [k for k, v in [
@@ -162,7 +163,6 @@ class SnowflakePipe(QueryPipe, Integration):
                 f"config entry '{self.dbname}' missing: {', '.join(missing)}"
             )
 
-        self.query_field = usage.get_param('query_field')
         self.params_field = "params"  # optional: list/tuple (positional) or dict (named)
 
     def reset(self):
@@ -174,7 +174,7 @@ class SnowflakePipe(QueryPipe, Integration):
         Build a header record with query metadata and session context.
         """
         h: Dict[str, Any] = {
-            "db": self.dbname,
+            "db_name": self.sf_db,
             "account": self.sf_account,
             "role": self.sf_role,
             "warehouse": self.sf_wh,
@@ -198,7 +198,7 @@ class SnowflakePipe(QueryPipe, Integration):
         h["result"] = "ok"
         return h
 
-    def execute_query_returning_Q_xR_iterable(self, record):
+    def execute_query_returning_S_xO_iterable(self, record):
         client = SnowflakeClient(
             account=self.sf_account,
             user=self.sf_user,

@@ -3,7 +3,8 @@
 
 # djk/select_pipe.py
 
-from pjk.base import DeepCopyPipe, Usage, ParsedToken, UsageError
+from pjk.components import DeepCopyPipe
+from pjk.usage import Usage, ParsedToken, UsageError
 
 class SelectFields(DeepCopyPipe):
     @classmethod

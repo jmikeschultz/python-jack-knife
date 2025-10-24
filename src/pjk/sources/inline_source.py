@@ -7,7 +7,8 @@ import hjson
 from hjson import HjsonDecodeError
 from typing import Optional
 from collections import OrderedDict
-from pjk.base import Source, TokenError, Usage
+from pjk.components import Source
+from pjk.usage import TokenError, Usage
 
 def to_builtin(obj):
     """Recursively convert OrderedDicts to dicts and lists."""

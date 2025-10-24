@@ -5,7 +5,8 @@
 
 import importlib.util
 from typing import Optional
-from pjk.base import Pipe, Sink, ParsedToken, UsageError
+from pjk.components import Pipe, Sink
+from pjk.usage import ParsedToken, UsageError
 
 class UserPipeFactory:
     @staticmethod

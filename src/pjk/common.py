@@ -5,7 +5,8 @@ import sys, shutil, subprocess, contextlib, signal
 import os
 import re
 import yaml
-from pjk.base import TokenError, Integration, Source, Pipe
+from pjk.components import Integration, Source, Pipe
+from pjk.usage import TokenError
 
 class SafeNamespace:
     def __init__(self, obj):
@@ -75,9 +76,7 @@ def highlight(text: str, color: str = 'bold', value: str = None) -> str:
     return text.replace(value, f"{style}{value}{RESET}")
 
 class Config:
-    def __init__(self, instance_type: str, component_class: Source|Pipe, instance: str):
-        # instance = name of the instance, e.g. 'myindexcollection', instance_type = 'index'
-        # instance_type only used by automatic config template maker MUST BE STRING LITERAL!
+    def __init__(self, component_class: Source|Pipe, instance: str):
         self.configs_yaml = os.path.expanduser('~/.pjk/component_configs.yaml')
         self.class_name = type(component_class).__name__
         self.instance = instance
@@ -91,7 +90,7 @@ class Config:
         else:
             self._data = {}
 
-    def lookup(self, param: str, default=None):
+    def lookup(self, param: str, param_type:type = str, default=None):
         instance_key = f'{self.class_name}-{self.instance}'
         entry = self._data.get(instance_key, None)
         if not entry:
@@ -99,7 +98,27 @@ class Config:
                 f"~/.pjk/component_configs.yaml does not contain entry for '{instance_key}' with required params."
             )
         
-        return entry.get(param, default)
+        raw = entry.get(param, default)
+        if param_type == str:
+            return raw
+        
+        if param_type == bool:
+            if type(raw) == bool:
+                return raw
+            return raw.lower() != 'false'
+        
+        if param_type == float:
+            if type(raw) == float:
+                return raw
+            return float(raw)
+        
+        if param_type == int:
+            if type(raw) == int:
+                return raw
+            return int(raw)
+        
+        else:
+            raise(f'unsupported type: {param_type}')
 
 class ComponentFactory:
     def __init__(self, core_components: dict):

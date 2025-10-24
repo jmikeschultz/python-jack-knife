@@ -4,19 +4,19 @@ class OpenSearchClient:
 
     @classmethod
     def get_client(cls, config: Config):
-        aws_auth = config.lookup("os_auth_use_aws", "true") == 'true'
-        scheme = config.lookup("os_scheme", "https")
-        verify_certs = config.lookup("os_verify_certs", "true") == 'true'
-        ca_certs = config.lookup("os_ca_certs", None)
-        region = config.lookup("os_region", None)
-        service = config.lookup("os_service", "es")
-        username = config.lookup("os_username", None)
-        password = config.lookup("os_password", None)
-        timeout = float(config.lookup("os_timeout", 30))
-        ssl_assert_hostname = config.lookup("os_ssl_assert_hostname", "true") == 'true'
-        ssl_show_warn = config.lookup("os_ssl_show_warn", "false") == 'true'
-        host = config.lookup("os_host", None)
-        port = config.lookup("os_port", None)
+        aws_auth = config.lookup("os_auth_use_aws", bool, "true")
+        scheme = config.lookup("os_scheme", str, "https")
+        verify_certs = config.lookup("os_verify_certs", bool, "true")
+        ca_certs = config.lookup("os_ca_certs", str, None)
+        region = config.lookup("os_region", str, None)
+        service = config.lookup("os_service", str, "es")
+        username = config.lookup("os_username", str, None)
+        password = config.lookup("os_password", str, None)
+        timeout = float(config.lookup("os_timeout", int, 30))
+        ssl_assert_hostname = config.lookup("os_ssl_assert_hostname", bool, "true")
+        ssl_show_warn = config.lookup("os_ssl_show_warn", bool, "false")
+        host = config.lookup("os_host", str, None)
+        port = config.lookup("os_port", int, None)
 
         # Reasonable port defaults
         if port is None:

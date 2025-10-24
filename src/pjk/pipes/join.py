@@ -3,7 +3,8 @@
 
 # djk/pipes/join.py
 
-from pjk.base import Pipe, Usage, UsageError, ParsedToken, KeyedSource
+from pjk.components import Pipe, KeyedSource
+from pjk.usage import Usage, UsageError, ParsedToken
 from pjk.progress import papi
 
 class JoinPipe(Pipe):

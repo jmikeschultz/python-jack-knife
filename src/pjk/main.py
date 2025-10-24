@@ -4,15 +4,13 @@
 #!/usr/bin/env python
 import sys
 import os
-import signal
 import shlex
 from typing import List
 from pjk.parser import ExpressionParser
-from pjk.base import UsageError
+from pjk.usage import UsageError
 from pjk.log import init as init_logging
 from datetime import datetime
 from pathlib import Path
-import shutil
 import traceback
 import concurrent.futures
 from pjk.registry import ComponentRegistry

@@ -4,7 +4,8 @@
 import os
 import shlex
 from typing import Any, List
-from pjk.base import Source, Pipe, Sink, TokenError, UsageError, ParsedToken, Usage
+from pjk.components import Source, Pipe, Sink
+from pjk.usage import TokenError, UsageError, ParsedToken, Usage
 from pjk.pipes.user_pipe_factory import UserPipeFactory
 from pjk.pipes.let_reduce import ReducePipe
 from pjk.pipes.progress_pipe import ProgressPipe
@@ -323,16 +324,6 @@ class SubExpression(Pipe, ProgressIgnore):
     def recursion_depth(self):
         return self.recursions
     
-    #def bind(self, subex_over: SubExpressionOver):
-    #    self.over_arg = subex_over.get_over_arg()
-    #    if self.over_arg.endswith('.py'):
-    #        self.over_field = 'child'
-    #        self.over_pipe = UserPipeFactory.create(self.over_arg)
-    #        self.upstream_source.set_source(self.over_pipe)
-    #        self.subexp_ops.append(self.over_pipe)
-    #    else:
-    #        self.over_field = self.over_arg
-
     def reset(self):
         for op in self.subexp_ops:
             if isinstance(op, Pipe):
@@ -341,24 +332,28 @@ class SubExpression(Pipe, ProgressIgnore):
     def __iter__(self):
         yield from self.left # pass thru to subexp_over which then calls process
 
-    def subexp_process(self, record: dict, over_field: str):
-        #for record in self.left:
-        #    if self.over_pipe:
-        #        one = UpstreamSource()
-        #        one.add_item(record)
-        #        self.over_pipe.set_sources([one])
+    def set_upstream(self, over_arg: str, record: dict):
+        if over_arg == '+':
+            self.upstream_source.set_list([record])
+            return True
 
-        if not self.subexp_left:
-            self.subexp_left = self.subexp_stack.pop()
-
-        field_data = record.pop(over_field, None)
+        field_data = record.pop(over_arg, None)
         if not field_data:
-            return
-
+            return False
+        
         if isinstance(field_data, list):
             self.upstream_source.set_list(field_data)
         else:
             self.upstream_source.set_list([field_data])
+
+        return True
+
+    def subexp_process(self, record: dict, over_arg: str):
+        if not self.subexp_left:
+            self.subexp_left = self.subexp_stack.pop()
+
+        if not self.set_upstream(over_arg, record):
+            return # couldn't set, no processing
 
         # Reset sub-pipe stack
         for op in self.subexp_ops:
@@ -369,7 +364,8 @@ class SubExpression(Pipe, ProgressIgnore):
         for rec in self.subexp_left:
             out_recs.append(rec)
 
-        record[over_field] = out_recs
+        field = over_arg if over_arg != '+' else 'child'
+        record[field] = out_recs
 
         for op in self.subexp_ops:
             if isinstance(op, ReducePipe):

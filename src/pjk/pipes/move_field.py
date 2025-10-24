@@ -3,7 +3,8 @@
 
 # djk/pipes/move_field.py
 
-from pjk.base import Pipe, ParsedToken, Usage, TokenError
+from pjk.components import Pipe
+from pjk.usage import ParsedToken, Usage, TokenError
 from pjk.common import is_valid_field_name
 
 class MoveField(Pipe):

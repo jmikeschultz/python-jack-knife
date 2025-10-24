@@ -4,7 +4,7 @@
 import os
 from typing import Any
 from queue import Queue, Empty
-from pjk.base import Source
+from pjk.components import Source
 from pjk.sources.lazy_file_local import LazyFileLocal
 from pjk.log import logger
 

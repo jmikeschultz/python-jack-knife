@@ -1,4 +1,6 @@
-from pjk.base import Sink, ParsedToken, NoBindUsage
+from pjk.usage import NoBindUsage
+from pjk.components import Sink
+from pjk.usage import ParsedToken
 from pjk.sinks.s3_sink import S3Sink
 from pjk.sinks.dir_sink import DirSink
 from typing import IO

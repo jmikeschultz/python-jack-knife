@@ -2,7 +2,7 @@ import sys
 import time
 import threading
 from typing import Dict, Any
-from pjk.base import Source, Sink
+from pjk.components import Source, Sink
 from pjk.common import highlight
 
 CSI = "\x1b["  # ANSI Control Sequence Introducer

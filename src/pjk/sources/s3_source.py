@@ -3,7 +3,7 @@
 
 from threading import Lock
 from typing import Optional, Any, Iterator, Tuple
-from pjk.base import Source
+from pjk.components import Source
 from pjk.sources.lazy_file_s3 import LazyFileS3
 from pjk.log import logger
 

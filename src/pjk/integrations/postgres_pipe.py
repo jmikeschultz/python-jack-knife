@@ -9,7 +9,8 @@ import uuid
 from decimal import Decimal
 from typing import Any, Dict, Optional
 
-from pjk.base import Integration, ParsedToken, Usage
+from pjk.components import Integration
+from pjk.usage import ParsedToken, Usage
 from pjk.common import Config
 from pjk.pipes.query_pipe import QueryPipe
 
@@ -92,26 +93,36 @@ def _row_to_dict(cursor, row) -> Dict[str, Any]:
 
 class PostgresPipe(QueryPipe,Integration):
     name = 'postgres'
-    desc = "Postgres query pipe; executes SQL from input."
-    arg0 = ("dbname", 'database name.')
+    desc = "Postgres query pipe; executes SQL over input record['query']."
+    arg0 = ("instance", 'instance of database.')
     examples = [
         ['myquery.sql', 'postgres:mydb', '-'],
         ["{'query': 'SELECT * from MY_TABLE;'}", 'postgres:mydb', '-'],
         ["{'query': 'SELECT * FROM pg_catalog.pg_tables;'}", 'postgres:mydb']
     ]
 
-    def __init__(self, ptok: ParsedToken, usage: Usage):
+    @classmethod
+    def config(cls):
+        return [
+            ('dn_name', str, None),
+            ('host', str, None),
+            ('user', str, None)
+            ('password', str, None)
+            ('port', int, 5432),
+            ('ssl', bool, False)
+        ]
+    def __init__(self, ptok: ParsedToken, usage: Usage, in_config: Config):
         super().__init__(ptok, usage)
 
-        self.dbname = usage.get_arg("dbname")
-        config = Config('dbname', self, self.dbname)
+        instance = usage.get_arg("instance")
+        config = in_config if in_config else Config(self, instance)
+        self.db_name = config.lookup('db_name')
         self.db_host = config.lookup("host")
         self.db_user = config.lookup("user")
         self.db_pass = config.lookup("password")
-        self.db_port = int(config.lookup("port", 5432))
-        self.db_ssl  = bool(config.lookup("ssl", False))
+        self.db_port = config.lookup("port", param_type=int, default=5432)
+        self.db_ssl  = config.lookup("ssl", param_type=bool, default=False)
 
-        self.query_field  = usage.get_param('query_field')
         self.params_field = "params"  # optional: list/tuple (positional) or dict (named)
 
     def reset(self):
@@ -145,7 +156,7 @@ class PostgresPipe(QueryPipe,Integration):
 
         return h
 
-    def execute_query_returning_Q_xR_iterable(self, record):
+    def execute_query_returning_S_xO_iterable(self, record):
         client = DBClient(
             host=self.db_host,
             username=self.db_user,

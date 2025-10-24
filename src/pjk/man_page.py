@@ -5,10 +5,20 @@ from pjk.pipes.factory import PipeFactory
 from pjk.sources.factory import SourceFactory
 from pjk.sinks.factory import SinkFactory
 from pjk.parser import ExpressionParser
-from pjk.base import Usage
+from pjk.components import Source, Pipe, Sink
+from pjk.usage import Usage, ParsedToken
 from pjk.registry import ComponentRegistry
 from pjk.common import pager_stdout, highlight
 from contextlib import nullcontext
+
+def get_base_class(usage: Usage, as_string: bool = False):
+        if issubclass(usage.comp_class, Sink):
+            return 'sink' if as_string else Sink
+        elif issubclass(usage.comp_class, Pipe):
+            return 'pipe' if as_string else Pipe
+        elif issubclass(usage.comp_class, Source):
+            return 'source' if as_string else Source
+        raise 'improper class'
 
 def smart_print(expr_tokens: list[str], name: str):
     import re
@@ -59,13 +69,13 @@ def do_all_man(registry: ComponentRegistry, no_pager: bool = True):
                 print()
 
 def print_man(registry: ComponentRegistry, name: str, usage: Usage):
-    comp_type = usage.get_base_class(as_string=True)
+    comp_type = get_base_class(usage, as_string=True)
     header = f'{name} is a {comp_type}'
+
     print('===================================')
     print('        ', highlight(header, 'bold', name))
     print('===================================')
 
-    print()
     print(usage.get_usage_text())
 
     examples = usage.get_examples()
@@ -88,8 +98,9 @@ def do_examples(token:str, registry: ComponentRegistry):
             for name, comp_class in factory.get_component_name_class_tuples():
                 usage = comp_class.usage()
 
-                comp_type = usage.get_base_class(as_string=True)
+                comp_type = get_base_class(usage, as_string=True)
                 header = f'{name} is a {comp_type}'
+
                 print('===================================')
                 print('        ', highlight(header, 'bold', name))
                 print('===================================')

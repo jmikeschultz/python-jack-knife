@@ -1,7 +1,8 @@
 # SPDX-License-Identifier: Apache-2.0
 # Copyright 2024 Mike Schultz
 
-from pjk.base import Sink, Integration, Source, ParsedToken, Usage
+from pjk.components import Sink, Integration, Source
+from pjk.usage import ParsedToken, Usage
 from decimal import Decimal
 
 class DDBSink(Sink, Integration):
@@ -16,8 +17,8 @@ class DDBSink(Sink, Integration):
         usage.def_param('batch_size', usage='How many records to write per batch (max 25)')
         return usage
 
-    def __init__(self, input_source: Source, ptok: ParsedToken, usage: Usage):
-        super().__init__(input_source)
+    def __init__(self, ptok: ParsedToken, usage: Usage):
+        super().__init__(ptok, usage)
         import boto3 # lazy import
 
         self.table_name = usage.get_arg('table')

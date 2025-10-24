@@ -3,7 +3,8 @@
 
 import os
 import queue
-from pjk.base import Source, ParsedToken
+from pjk.components import Source
+from pjk.usage import ParsedToken
 from pjk.common import ComponentFactory
 from pjk.sources.json_source import JsonSource
 from pjk.sources.csv_source import CSVSource
@@ -14,6 +15,7 @@ from pjk.sources.inline_source import InlineSource
 from pjk.sources.user_source_factory import UserSourceFactory
 from pjk.sources.parquet_source import ParquetSource
 from pjk.sources.format_source import FormatSource
+from pjk.sources.configs_source import ConfigsSource
 
 COMPONENTS = {
         'inline': InlineSource,
@@ -24,6 +26,7 @@ COMPONENTS = {
         'sql': SQLSource,
         'npy': NpySource,
         'parquet': ParquetSource,
+        'configs': ConfigsSource,
     }
 
 class SourceFactory(ComponentFactory):

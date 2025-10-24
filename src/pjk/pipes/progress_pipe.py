@@ -1,5 +1,5 @@
 from typing import Iterator
-from pjk.base import Source, Pipe, Sink
+from pjk.components import Source, Pipe, Sink
 from pjk.progress import papi
 from pjk.progress import ProgressIgnore
 

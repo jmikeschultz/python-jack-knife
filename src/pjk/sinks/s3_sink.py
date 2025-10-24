@@ -4,7 +4,7 @@
 import io
 import gzip
 from typing import Optional, Type
-from pjk.base import Source, Sink
+from pjk.components import Source, Sink
 from pjk.log import logger
 from pjk.sinks.s3_stream import S3MultipartWriter
 

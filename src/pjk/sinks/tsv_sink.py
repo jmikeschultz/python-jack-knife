@@ -2,7 +2,7 @@
 # Copyright 2024 Mike Schultz
 
 from pjk.sinks.csv_sink import CSVSink
-from pjk.base import Usage
+from pjk.usage import Usage
 from typing import IO
 
 class TSVSink(CSVSink):

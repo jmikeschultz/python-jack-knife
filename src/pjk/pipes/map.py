@@ -4,7 +4,8 @@
 # djk/pipes/group.py
 
 from typing import Optional
-from pjk.base import ParsedToken, Usage, Pipe, KeyedSource
+from pjk.components import Pipe, KeyedSource
+from pjk.usage import ParsedToken, Usage
 from pjk.progress import papi
 
 class MapByPipe(Pipe, KeyedSource):
@@ -26,9 +27,9 @@ class MapByPipe(Pipe, KeyedSource):
 
         return u
 
-    def __init__(self, ptok: ParsedToken, usage: Usage, is_group: bool = False):
+    def __init__(self, ptok: ParsedToken, usage: Usage):
         super().__init__(ptok)
-        self.is_group = is_group
+        self.is_group = False
         self.fields = usage.get_arg('key').split(',')
         self.rec_map = {}
         self.matched_map = {}
@@ -135,4 +136,5 @@ class GroupByPipe(MapByPipe):
         return u
 
     def __init__(self, ptok: ParsedToken, usage: Usage):
-        super().__init__(ptok, usage, True)
+        super().__init__(ptok, usage)
+        self.is_group = True

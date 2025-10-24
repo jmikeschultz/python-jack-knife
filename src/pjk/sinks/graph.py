@@ -1,7 +1,8 @@
 # SPDX-License-Identifier: Apache-2.0
 # Copyright 2024 Mike Schultz
 
-from pjk.base import Sink, ParsedToken, Usage, TokenError
+from pjk.components import Sink
+from pjk.usage import ParsedToken, Usage, TokenError
 
 from pjk.sinks.graph_cumulative import graph_cumulative
 from pjk.sinks.graph_hist import graph_hist
