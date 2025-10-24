@@ -9,11 +9,9 @@ import uuid
 from decimal import Decimal
 from typing import Any, Dict, Optional
 
-from pjk.components import Integration
 from pjk.usage import ParsedToken, TokenError, Usage
 from pjk.pipes.query_pipe import QueryPipe
-from pjk.common import Config
-
+from pjk.common import Integration
 
 # ---------- utilities ----------
 
@@ -136,32 +134,26 @@ class SnowflakePipe(QueryPipe, Integration):
         ["myquery.sql", "snowflake:EDLDB", "-"]
     ]
 
-    def __init__(self, ptok: ParsedToken, usage: Usage, in_config: Config = None):
-        super().__init__(ptok, usage)
+    # name, type, default
+    config_tuples = [
+       ("account", str, None),
+        ("user", str, None),
+        ("authenticator", str, None),
+        ("role", str, None),
+        ("warehouse", str, None),
+        ("schema", str, None),
+        ('db_name', str, None)
+    ]
 
-        instance = usage.get_arg('instance')
-        config = in_config if in_config else Config(self, instance)
-        self.sf_account  = config.lookup("account")
-        self.sf_user     = config.lookup("user")
-        self.sf_auth     = config.lookup("authenticator")
-        self.sf_role     = config.lookup("role")
-        self.sf_wh       = config.lookup("warehouse")
-        self.sf_schema   = config.lookup("schema")
-        self.sf_db       = config.lookup('db_name')
-
-        # Basic validation
-        missing = [k for k, v in [
-            ("account", self.sf_account),
-            ("user", self.sf_user),
-            ("authenticator|password", self.sf_auth or self.sf_password),
-            ("role", self.sf_role),
-            ("warehouse", self.sf_wh),
-            ("schema", self.sf_schema),
-        ] if not v]
-        if missing:
-            raise TokenError(
-                f"config entry '{self.dbname}' missing: {', '.join(missing)}"
-            )
+    def __init__(self, ptok: ParsedToken, u: Usage):
+        super().__init__(ptok, u)
+        self.sf_account  = u.get_config_param("account")
+        self.sf_user     = u.get_config_param("user")
+        self.sf_auth     = u.get_config_param("authenticator")
+        self.sf_role     = u.get_config_param("role")
+        self.sf_wh       = u.get_config_param("warehouse")
+        self.sf_schema   = u.get_config_param("schema")
+        self.sf_db       = u.get_config_param('db_name')
 
         self.params_field = "params"  # optional: list/tuple (positional) or dict (named)
 

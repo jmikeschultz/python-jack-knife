@@ -4,10 +4,9 @@ import traceback
 from copy import deepcopy
 from typing import Optional, Iterator, Dict, Any, Iterable
 
-from pjk.components import Pipe, Integration
 from pjk.usage import ParsedToken, Usage
 from pjk.pipes.query_pipe import QueryPipe
-from pjk.common import Config
+from pjk.common import Integration
 from pjk.integrations.opensearch_client import OpenSearchClient
 
 def build_body_from_string(query_string: str) -> dict:
@@ -34,16 +33,29 @@ class OpenSearchQueryPipe(QueryPipe, Integration):
         ["{'os_query_object': {query: {...}}", 'os_query:myindex', '-'],
     ]
 
-    def __init__(self, ptok: ParsedToken, usage: Usage, in_config: Config = None):
+     # name, type, default
+    config_tuples = [
+        ("index_name", str, None),
+        ("os_auth_use_aws", bool, "true"),
+        ("os_scheme", str, "https"),
+        ("os_verify_certs", bool, "true"),
+        ("os_ca_certs", str, None),
+        ("os_region", str, None),
+        ("os_service", str, "es"),
+        ("os_username", str, None),
+        ("os_password", str, None),
+        ("os_timeout", float, 30),
+        ("os_ssl_assert_hostname", bool, "true"),
+        ("os_ssl_show_warn", bool, "false"),
+        ("os_host", str, None),
+        ("os_port", int, None)
+    ]
+
+    def __init__(self, ptok: ParsedToken, usage: Usage):
         super().__init__(ptok, usage)
 
-        # instance from arg0
-        self.instance = ptok.get_arg(0)
-
-        # in_config allows injection to determine parameters for template file
-        config = in_config if in_config else Config(self, self.instance)
-        self.index = config.lookup("index_name", str, None)
-        self.client = OpenSearchClient.get_client(config)
+        self.index = usage.get_config_param("index_name")
+        self.client = OpenSearchClient.get_client(usage)
 
         # Iteration state
         self.cur_record: Optional[Dict[str, Any]] = None
@@ -81,6 +93,10 @@ class OpenSearchQueryPipe(QueryPipe, Integration):
             query_body = build_body_from_string(query_string)
         else:
             query_body = query_record.get('os_query_object')
+
+        if not query_body:
+            yield {'_error': "query_record missing 'query' or 'os_query_object' field"}
+            return
 
         try:
             # Build final request body

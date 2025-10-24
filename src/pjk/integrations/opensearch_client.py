@@ -1,28 +1,26 @@
-from pjk.common import Config
+from pjk.usage import Usage
 
 class OpenSearchClient:
 
     @classmethod
-    def get_client(cls, config: Config):
-        aws_auth = config.lookup("os_auth_use_aws", bool, "true")
-        scheme = config.lookup("os_scheme", str, "https")
-        verify_certs = config.lookup("os_verify_certs", bool, "true")
-        ca_certs = config.lookup("os_ca_certs", str, None)
-        region = config.lookup("os_region", str, None)
-        service = config.lookup("os_service", str, "es")
-        username = config.lookup("os_username", str, None)
-        password = config.lookup("os_password", str, None)
-        timeout = float(config.lookup("os_timeout", int, 30))
-        ssl_assert_hostname = config.lookup("os_ssl_assert_hostname", bool, "true")
-        ssl_show_warn = config.lookup("os_ssl_show_warn", bool, "false")
-        host = config.lookup("os_host", str, None)
-        port = config.lookup("os_port", int, None)
+    def get_client(cls, u: Usage):
+        aws_auth = u.get_config_param("os_auth_use_aws")
+        scheme = u.get_config_param("os_scheme")
+        verify_certs = u.get_config_param("os_verify_certs")
+        ca_certs = u.get_config_param("os_ca_certs")
+        region = u.get_config_param("os_region")
+        service = u.get_config_param("os_service")
+        username = u.get_config_param("os_username")
+        password = u.get_config_param("os_password")
+        timeout = u.get_config_param("os_timeout")
+        ssl_assert_hostname = u.get_config_param("os_ssl_assert_hostname")
+        ssl_show_warn = u.get_config_param("os_ssl_show_warn")
+        host = u.get_config_param("os_host")
+        port = u.get_config_param("os_port")
 
         # Reasonable port defaults
         if port is None:
             port = 443 if scheme == "https" else 9200
-        else:
-            port = int(port)
 
         if host is None:
             raise ValueError("Config os_host is required (set os_host + os_port/os_scheme, or a connection profile).")

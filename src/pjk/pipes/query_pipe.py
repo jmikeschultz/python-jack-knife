@@ -8,6 +8,7 @@ class QueryPipe(Pipe):
     name: str = None
     desc: str = None
     arg0: tuple[Optional[str], Optional[str]] = (None, None)
+    config_tuples = [] # name, type, default
     examples: list = []
 
     @classmethod
@@ -25,6 +26,7 @@ class QueryPipe(Pipe):
         for e in cls.examples:
             u.def_example(expr_tokens=e, expect=None)
 
+        u.def_config_tuples(cls.config_tuples)
         return u
 
 

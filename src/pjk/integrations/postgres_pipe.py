@@ -9,9 +9,8 @@ import uuid
 from decimal import Decimal
 from typing import Any, Dict, Optional
 
-from pjk.components import Integration
 from pjk.usage import ParsedToken, Usage
-from pjk.common import Config
+from pjk.common import Integration
 from pjk.pipes.query_pipe import QueryPipe
 
 
@@ -20,11 +19,11 @@ class DBClient:
     _connection = None
     
     def __init__(self, host: str, username: str, password: Optional[str],
-                 dbname: str, port: int = 5432, ssl: bool = False):
+                 db_name: str, port: int = 5432, ssl: bool = False):
         import pg8000 # lazy import
         if DBClient._connection is None:
             try:
-                kwargs = dict(user=username, password=password, host=host, database=dbname, port=port)
+                kwargs = dict(user=username, password=password, host=host, database=db_name, port=port)
                 if ssl:
                     import ssl as _ssl
                     kwargs["ssl_context"] = _ssl.create_default_context()
@@ -101,27 +100,25 @@ class PostgresPipe(QueryPipe,Integration):
         ["{'query': 'SELECT * FROM pg_catalog.pg_tables;'}", 'postgres:mydb']
     ]
 
-    @classmethod
-    def config(cls):
-        return [
-            ('dn_name', str, None),
+    # name, type, default
+    config_tuples = [
+            ('db_name', str, None),
             ('host', str, None),
-            ('user', str, None)
-            ('password', str, None)
+            ('user', str, None),
+            ('password', str, None),
             ('port', int, 5432),
             ('ssl', bool, False)
-        ]
-    def __init__(self, ptok: ParsedToken, usage: Usage, in_config: Config):
-        super().__init__(ptok, usage)
+    ]
+    
+    def __init__(self, ptok: ParsedToken, u: Usage):
+        super().__init__(ptok, u)
 
-        instance = usage.get_arg("instance")
-        config = in_config if in_config else Config(self, instance)
-        self.db_name = config.lookup('db_name')
-        self.db_host = config.lookup("host")
-        self.db_user = config.lookup("user")
-        self.db_pass = config.lookup("password")
-        self.db_port = config.lookup("port", param_type=int, default=5432)
-        self.db_ssl  = config.lookup("ssl", param_type=bool, default=False)
+        self.db_name = u.get_config_param('db_name')
+        self.db_host = u.get_config_param("host")
+        self.db_user = u.get_config_param("user")
+        self.db_pass = u.get_config_param("password")
+        self.db_port = u.get_config_param("port")
+        self.db_ssl  = u.get_config_param("ssl")
 
         self.params_field = "params"  # optional: list/tuple (positional) or dict (named)
 
@@ -135,7 +132,7 @@ class PostgresPipe(QueryPipe,Integration):
         Figures out result, rowcount, function automatically.
         """
         h = {
-            "db": self.dbname,
+            "db": self.db_name,
             "dbhost": self.db_host,
         }
         if params:
@@ -161,7 +158,7 @@ class PostgresPipe(QueryPipe,Integration):
             host=self.db_host,
             username=self.db_user,
             password=self.db_pass,
-            dbname=self.dbname,
+            db_name=self.db_name,
             port=self.db_port,
             ssl=self.db_ssl,
         )

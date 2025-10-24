@@ -5,8 +5,13 @@ import sys, shutil, subprocess, contextlib, signal
 import os
 import re
 import yaml
-from pjk.components import Integration, Source, Pipe
-from pjk.usage import TokenError
+from pjk.usage import Usage, TokenError
+from abc import ABC
+
+# mixin 
+# just for distinguishing components for display
+class Integration(ABC):
+    pass
 
 class SafeNamespace:
     def __init__(self, obj):
@@ -74,51 +79,6 @@ def highlight(text: str, color: str = 'bold', value: str = None) -> str:
     value = text if not value else value
     style = COLOR_CODES.get(color.lower(), COLOR_CODES['bold'])
     return text.replace(value, f"{style}{value}{RESET}")
-
-class Config:
-    def __init__(self, component_class: Source|Pipe, instance: str):
-        self.configs_yaml = os.path.expanduser('~/.pjk/component_configs.yaml')
-        self.class_name = type(component_class).__name__
-        self.instance = instance
-        self._data = {}
-        self._load()
-        
-    def _load(self):
-        if os.path.exists(self.configs_yaml):
-            with open(self.configs_yaml, 'r') as f:
-                self._data = yaml.safe_load(f) or {}
-        else:
-            self._data = {}
-
-    def lookup(self, param: str, param_type:type = str, default=None):
-        instance_key = f'{self.class_name}-{self.instance}'
-        entry = self._data.get(instance_key, None)
-        if not entry:
-            raise TokenError(
-                f"~/.pjk/component_configs.yaml does not contain entry for '{instance_key}' with required params."
-            )
-        
-        raw = entry.get(param, default)
-        if param_type == str:
-            return raw
-        
-        if param_type == bool:
-            if type(raw) == bool:
-                return raw
-            return raw.lower() != 'false'
-        
-        if param_type == float:
-            if type(raw) == float:
-                return raw
-            return float(raw)
-        
-        if param_type == int:
-            if type(raw) == int:
-                return raw
-            return int(raw)
-        
-        else:
-            raise(f'unsupported type: {param_type}')
 
 class ComponentFactory:
     def __init__(self, core_components: dict):

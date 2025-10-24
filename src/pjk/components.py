@@ -26,11 +26,6 @@ class KeyedSource(ABC):
     def deep_copy(self):
         return None
 
-# mixin 
-# just for distinguishing components for display
-class Integration(ABC):
-    pass
-
 class Source(ABC):
     @classmethod
     def usage(cls):
@@ -140,9 +135,4 @@ class Sink(ABC):
 
     def deep_copy(self):
         return None
-
-# identity source for sub-pipeline seeding
-class IdentitySource(Source):
-    def next(self):
-        raise RuntimeError("IdentitySource should never be executed")
 

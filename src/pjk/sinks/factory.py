@@ -11,7 +11,6 @@ from pjk.sinks.devnull import DevNullSink
 from pjk.sinks.graph import GraphSink
 from pjk.sinks.csv_sink import CSVSink
 from pjk.sinks.tsv_sink import TSVSink
-from pjk.integrations.ddb_sink import DDBSink
 from pjk.sinks.expect import ExpectSink
 from pjk.sinks.format_sink import FormatSink
 from pjk.sinks.create_sink import CreateSink
@@ -21,7 +20,6 @@ COMPONENTS = {
         '-': StdoutSink,
         'devnull': DevNullSink,
         'graph': GraphSink,
-        'ddb': DDBSink,
         'json': JsonSink,
         'csv': CSVSink,
         'tsv': TSVSink,

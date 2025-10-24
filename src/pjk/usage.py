@@ -1,4 +1,74 @@
 from typing import Optional, Set, List
+import os
+import yaml
+
+CONFIG_FILE = '~/pjk/configs.yaml'
+
+class Config:
+    def __init__(self):
+        self.configs_yaml = os.path.expanduser(CONFIG_FILE)
+        self._data = {}
+        self._load()
+        
+    def _load(self):
+        if os.path.exists(self.configs_yaml):
+            with open(self.configs_yaml, 'r') as f:
+                self._data = yaml.safe_load(f) or {}
+        else:
+            self._data = {}
+
+    def lookup(self, usage: "Usage", param: str):
+         # this should be advertised as a well-known requirement: usage must define a 'instance' arg
+        instance = usage.get_arg("instance")
+        if not instance:
+            raise TokenError(f"'instance' arg must be defined when using configs in {CONFIG_FILE}")
+
+        component_class = usage.get_component_class()
+        class_name = component_class.__name__
+
+         # name, type, default
+        tuples_dict = usage.get_config_tuples()
+        type_default = tuples_dict.get(param)
+        if not type_default:
+            raise TokenError(f"{class_name} does not define '{param}' in config_tuples")
+
+        (param_type, param_default) = type_default
+
+        instance_key = f'{class_name}-{instance}'
+        entry = self._data.get(instance_key, None)
+        if not entry:
+            raise TokenError(
+                f"{CONFIG_FILE} does not contain entry for '{instance_key}' with required params."
+            )
+        
+        raw = entry.get(param, param_default)
+
+        if not raw:
+            return None
+
+        if param_type == str:
+            return raw
+        
+        if param_type == bool:
+            if type(raw) == bool:
+                return raw
+            return raw.lower() != 'false'
+        
+        if param_type == float:
+            if type(raw) == float:
+                return raw
+            return float(raw)
+        
+        if param_type == int:
+            if type(raw) == int:
+                return raw
+            return int(raw)
+        
+        else:
+            raise(f'unsupported type: {param_type}')
+
+# singleton
+configs = Config()
 
 class ParsedToken:
     def __init__(self, token: str):
@@ -85,6 +155,9 @@ class Usage:
 
     def def_config_tuples(self, tuples: list):
         self.config_tuples = tuples
+
+    def get_config_tuples(self) -> dict:
+        return {n: (t, d) for n, t, d in self.config_tuples}
 
     # args and param values default as str
     def def_arg(self, name: str, usage: str, is_num: bool = False, valid_values: Optional[Set[str]] = None):
@@ -197,6 +270,9 @@ class Usage:
             except (ValueError, TypeError) as e:
                 raise TokenError.from_list([f"wrong value type for '{name}' param.", '', self.get_usage_text()])
 
+    def get_config_param(self, name: str):
+        return configs.lookup(self, name)
+
     def _get_val(self, val_str: str, is_num: bool, valid_values: Optional[Set[str]] = None):
         if not val_str:
             raise ValueError('missing value')
@@ -253,3 +329,4 @@ class UsageError(ValueError):
         offset = 4 + sum(len(t) + 1 for t in tokens[:self.token_no])  # +1 for space, 4 for pjk
         underline = ' ' * offset + marker * len(tokens[self.token_no])
         return underline
+    

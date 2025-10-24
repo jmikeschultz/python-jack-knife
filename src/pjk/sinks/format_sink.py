@@ -76,9 +76,6 @@ class FormatSink(Sink):
         path_no_ext = gd.get('path', None)
         ext = gd.get('ext', None)
 
-        usage = cls.usage()
-        usage.bind_params(ptok) # only bind params
-
         is_gz = False
         format = None
 
@@ -116,6 +113,8 @@ class FormatSink(Sink):
                 if not sink_class:
                     raise Exception('fix this exception message, extension for single file must be recognized format')    
             else:
+                usage = cls.usage()
+                usage.bind_params(ptok) # only bind params
                 format, is_gz = cls.get_format_gz(usage.get_param('format'))
                 sink_class = sinks.get(format)
 
