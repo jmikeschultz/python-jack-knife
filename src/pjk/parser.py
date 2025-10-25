@@ -6,33 +6,69 @@ import shlex
 from typing import Any, List
 from pjk.components import Source, Pipe, Sink
 from pjk.usage import TokenError, UsageError, ParsedToken, Usage
-from pjk.pipes.user_pipe_factory import UserPipeFactory
 from pjk.pipes.let_reduce import ReducePipe
+from pjk.sources.favorite_source import FAVORITES_FILE, read_favorites
 from pjk.pipes.progress_pipe import ProgressPipe
 from pjk.registry import ComponentRegistry
 from pjk.progress import papi
 from pjk.progress import ProgressIgnore
 
+# fav is a special source.
+# for fav:+ it's a normal source of all the favorites in FAVORITES_FILE:
+# we leave it in the expression.  But for fav:<instance>, we remove the
+# token from the expression, lookup the instance in FAVORITES_FILE and 
+# inject the favorite into the expression like a macro
+def handle_favorites(token: str, expanded: List[str]):
+    if token == 'fav:+' or not token.startswith('fav:'):
+        return False
+    
+    instance = token.split(':', 1)[1]
+    favorites = read_favorites()
+    fav = favorites.get(instance, None)
+    if not fav:
+        raise TokenError(f"No '{instance}' favorite in {FAVORITES_FILE}")
+
+    try:
+        parts = shlex.split(fav, comments=True, posix=True)
+        expanded.extend(parts)
+    except ValueError as e:
+        raise UsageError(f"Error parsing {token}: {e}")
+    
+    return True
+
+def handle_pjk_file(token: str, expanded: List[str]):
+    if not token.endswith(".pjk"):
+        return False
+    
+    if not os.path.isfile(token):
+        raise TokenError(f"pjk file not found: {token}")
+    
+    with open(token, "r") as f:
+        lines = f.readlines()
+
+    # Remove comments outside quotes, then split
+    stripped = []
+    for line in lines:
+        try:
+            parts = shlex.split(line, comments=True, posix=True)
+            stripped.extend(parts)
+        except ValueError as e:
+            raise UsageError(f"Error parsing {token}: {e}")
+    expanded.extend(stripped)
+    return True
+
 def expand_macros(tokens: List[str]) -> List[str]:
     expanded = []
     for token in tokens:
-        if token.endswith(".pjk"):
-            if not os.path.isfile(token):
-                raise FileNotFoundError(f"Macro file not found: {token}")
-            with open(token, "r") as f:
-                lines = f.readlines()
+        if handle_favorites(token, expanded):
+            continue
 
-            # Remove comments outside quotes, then split
-            stripped = []
-            for line in lines:
-                try:
-                    parts = shlex.split(line, comments=True, posix=True)
-                    stripped.extend(parts)
-                except ValueError as e:
-                    raise UsageError(f"Error parsing {token}: {e}")
-            expanded.extend(stripped)
+        elif handle_pjk_file(token, expanded):
+            continue
+            
         else:
             expanded.append(token)
+
     return expanded
 
 stack_level = -1
@@ -109,12 +145,14 @@ class ExpressionParser:
         return sink
 
     def parse(self, tokens: List[str]) -> Sink:
-        self.tokens = expand_macros(tokens)
         usage_error_message = "You've got a problem here."
         stack_helper = StackLoader()
+        self.tokens = tokens
         pos = 0
-        
+
         try:
+            self.tokens = expand_macros(tokens)
+
             if len(self.tokens) < 2:
                 raise TokenError.from_list(['expression must include source and sink.',
                                             'pjk <source> [<pipe> ...] <sink>'])

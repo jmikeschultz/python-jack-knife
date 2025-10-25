@@ -1,5 +1,5 @@
 from pjk.components import Pipe
-from pjk.usage import ParsedToken, Usage
+from pjk.usage import ParsedToken, Usage, CONFIG_FILE
 from typing import Any, Dict, Iterable, Optional
 from abc import abstractmethod
 
@@ -18,7 +18,7 @@ class QueryPipe(Pipe):
             desc=cls.desc,
             component_class=cls
         )
-        u.def_arg(name=cls.arg0[0], usage=f"{cls.arg0[1]} ~/.pjk/component_configs.yaml must contain entry '{cls.__name__}-<{cls.arg0[0]}'>\n  with necessary parameters.")
+        u.def_arg(name=cls.arg0[0], usage=f"{cls.arg0[1]} {CONFIG_FILE} must contain entry '{cls.__name__}-<{cls.arg0[0]}>'\n  with necessary parameters.")
         u.def_param("count", usage="Number of search results, (databases may ignore)", is_num=True, default="10")
         u.def_param("shape", usage='the shape of ouput records', is_num=False,
                        valid_values={'xO', 'S_xO', 'Sxo'}, default='xO')

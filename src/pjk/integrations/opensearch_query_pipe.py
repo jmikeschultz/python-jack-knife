@@ -79,7 +79,7 @@ class OpenSearchQueryPipe(QueryPipe, Integration):
                 yield {'index': index_name, 'count': count}
 
             except Exception as e:
-                print(f"{index_name}: ⚠️ failed to count ({e})")
+                print(f"{index_name}: failed to count ({e})")
 
     def execute_query_returning_S_xO_iterable(self, query_record: dict) -> Iterator[Dict[str, Any]]:
         query_string = query_record.get('query', None)

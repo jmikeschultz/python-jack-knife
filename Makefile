@@ -31,7 +31,7 @@ release: clean
 	  exit 1; \
 	fi
 	python tools/bump_version.py $(VERSION)
-	python tools/create_configs_template.py "src/pjk" "src/pjk/resources/component_configs.tmpl"
+	#python tools/create_configs_template.py "src/pjk" "src/pjk/resources/configs.tmpl"
 	python -m build
 	twine check dist/*
 	twine upload dist/*
