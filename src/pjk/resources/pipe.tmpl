@@ -1,5 +1,6 @@
 # template for a pipe, used by 'create' sink
-from pjk.base import Pipe, ParsedToken, Usage
+from pjk.components import Pipe
+from pjk.usage import ParsedToken, Usage
 
 class __NAME__Pipe(Pipe):
     @classmethod
@@ -10,7 +11,7 @@ class __NAME__Pipe(Pipe):
             component_class=cls
         )
         #usage.def_arg(name='myarg', usage='meaning of my arg', is_num=True)
-	    #usage.def_param(name='myparam', usage='meaning of myparam', default='foo')
+	#usage.def_param(name='myparam', usage='meaning of myparam', default='foo')
         #usage.def_example(expr_tokens=['[{id:1}, {id:2}]', '__NAME__:foo'], expect="{id:1}")
         return usage
 
