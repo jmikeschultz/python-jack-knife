@@ -4,7 +4,7 @@ from pathlib import Path
 from typing import Dict
 
 MACROS_FILE = '~/.pjk/macros.txt'
-MACRO_PREFIX = 'mac'
+MACRO_PREFIX = 'm'
 
 def read_macros(file_name: str = MACROS_FILE) -> Dict[str, str]:
     out: Dict[str, str] = {}
