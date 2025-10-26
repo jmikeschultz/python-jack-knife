@@ -44,7 +44,7 @@ class CreateSink(Sink):
             name='create',
             desc=(
                 "Write a bare bones source, pipe or sink python file.\n"
-                "Requires input record of the form: {<type>: <name>}. E.g. {pipe: 'mypipe'}\n"
+                "Requires input record of the form: \"{<type>: '<name>'}\". E.g. \"{pipe: 'mypipe'}\"\n"
                 "User components can be used inline or deposited in ~/.pjk/plugins"
             ),
             component_class=cls

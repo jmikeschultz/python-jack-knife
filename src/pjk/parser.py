@@ -7,26 +7,22 @@ from typing import Any, List
 from pjk.components import Source, Pipe, Sink
 from pjk.usage import TokenError, UsageError, ParsedToken, Usage
 from pjk.pipes.let_reduce import ReducePipe
-from pjk.sources.favorite_source import FAVORITES_FILE, read_favorites
+from pjk.sources.macro_source import MACROS_FILE, MACRO_PREFIX, read_macros
 from pjk.pipes.progress_pipe import ProgressPipe
 from pjk.registry import ComponentRegistry
 from pjk.progress import papi
 from pjk.progress import ProgressIgnore
 
-# fav is a special source.
-# for fav:+ it's a normal source of all the favorites in FAVORITES_FILE:
-# we leave it in the expression.  But for fav:<instance>, we remove the
-# token from the expression, lookup the instance in FAVORITES_FILE and 
-# inject the favorite into the expression like a macro
-def handle_favorites(token: str, expanded: List[str]):
-    if token == 'fav:+' or not token.startswith('fav:'):
+# macros are of the form MACRO_PREFIX:<instance>
+def handle_macros(token: str, expanded: List[str]):
+    if not token.startswith(f'{MACRO_PREFIX}:'):
         return False
     
     instance = token.split(':', 1)[1]
-    favorites = read_favorites()
-    fav = favorites.get(instance, None)
+    macros = read_macros()
+    fav = macros.get(instance, None)
     if not fav:
-        raise TokenError(f"No '{instance}' favorite in {FAVORITES_FILE}")
+        raise TokenError(f"No '{instance}' macro in {MACROS_FILE}")
 
     try:
         parts = shlex.split(fav, comments=True, posix=True)
@@ -60,7 +56,7 @@ def handle_pjk_file(token: str, expanded: List[str]):
 def expand_macros(tokens: List[str]) -> List[str]:
     expanded = []
     for token in tokens:
-        if handle_favorites(token, expanded):
+        if handle_macros(token, expanded):
             continue
 
         elif handle_pjk_file(token, expanded):

@@ -16,7 +16,7 @@ from pjk.sources.user_source_factory import UserSourceFactory
 from pjk.sources.parquet_source import ParquetSource
 from pjk.sources.format_source import FormatSource
 from pjk.sources.configs_source import ConfigsSource
-from pjk.sources.favorite_source import FavoriteSource
+from pjk.sources.macro_source import MacroSource
 
 COMPONENTS = {
         'inline': InlineSource,
@@ -28,7 +28,7 @@ COMPONENTS = {
         'npy': NpySource,
         'parquet': ParquetSource,
         'configs': ConfigsSource,
-        'fav': FavoriteSource
+        'macros': MacroSource
     }
 
 class SourceFactory(ComponentFactory):

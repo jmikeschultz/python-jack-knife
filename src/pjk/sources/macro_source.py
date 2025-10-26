@@ -3,9 +3,10 @@ from pjk.components import Source
 from pathlib import Path
 from typing import Dict
 
-MACRO_FILE = '~/.pjk/macros.txt'
+MACROS_FILE = '~/.pjk/macros.txt'
+MACRO_PREFIX = 'mac'
 
-def read_macros(file_name: str = MACRO_FILE) -> Dict[str, str]:
+def read_macros(file_name: str = MACROS_FILE) -> Dict[str, str]:
     out: Dict[str, str] = {}
     path = Path(file_name).expanduser()
     with path.open(encoding="utf-8") as f:
@@ -22,8 +23,8 @@ class MacroSource(Source):
     def usage(cls):
         u = Usage(
             name='macros',
-            desc=f"Source to list the macro expressions stored in {MACRO_FILE}.\n"
-                  "A specific macro is referenced using 'm:<instance>, e.g. pjk m:hw -",
+            desc=f"A source of macros stored in {MACROS_FILE}\n"
+            f"Specific macros are referenced as '{MACRO_PREFIX}:<instance>', e.g. 'pjk {MACRO_PREFIX}:hw -'",
             component_class=cls
     	)
         return u
