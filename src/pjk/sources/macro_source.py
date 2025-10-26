@@ -27,6 +27,7 @@ class MacroSource(Source):
             f"Specific macros are referenced as '{MACRO_PREFIX}:<instance>', e.g. 'pjk {MACRO_PREFIX}:hw -'",
             component_class=cls
     	)
+        u.def_example(["macros", "-"], None)
         return u
 
     def __init__(self, ptok: ParsedToken, usage: Usage):

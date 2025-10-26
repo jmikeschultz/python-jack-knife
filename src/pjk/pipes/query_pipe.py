@@ -15,7 +15,12 @@ class QueryPipe(Pipe):
     def usage(cls):
         u = Usage(
             name=cls.name,
-            desc=cls.desc,
+            desc=f"{cls.desc}\n"
+            "The shape of output records is selected using the 'shape' parameter, default=xO.\n"
+            "xO   = multiple (O)utput records.\n"
+            "S_xO = a (S)ummary record followed by multiple (O)utput records.\n"
+            "Sxo  = a single (S)ummary record containing multiple child (o)utput records."
+            ,
             component_class=cls
         )
         u.def_arg(name=cls.arg0[0], usage=f"{cls.arg0[1]} {CONFIG_FILE} must contain entry '{cls.__name__}-<{cls.arg0[0]}>'\n  with necessary parameters.")
