@@ -2,7 +2,7 @@ from typing import Optional, Set, List
 import os
 import yaml
 
-CONFIG_FILE = '~/pjk/configs.yaml'
+CONFIG_FILE = '~/.pjk/configs.yaml'
 
 class Config:
     def __init__(self):
