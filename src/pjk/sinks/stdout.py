@@ -38,7 +38,6 @@ class StdoutSink(Sink):
                                 continue
 
                         # everything else -> normal YAML
-                        print('foo')
                         yaml.dump(
                             record,
                             sys.stdout,
