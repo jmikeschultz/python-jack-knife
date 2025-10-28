@@ -8,31 +8,6 @@ from pjk.components import Sink, Source
 from pjk.usage import ParsedToken, Usage
 from pjk.common import pager_stdout
 
-# --- NEW: minimal custom dumper that block-quotes only "tricky" strings ---
-class _PjkDumper(yaml.SafeDumper):
-    pass
-
-def _needs_block(s: str) -> bool:
-    # Strings that are annoying to copy if quoted/escaped:
-    # - contain YAML structural chars or JSON-ish payloads
-    # - contain colon-space (key-like), braces, brackets, quotes, or backslashes
-    # - multi-line strings
-    return (
-        "\n" in s
-        or ": " in s
-        or any(c in s for c in "{}[]'\"\\")
-    )
-
-def _represent_str(dumper, data: str):
-    if _needs_block(data):
-        # Literal block scalar preserves content exactly, no escaping
-        return dumper.represent_scalar("tag:yaml.org,2002:str", data, style="|")
-    # Default behavior for ordinary strings
-    return SafeRepresenter.represent_str(dumper, data)
-
-_PjkDumper.add_representer(str, _represent_str)
-# --------------------------------------------------------------------------
-
 class StdoutSink(Sink):
     @classmethod
     def usage(cls):
@@ -54,16 +29,27 @@ class StdoutSink(Sink):
             with pager_stdout(self.use_pager):
                 for record in self.input:
                     try:
+                        # if it's a simple single-key map whose value is a string, print raw
+                        # kind of hack to make 'pjk macros -' cut-n-pastable
+                        if isinstance(record, dict) and len(record) == 1:
+                            (k, v), = record.items()
+                            if isinstance(v, str):
+                                sys.stdout.write(f"{k}: {v}\n---\n")
+                                continue
+
+                        # everything else -> normal YAML
+                        print('foo')
                         yaml.dump(
                             record,
                             sys.stdout,
-                            Dumper=_PjkDumper,     # <-- use the custom dumper
                             sort_keys=False,
                             explicit_start=True,
                             allow_unicode=True,
-                            width=10**9
+                            width=10**9,
                         )
                     except BrokenPipeError:
                         break
         except BrokenPipeError:
             pass
+
+
