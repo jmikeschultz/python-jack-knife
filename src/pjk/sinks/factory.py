@@ -14,6 +14,7 @@ from pjk.sinks.tsv_sink import TSVSink
 from pjk.sinks.expect import ExpectSink
 from pjk.sinks.format_sink import FormatSink
 from pjk.sinks.create_sink import CreateSink
+from pjk.integrations.opensearch_index_sink import OpenSearchIndexSink
 from pjk.sinks.user_sink_factory import UserSinkFactory
 
 COMPONENTS = {
@@ -23,6 +24,7 @@ COMPONENTS = {
         'json': JsonSink,
         'csv': CSVSink,
         'tsv': TSVSink,
+        'os_index': OpenSearchIndexSink,
         'create': CreateSink
         }
 

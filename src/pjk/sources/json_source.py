@@ -6,6 +6,7 @@ from pjk.usage import NoBindUsage
 from pjk.components import Source
 from pjk.sources.lazy_file import LazyFile
 from pjk.sources.format_source import FormatSource
+from typing import Any, Dict, Iterable, Optional
 from pjk.log import logger
 
 class JsonSource(FormatSource):
@@ -15,6 +16,16 @@ class JsonSource(FormatSource):
         self.lazy_file = lazy_file
         self.num_recs = 0
 
+    def as_whole_file(self) -> Iterable[Dict[str, Any]]:
+        with self.lazy_file.open() as f:
+            string = f.read()
+            object = json.loads(string)
+            if isinstance(object, list):
+                for item in object:
+                    yield item
+            else: 
+                yield object
+
     def __iter__(self):
         with self.lazy_file.open() as f:
             for line in f:
@@ -22,11 +33,11 @@ class JsonSource(FormatSource):
                 try:
                     yield json.loads(line)
                 except json.JSONDecodeError as e:
-                    print('json decode error, see ~/.pjk/logs')
-                    snippet = line.strip()
-                    if len(snippet) > 200:
-                        snippet = snippet[:200] + "…"
-                    logger.warning(
-                        f"Skipping invalid JSON at line {self.num_recs} "
-                        f"in {self.lazy_file.path}: {e} | data: {snippet}"
-                    )
+                    break
+
+        # attempt to decode the file as a whole
+        try:
+            yield from self.as_whole_file()
+
+        except:
+            logger.error(f'cannot decode {self.lazy_file.path}')

@@ -7,7 +7,7 @@ from typing import Optional, Iterator, Dict, Any, Iterable
 from pjk.usage import ParsedToken, Usage
 from pjk.pipes.query_pipe import QueryPipe
 from pjk.common import Integration
-from pjk.integrations.opensearch_client import OpenSearchClient
+from pjk.integrations.opensearch_client import OpenSearchClient, OS_CONFIG_TUPLES
 
 def build_body_from_string(query_string: str) -> dict:
     if query_string == "*":
@@ -23,38 +23,24 @@ def build_body_from_string(query_string: str) -> dict:
 
 class OpenSearchQueryPipe(QueryPipe, Integration):
     name = "os_query"
-    desc = "Opensearch query pipe. Uses record['query'] or record['os_query_object'] for os query"
+    desc = ("Opensearch query pipe. Uses record['query'] or record['os_query_object'] for os query\n"
+    "An instance may define 'default_index' otherwise the query object must include an 'index' field.\n")
     arg0 = ("instance", "instance to query over.")
     examples = [
-        ["{'query': '_ping'}", 'os_query:myindex', '-'],
-        ["{'query': '*'}", 'os_query:myindex', '-'],
-        ["{'query': 'dog'}", 'os_query:myindex', '-'],
-        ["{'query': 'dog AND cat'}", 'os_query:myindex', '-'],
-        ["{'os_query_object': {query: {...}}", 'os_query:myindex', '-'],
+        ["{'query': '_ping'}", 'os_query:myinst', '-'],
+        ["{'index': 'myidx', 'query': '*'}", 'os_query:myinst', '-'],
+        ["{'index': 'myidx', 'query': 'dog AND cat'}", 'os_query:myinst', '-'],
+        ["{'index': 'myidx', 'query': 'dog'}", 'os_query:myinst', '-'],
+        ["{'os_query_object': {query: {...}}", 'os_query:myinst', '-', ' # uses instance.default_index'],
     ]
 
      # name, type, default
-    config_tuples = [
-        ("index_name", str, None),
-        ("os_auth_use_aws", bool, "true"),
-        ("os_scheme", str, "https"),
-        ("os_verify_certs", bool, "true"),
-        ("os_ca_certs", str, None),
-        ("os_region", str, None),
-        ("os_service", str, "es"),
-        ("os_username", str, None),
-        ("os_password", str, None),
-        ("os_timeout", float, 30),
-        ("os_ssl_assert_hostname", bool, "true"),
-        ("os_ssl_show_warn", bool, "false"),
-        ("os_host", str, None),
-        ("os_port", int, None)
-    ]
+    config_tuples = OS_CONFIG_TUPLES
 
     def __init__(self, ptok: ParsedToken, usage: Usage):
         super().__init__(ptok, usage)
 
-        self.index = usage.get_config("index_name")
+        self.index = usage.get_config("default_index")
         self.client = OpenSearchClient.get_client(usage)
 
         # Iteration state
@@ -83,6 +69,10 @@ class OpenSearchQueryPipe(QueryPipe, Integration):
 
     def execute_query_returning_S_xO_iterable(self, query_record: dict) -> Iterator[Dict[str, Any]]:
         query_string = query_record.get('query', None)
+        query_index = query_record.get('index', None)
+        if query_index:
+            self.index = query_index # overwrite the default query
+
         query_body = None
 
         if query_string:
@@ -131,8 +121,8 @@ class OpenSearchQueryPipe(QueryPipe, Integration):
                     yield {"_type": "os_query_hit", "_hit": hit}
 
         except Exception as e:
-            print("OpenSearch query error:", e, file=sys.stderr)
-            traceback.print_exc()
+            #print("OpenSearch query error:", e, file=sys.stderr)
+            #traceback.print_exc()
             yield {
                 "_type": "os_query_error",
                 "error": str(e),

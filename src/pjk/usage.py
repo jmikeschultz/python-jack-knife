@@ -41,6 +41,14 @@ class Config:
                 f"{CONFIG_FILE} does not contain entry for '{instance_key}' with required params."
             )
         
+        _alias = entry.get('_alias', None) # _alias must = another entry instance_key
+        if _alias:
+            entry = self._data.get(_alias, None)
+            if not entry:
+                raise TokenError(
+                    f"'{instance_key}:_alias' in {CONFIG_FILE} points to a non-existent entry: '{_alias}'."
+                )    
+        
         raw = entry.get(param, param_default)
 
         if not raw:

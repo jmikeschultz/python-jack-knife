@@ -1,7 +1,24 @@
 from pjk.usage import Usage
 
-class OpenSearchClient:
+ # name, type, default
+OS_CONFIG_TUPLES = [
+    ("default_index", str, None),
+    ("os_auth_use_aws", bool, "true"),
+    ("os_scheme", str, "https"),
+    ("os_verify_certs", bool, "true"),
+    ("os_ca_certs", str, None),
+    ("os_region", str, None),
+    ("os_service", str, "es"),
+    ("os_username", str, None),
+    ("os_password", str, None),
+    ("os_timeout", float, 30),
+    ("os_ssl_assert_hostname", bool, "true"),
+    ("os_ssl_show_warn", bool, "false"),
+    ("os_host", str, None),
+    ("os_port", int, None)
+]
 
+class OpenSearchClient:
     @classmethod
     def get_client(cls, u: Usage):
         aws_auth = u.get_config("os_auth_use_aws")

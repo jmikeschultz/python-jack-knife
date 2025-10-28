@@ -16,7 +16,7 @@ SnowflakePipe-<instance>:
    db_name: <str>
 
 OpenSearchQueryPipe-<instance>:
-   index_name: <str>
+   default_index: <str>
    os_auth_use_aws: <bool>
    os_scheme: <str>
    os_verify_certs: <bool>
@@ -30,4 +30,11 @@ OpenSearchQueryPipe-<instance>:
    os_ssl_show_warn: <bool>
    os_host: <str>
    os_port: <int>
+
+OpenSearchIndexSink-<instance>:
+   _alias: OpenSearchQueryPipe-<instance>
+
+EmbedSink-<instance>:
+   model_name: <str>
+   batch_size: <int>
 

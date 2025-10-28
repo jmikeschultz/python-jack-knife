@@ -11,7 +11,7 @@ class SelectFields(DeepCopyPipe):
     def usage(cls):
         usage = Usage(
             name='sel',
-            desc='Keep only the specified fields from each record',
+            desc='Select specific fields from each record.',
             component_class=cls
         )
         usage.def_arg(name='fields', usage='Comma-separated list of fields to retain')
