@@ -33,11 +33,9 @@ class JsonSource(FormatSource):
                 try:
                     yield json.loads(line)
                 except json.JSONDecodeError as e:
-                    break
-
-        # attempt to decode the file as a whole
-        try:
-            yield from self.as_whole_file()
-
-        except:
-            logger.error(f'cannot decode {self.lazy_file.path}')
+                    try:
+                        yield from self.as_whole_file()
+                        return
+                    except:
+                        logger.error(f'cannot decode {self.lazy_file.path}')
+                        break

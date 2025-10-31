@@ -29,14 +29,6 @@ class StdoutSink(Sink):
             with pager_stdout(self.use_pager):
                 for record in self.input:
                     try:
-                        # if it's a simple single-key map whose value is a string, print raw
-                        # kind of hack to make 'pjk macros -' cut-n-pastable
-                        if isinstance(record, dict) and len(record) == 1:
-                            (k, v), = record.items()
-                            if isinstance(v, str):
-                                sys.stdout.write(f"{k}: {v}\n---\n")
-                                continue
-
                         # everything else -> normal YAML
                         yaml.dump(
                             record,

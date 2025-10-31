@@ -14,13 +14,13 @@ class JoinPipe(Pipe):
     def usage(cls):
         usage = Usage(
             name='join',
-            desc="Join records against a keyed source on shared fields",
+            desc="Join records against a keyed source or concatentate sources",
             component_class=cls
         )
         usage.def_arg(
             name='mode',
-            usage="'left', 'inner', or 'outer' join behavior",
-            valid_values={'left', 'inner', 'outer'}
+            usage="'left', 'inner', 'outer' or 'concat' behavior.",
+            valid_values={'left', 'inner', 'outer', 'concat'}
         )
         usage.def_syntax("pjk <left_source> <map_source> [mapby|groupby]:<key> join:<mode> <sink>")
 
@@ -49,6 +49,14 @@ class JoinPipe(Pipe):
             "join:outer"
         ],
         expect="[{color:'blue', price:50}, {color:'green'}, {color:'red', price: 20}]")
+
+        usage.def_example(expr_tokens=
+        [
+            "[{color:'blue'},{color:'green'}]",
+            "[{color:'blue', price:50}, {color:'red', price:20}]",
+            "join:concat"
+        ],
+        expect="[{color:'blue'}, {color:'green'}, {color: 'blue', price:50}, {color:'red', price: 20}]")
         return usage
 
     def __init__(self, ptok: ParsedToken, usage: Usage):
@@ -68,7 +76,19 @@ class JoinPipe(Pipe):
         self._pending_right = None
         self._check_right = False
 
+    def concat_iter(self):
+        for rec in self.left:
+            self.recs_out.increment()
+            yield rec
+        for rec in self.right:
+            self.recs_out.increment()
+            yield rec
+
     def __iter__(self):
+        if self.mode == 'concat':
+            yield from self.concat_iter()
+            return
+
         if not isinstance(self.right, KeyedSource):
             raise UsageError("right source must be a KeyedSource")
 
