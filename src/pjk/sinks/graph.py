@@ -18,8 +18,8 @@ class GraphSink(Sink):
             component_class=cls
         )
         usage.def_arg(name='kind', usage='hist|scatter|bar|line|cumulative')
-        usage.def_param(name='x', usage='Name of x-axis field', default='x')
-        usage.def_param(name='y', usage='Name of y-axis field', default='y')
+        usage.def_param(name='x', usage='x-axis field', default='x')
+        usage.def_param(name='y', usage='comma separated list of y-axis fields', default='y')
         usage.def_param(name='pause', usage='Seconds to show graph', is_num=True, default='-1')
         return usage
 

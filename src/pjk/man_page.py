@@ -8,7 +8,7 @@ from pjk.parser import ExpressionParser
 from pjk.components import Source, Pipe, Sink
 from pjk.usage import Usage, ParsedToken
 from pjk.registry import ComponentRegistry
-from pjk.common import pager_stdout, highlight
+from pjk.common import pager_stdout, highlight, ComponentOrigin
 from contextlib import nullcontext
 
 def get_base_class(usage: Usage, as_string: bool = False):
@@ -49,9 +49,9 @@ def do_man(name: str, registry: ComponentRegistry):
     # source and sinks have common names so go through multiple times
     printed = False
     for factory in registry.get_factories():
-        usage = factory.get_usage(name)
-        if usage:
-            print_man(registry, name, usage)
+        comp_class = factory.get_component_class(name)
+        if comp_class:
+            print_man(registry, name, comp_class.usage())
             printed = True
 
     if not printed:
@@ -61,11 +61,9 @@ def do_all_man(registry: ComponentRegistry, no_pager: bool = True):
     cm = nullcontext() if no_pager else pager_stdout()
     with cm:
         for factory in registry.get_factories():
-            #comp_type = factory.get_comp_type_name()
-            component_tuples = factory.get_component_name_class_tuples() # all of them
-            for name, comp_class in component_tuples:
-                usage = factory.get_usage(name)
-                print_man(registry, name, usage)
+            component_dict = factory.get_components([ComponentOrigin.CORE, ComponentOrigin.EXTERNAL, ComponentOrigin.USER], is_integration=None)
+            for name, comp_class in component_dict.items():
+                print_man(registry, name, comp_class.usage())
                 print()
 
 def print_man(registry: ComponentRegistry, name: str, usage: Usage):
@@ -94,8 +92,8 @@ def do_examples(token:str, registry: ComponentRegistry):
     cm = nullcontext() if no_pager else pager_stdout()
     with cm:
         for factory in registry.get_factories():
-            comp_type = factory.get_comp_type_name()
-            for name, comp_class in factory.get_component_name_class_tuples():
+            component_dict = factory.get_components([ComponentOrigin.CORE, ComponentOrigin.EXTERNAL, ComponentOrigin.USER], is_integration=None)
+            for name, comp_class in component_dict.items():
                 usage = comp_class.usage()
 
                 comp_type = get_base_class(usage, as_string=True)

@@ -1,17 +1,14 @@
 # SPDX-License-Identifier: Apache-2.0
 # Copyright 2024 Mike Schultz
 
-import sys, shutil, subprocess, contextlib, signal
+import contextlib, io, os, subprocess, sys
 import os
 import re
-import yaml
-from pjk.usage import Usage, TokenError
 from abc import ABC
-
-# mixin 
-# just for distinguishing components for display
-class Integration(ABC):
-    pass
+from enum import Enum
+from pjk.sources.format_source import FormatSource
+from pjk.sinks.format_sink import FormatSink
+from typing import List, Type
 
 class SafeNamespace:
     def __init__(self, obj):
@@ -35,31 +32,70 @@ class ReducingNamespace:
             return value
         return [value]  # promote scalars to singleton lists
 
-@contextlib.contextmanager
-def pager_stdout(use_pager=True):
-    if use_pager and shutil.which("less"):
-        # Avoid BrokenPipeError noise if user quits less early
-        try:
-            signal.signal(signal.SIGPIPE, signal.SIG_DFL)
-        except Exception:
-            pass  # not available on Windows
+# pjk/common.py
+import contextlib, io, os, subprocess, sys
 
-        pager = subprocess.Popen(["less", "-FRSX"], stdin=subprocess.PIPE, text=True)
-        old_stdout = sys.stdout
-        try:
-            sys.stdout = pager.stdin
-            yield
-        finally:
-            try:
-                sys.stdout.flush()
-            except Exception:
-                pass
-            sys.stdout = old_stdout
-            if pager.stdin:
-                pager.stdin.close()
-            pager.wait()
-    else:
+@contextlib.contextmanager
+def pager_stdout(use_pager: bool = True):
+    """
+    Stream stdout into `less` via a pipe.
+    - If stdout is not a TTY or use_pager is False → write directly to sys.stdout.
+    - Otherwise spawn `less` and replace sys.stdout with less.stdin.
+    """
+    # If not a TTY, paging makes no sense
+    if not use_pager or not sys.stdout.isatty():
         yield
+        return
+
+    env = os.environ.copy()
+    # -R: pass ANSI; -S: chop long lines; you can add -F/-X to taste
+    env.setdefault("LESS", "-R")
+    # Ensure UTF-8
+    env.setdefault("LESSCHARSET", "utf-8")
+
+    stdout_orig = sys.stdout
+    stderr_orig = sys.stderr
+
+    # Start less with a *pipe* for stdin and inherit the real terminal for out/err
+    pager = subprocess.Popen(
+        ["less"],
+        stdin=subprocess.PIPE,
+        stdout=stdout_orig,   # keep interactivity
+        stderr=stderr_orig,
+        env=env,
+        close_fds=True,
+        bufsize=0,            # unbuffered pipe
+    )
+
+    # Wrap less.stdin as a text writer and swap sys.stdout
+    assert pager.stdin is not None
+    pager_bin = pager.stdin
+    pager_txt = io.TextIOWrapper(pager_bin, encoding="utf-8", write_through=True)
+
+    sys.stdout = pager_txt
+    try:
+        yield
+    except BrokenPipeError:
+        pass
+    finally:
+        try:
+            sys.stdout.flush()
+        except Exception:
+            pass
+        # Restore first, then close pager stdin to send EOF
+        sys.stdout = stdout_orig
+        try:
+            pager_txt.flush()
+        except Exception:
+            pass
+        try:
+            pager_bin.close()   # EOF → lets less exit
+        except Exception:
+            pass
+        try:
+            pager.wait()
+        except Exception:
+            pass
 
 COLOR_CODES = {
         'bold': '\033[1m',
@@ -80,41 +116,56 @@ def highlight(text: str, color: str = 'bold', value: str = None) -> str:
     style = COLOR_CODES.get(color.lower(), COLOR_CODES['bold'])
     return text.replace(value, f"{style}{value}{RESET}")
 
+# mixin
+class Integration(ABC):
+    pass
+
+class ComponentOrigin(Enum):
+    CORE = 0 # core components defined in python-jack-knife
+    EXTERNAL = 1 # component loaded via load_package_extras (displayed in either 'integrations' or 'applications')
+    USER = 2 # components loaded via load_user_components (always displayed in user_components)
+
+class ComponentWrapper:
+    def __init__(self, name: str, comp_class, origin: ComponentOrigin):
+        self.name = name
+        self.comp_class = comp_class
+        self.origin = origin
+        self.is_integration = issubclass(comp_class, Integration)
+
 class ComponentFactory:
     def __init__(self, core_components: dict):
-        self.num_orig = 0
-        self._components = {}
+        self.wrappers = {}
         for k, v in core_components.items():
-            if issubclass(v, Integration):
-                self.register(k, v, 'integration')
-            else:
-                self.register(k, v, 'core')
+            self.register(k, v, origin=ComponentOrigin.CORE)
 
-    def register(self, name, comp_class, origin: str):
-        self._components[name] = (comp_class, origin)
+    def register(self, name, comp_class, origin: ComponentOrigin):
+        self.wrappers[name] = ComponentWrapper(name, comp_class=comp_class, origin=origin)
 
-    def get_comp_type_name(self):
-        pass
+    # is_integration True|False|None=don't care
+    def get_components(self, origin_list: List[ComponentOrigin], is_integration: bool) -> dict:
+        all = {}
+        for wrapper in self.wrappers.values():
+            if is_integration is not None:
+                if wrapper.is_integration != is_integration:
+                    continue
 
-    def get_component_name_class_tuples(self, origin: str = None) -> list:
-        ret = []
-        for k, (v, org) in self._components.items():
-            if not origin or origin == org:
-                ret.append((k, v))
-        return ret
+            for o in origin_list:
+                if wrapper.origin == o:
+                    all[wrapper.name] = wrapper.comp_class
+
+        return all
 
     def get_component_class(self, name: str):
-        tuple = self._components.get(name)
-        if not tuple:
+        wrapper = self.wrappers.get(name, None)
+        if not wrapper:
             return None
-        component_class, origin = tuple
-        return component_class
+        return wrapper.comp_class
 
-    def get_usage(self, name: str):
-        comp_class = self.get_component_class(name)
-        if not comp_class:
-            return None
-        return comp_class.usage()
+    #def get_usage(self, name: str):
+    #    comp_class = self.get_component_class(name)
+    #   if not comp_class:
+    #       return None
+    #   return comp_class.usage()
 
     def create(self, token: str):
         pass

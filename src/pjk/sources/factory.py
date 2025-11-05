@@ -1,8 +1,6 @@
 # SPDX-License-Identifier: Apache-2.0
 # Copyright 2024 Mike Schultz
 
-import os
-import queue
 from pjk.components import Source
 from pjk.usage import ParsedToken
 from pjk.common import ComponentFactory

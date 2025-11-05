@@ -1,13 +1,6 @@
 import os
 import shutil
-import sys
-import json
-import boto3
 from pjk.main import execute_tokens
-import gzip
-import io
-from typing import List, Dict
-import csv
 
 def test_local():
     DIR="/tmp/.pjk-tests"

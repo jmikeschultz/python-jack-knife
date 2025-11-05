@@ -5,7 +5,6 @@
 import sys
 import os
 import shlex
-import shutil
 from typing import List
 from pjk.parser import ExpressionParser
 from pjk.usage import UsageError
@@ -80,7 +79,7 @@ def execute(command: str):
 
 def execute_tokens(tokens: List[str]):
     initialize()
-
+    
     if '--version' in tokens:
         print(f"pjk version {__version__}")
         sys.exit(0)

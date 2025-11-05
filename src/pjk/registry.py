@@ -3,6 +3,7 @@
 
 import os
 import sys
+import time
 from pjk.sinks.factory import SinkFactory
 from pjk.pipes.factory import PipeFactory
 from pjk.sources.factory import SourceFactory
@@ -11,24 +12,33 @@ from pjk.sources.format_source import FormatSource
 import importlib.util
 import importlib
 import importlib.metadata
+import sysconfig, pathlib, importlib
 from pjk.components import Pipe, Source, Sink
-from pjk.common import ComponentFactory, highlight
-from typing import List
+from pjk.common import ComponentFactory, highlight, ComponentOrigin
+from typing import List, Type
 
-class DisplayHolder:
-    def __init__(self, factories: List[ComponentFactory]):
-        for factory in factories:
-            pass            
-                 
+class ExternalRegistrar:
+    def __init__(self, sources: SourceFactory, pipes: PipeFactory, sinks: SinkFactory) -> None:
+        self._sources: SourceFactory = sources
+        self._pipes: PipeFactory = pipes
+        self._sinks: SinkFactory = sinks
+
+    def source(self, name: str, cls: Type[Source]) -> None:
+        self._sources.register(name, cls, origin=ComponentOrigin.EXTERNAL)
+
+    def pipe(self, name: str, cls: Type[Pipe]) -> None:
+        self._pipes.register(name, cls, origin=ComponentOrigin.EXTERNAL)
+
+    def sink(self, name: str, cls: Type[Sink]) -> None:
+        self._sinks.register(name, cls, origin=ComponentOrigin.EXTERNAL)
 
 class ComponentRegistry:
     def __init__(self):
         self.source_factory = SourceFactory()
         self.pipe_factory = PipeFactory()
         self.sink_factory = SinkFactory()
-
         self.load_user_components()
-        load_package_extras()
+        self.load_package_extras()
 
     def create_source(self, token: str):
         return self.source_factory.create(token)
@@ -56,9 +66,31 @@ class ComponentRegistry:
         print()
         print_factory_core(self.sink_factory, header='sinks')
 
-        self.print_origin_components('integration', 'integrations')
-        self.print_origin_components('user', 'user components (~/.pjk/plugins)')
+        self.print_non_core([ComponentOrigin.CORE,ComponentOrigin.EXTERNAL], is_integration=True, header='integrations')
+        self.print_non_core([ComponentOrigin.EXTERNAL], is_integration=False, header='apps')
+        self.print_non_core([ComponentOrigin.USER], is_integration=None, header='user components (~/.pjk/plugins)')        
+
+    # is_integration = True|False|None  None=don't care
+    def print_non_core(self, origin_list: List[ComponentOrigin], is_integration: bool, header:str):
+        all = {}
+        for factory in [self.source_factory, self.pipe_factory, self.sink_factory]:
+            component_dict = factory.get_components(origin_list=origin_list, is_integration=is_integration)
+            all.update(component_dict)
+
+        if not all:
+            return
         
+        print()        
+        print(highlight(header))
+
+        for name, comp_class in all.items():
+            usage = comp_class.usage()
+            comp_class_type_str = get_component_type(comp_class)
+            lines = usage.desc.split('\n')
+            temp = highlight(comp_class_type_str)
+            line = f'  {name:<17} {temp:<15} {lines[0]}'
+            print(line)
+
     def load_user_components(self, path=os.path.expanduser("~/.pjk/plugins")):
         if not os.path.isdir(path):
             return
@@ -87,36 +119,55 @@ class ComponentRegistry:
                     name = usage.name
 
                     if is_sink(obj, module):
-                        self.sink_factory.register(name, obj, 'user')
+                        self.sink_factory.register(name, obj, ComponentOrigin.USER)
                     elif is_pipe(obj, module):
-                        self.pipe_factory.register(name, obj, 'user')
+                        self.pipe_factory.register(name, obj, ComponentOrigin.USER)
                     elif is_source(obj, module):
-                        self.source_factory.register(name, obj, 'user')
+                        self.source_factory.register(name, obj, ComponentOrigin.USER)
 
-    def print_origin_components(self, origin: str, header:str):
-        component_tuples = []
-        for factory in [self.source_factory, self.pipe_factory, self.sink_factory]:
-            component_tuples.extend(factory.get_component_name_class_tuples(origin))
+    def iter_entry_points(self, group: str):
+        """
+        Return entry points in the given group across Python 3.9–3.12.
+        """
+        eps = importlib.metadata.entry_points()
+        return eps.select(group=group) if hasattr(eps, "select") else eps.get(group, [])
 
-        if not component_tuples:
-            return
-        print()        
-        print(highlight(header))
+    def load_package_extras(self, group: str = "pjk.package_extras") -> None:
+        """
+        Load pip-installed extras and register their components into THIS registry.
 
-        for name, comp_class in component_tuples:
-            usage = comp_class.usage()
-            comp_class_type_str = get_component_type(comp_class)
-            lines = usage.desc.split('\n')
-            temp = highlight(comp_class_type_str)
-            line = f'  {name:<17} {temp:<15} {lines[0]}'
-            print(line)
+        Preferred contract:
+        entry point -> callable register(registrar)
+
+        Fallback (legacy):
+        entry point -> module path; we import the MODULE PART ONLY for side-effects.
+        """
+        registrar = ExternalRegistrar(self.source_factory, self.pipe_factory, self.sink_factory)
+
+        for ep in self.iter_entry_points(group):
+            try:
+                # Try the modern, explicit path first.
+                loader = getattr(ep, "load", None)
+                if callable(loader):
+                    target = ep.load()  # resolves "module:object" to the actual object
+                    if callable(target):
+                        target(registrar)  # plugin registers into your live factories
+                        #print(f"[pjk] loaded extra (callable): {ep.name} -> {ep.value}")
+                        continue
+                    # Not callable -> fall through to legacy import
+                # Legacy path: import ONLY the module portion before ':' for side-effects
+                mod = ep.value.split(":", 1)[0]
+                importlib.import_module(mod)
+                #print(f"[pjk] loaded extra (import): {ep.name} -> {ep.value}")
+            except Exception as e:
+                print(f"[pjk] failed to load extra {ep.name}: {e}")
 
 def print_core_formats(factories: List[ComponentFactory]):
     print(highlight('formats'))
     formats = set()
     for factory in factories:
-        tuples = factory.get_component_name_class_tuples('core')
-        for name, comp_class in tuples:
+        component_dict = factory.get_components([ComponentOrigin.CORE], is_integration=False)
+        for name, comp_class in component_dict.items():
             if issubclass(comp_class, FormatSink|FormatSource):
                 formats.add(name)
     
@@ -124,23 +175,21 @@ def print_core_formats(factories: List[ComponentFactory]):
     lst = ', '.join(list(formats))
     print(f'{space:<15}{lst}. (sources/sinks in local files, dirs and s3)')
 
-def print_factory_core(factory: ComponentFactory, header: str, include_formats: bool=False, include_integrations=False):
-        components:list = factory.get_component_name_class_tuples('core')
-        header = highlight(header)
-        print(header)
+def print_factory_core(factory: ComponentFactory, header: str):
+    component_dict = factory.get_components([ComponentOrigin.CORE], is_integration=False)
+    header = highlight(header)
+    print(header)
 
-        i = 0
-        # user and outside package components are also here, but printed from registry class
-        for name, comp_class in components:
-            if issubclass(comp_class, FormatSink|FormatSource) and not include_formats:
-                continue
+    # user and outside package components are also here, but printed from registry class
+    for name, comp_class in component_dict.items():
+        if issubclass(comp_class, FormatSink|FormatSource):
+            continue
 
-            usage = comp_class.usage()
-            lines = usage.desc.split('\n')
+        usage = comp_class.usage()
+        lines = usage.desc.split('\n')
 
-            line = f'  {name:<12} {lines[0]}'
-            print(line)
-            i += 1
+        line = f'  {name:<12} {lines[0]}'
+        print(line)
     
 def get_component_type(component_class) -> str:
     if issubclass(component_class, Sink):
@@ -178,22 +227,3 @@ def is_sink(obj, module):
         and obj.__module__ == module.__name__
     )
 
-
-def iter_entry_points(group: str):
-    eps = importlib.metadata.entry_points()
-    if hasattr(eps, "select"):
-        # Python 3.10+ (importlib.metadata.EntryPoints)
-        return eps.select(group=group)
-    # Python 3.9 and older
-    return eps.get(group, [])
-
-def load_package_extras():
-    """
-    Discover and import all installed pjk extras (via entry points).
-    """
-    for ep in iter_entry_points("pjk.package_extras"):
-        try:
-            importlib.import_module(ep.value)
-            print(f"[pjk] loaded package extra: {ep.name} -> {ep.value}")
-        except Exception as e:
-            print(f"[pjk] failed to load extra {ep.name}: {e}")
