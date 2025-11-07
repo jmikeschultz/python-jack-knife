@@ -10,7 +10,6 @@ from pjk.parser import ExpressionParser
 from pjk.usage import UsageError
 from pjk.log import init as init_logging
 from datetime import datetime
-from pathlib import Path
 import traceback
 import concurrent.futures
 from pjk.registry import ComponentRegistry
@@ -26,6 +25,10 @@ def write_history(tokens):
     
     log_path = ".pjk-history.txt"
     timestamp = datetime.now().strftime("%Y-%m-%d %H:%M")
+
+    if len(tokens) < 2: 
+        return 
+    
     command = " ".join(tokens)
 
     try:
@@ -67,6 +70,7 @@ def execute_threaded(sinks, stop_progress=None):
 
 def initialize():
     init_logging()
+    write_history(sys.argv[1:])
 
     #src = Path("src/pjk/resources/configs.tmpl")
     #dst_dir = Path.home() / ".pjk"
@@ -120,8 +124,6 @@ def execute_tokens(tokens: List[str]):
             execute_threaded(sinks, stop_progress=(display.stop if display else None))
         else:
             sink.drain()
-
-        write_history(sys.argv[1:])
 
     except UsageError as e:
         print(e, file=sys.stderr)

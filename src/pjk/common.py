@@ -49,7 +49,7 @@ def pager_stdout(use_pager: bool = True):
 
     env = os.environ.copy()
     # -R: pass ANSI; -S: chop long lines; you can add -F/-X to taste
-    env.setdefault("LESS", "-R")
+    env.setdefault("LESS", "-RFX")
     # Ensure UTF-8
     env.setdefault("LESSCHARSET", "utf-8")
 
@@ -160,12 +160,6 @@ class ComponentFactory:
         if not wrapper:
             return None
         return wrapper.comp_class
-
-    #def get_usage(self, name: str):
-    #    comp_class = self.get_component_class(name)
-    #   if not comp_class:
-    #       return None
-    #   return comp_class.usage()
 
     def create(self, token: str):
         pass

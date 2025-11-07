@@ -3,7 +3,6 @@
 
 import os
 import sys
-import time
 from pjk.sinks.factory import SinkFactory
 from pjk.pipes.factory import PipeFactory
 from pjk.sources.factory import SourceFactory
@@ -11,8 +10,6 @@ from pjk.sinks.format_sink import FormatSink
 from pjk.sources.format_source import FormatSource
 import importlib.util
 import importlib
-import importlib.metadata
-import sysconfig, pathlib, importlib
 from pjk.components import Pipe, Source, Sink
 from pjk.common import ComponentFactory, highlight, ComponentOrigin
 from typing import List, Type
@@ -38,7 +35,7 @@ class ComponentRegistry:
         self.pipe_factory = PipeFactory()
         self.sink_factory = SinkFactory()
         self.load_user_components()
-        self.load_package_extras()
+        self.load_namespace_extras()
 
     def create_source(self, token: str):
         return self.source_factory.create(token)
@@ -125,42 +122,35 @@ class ComponentRegistry:
                     elif is_source(obj, module):
                         self.source_factory.register(name, obj, ComponentOrigin.USER)
 
-    def iter_entry_points(self, group: str):
-        """
-        Return entry points in the given group across Python 3.9–3.12.
-        """
-        eps = importlib.metadata.entry_points()
-        return eps.select(group=group) if hasattr(eps, "select") else eps.get(group, [])
-
-    def load_package_extras(self, group: str = "pjk.package_extras") -> None:
-        """
-        Load pip-installed extras and register their components into THIS registry.
-
-        Preferred contract:
-        entry point -> callable register(registrar)
-
-        Fallback (legacy):
-        entry point -> module path; we import the MODULE PART ONLY for side-effects.
-        """
+    def load_namespace_extras(self, package: str = "pjk_extras") -> None:
         registrar = ExternalRegistrar(self.source_factory, self.pipe_factory, self.sink_factory)
+        import importlib, importlib.metadata as im
 
-        for ep in self.iter_entry_points(group):
+        for dist in im.distributions():
+            name = (dist.metadata.get("Name") or "")
+            if not name.startswith("pjk-"):
+                continue
+
+            modname = f"{package}.{name[4:].replace('-', '_')}"  # pjk-foo-bar -> pjk_extras.foo_bar
+
+            # Import the extra; if it fails, continue to the next
             try:
-                # Try the modern, explicit path first.
-                loader = getattr(ep, "load", None)
-                if callable(loader):
-                    target = ep.load()  # resolves "module:object" to the actual object
-                    if callable(target):
-                        target(registrar)  # plugin registers into your live factories
-                        #print(f"[pjk] loaded extra (callable): {ep.name} -> {ep.value}")
-                        continue
-                    # Not callable -> fall through to legacy import
-                # Legacy path: import ONLY the module portion before ':' for side-effects
-                mod = ep.value.split(":", 1)[0]
-                importlib.import_module(mod)
-                #print(f"[pjk] loaded extra (import): {ep.name} -> {ep.value}")
+                mod = importlib.import_module(modname)
             except Exception as e:
-                print(f"[pjk] failed to load extra {ep.name}: {e}")
+                print(f"[pjk] import failed for {modname}: {e}")
+                continue
+
+            reg = getattr(mod, "register", None)
+            if not callable(reg):
+                print(f"[pjk] extra '{modname}' has no register(registrar)")
+                continue
+
+            # Run its register; if it fails, continue to the next
+            try:
+                reg(registrar)   # registers class TYPES, same contract as before
+            except Exception as e:
+                print(f"[pjk] register() failed in {modname}: {e}")
+                continue
 
 def print_core_formats(factories: List[ComponentFactory]):
     print(highlight('formats'))

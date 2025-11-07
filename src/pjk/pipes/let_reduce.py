@@ -24,7 +24,7 @@ def do_eval(expr, env):
         safe_env['json'] = json
         return eval(expr, {}, safe_env)
     except Exception:
-        raise UsageError(f"UsageError in expression: {expr}")
+        raise Exception(f"Error in expression: {expr}")
 
 def eval_regular(expr: str, record: dict):
     env = {'f': SafeNamespace(record)}

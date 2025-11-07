@@ -2,7 +2,7 @@ from pjk.components import Pipe
 from pjk.usage import ParsedToken, Usage, CONFIG_FILE
 from typing import Any, Dict, Iterable, Optional
 from abc import abstractmethod
-
+from pjk.progress import papi
 
 class QueryPipe(Pipe):
     name: str = None
@@ -40,6 +40,8 @@ class QueryPipe(Pipe):
         self.output_shape = usage.get_param('shape')
         self.count = usage.get_param('count')
         self.query_field = 'query' # for all subclasses
+        self.inrecs = papi.get_counter(self, var_label=None) # don't display progress
+        self.outrecs = papi.get_percentage_counter(self, var_label='recs_out', denom_counter=self.inrecs)
 
     @abstractmethod
     def execute_query_returning_S_xO_iterable(self, record) -> Iterable[Dict[str, Any]]:
@@ -53,6 +55,7 @@ class QueryPipe(Pipe):
 
     def __iter__(self):
         for in_rec in self.left:
+            self.inrecs.increment()
             iter = self.execute_query_returning_S_xO_iterable(in_rec)
 
             if self.output_shape == 'S_xO':
@@ -60,8 +63,11 @@ class QueryPipe(Pipe):
                 for out_rec in iter:
                     if not q_done:
                         q_done = True
+                        self.outrecs.increment()
                         yield self._make_q_object(in_rec, out_rec)
                         continue
+
+                    self.outrecs.increment()
                     yield out_rec
 
             elif self.output_shape == 'xO':
@@ -70,6 +76,7 @@ class QueryPipe(Pipe):
                     if not q_done:
                         q_done = True
                         continue
+                    self.outrecs.increment()
                     yield out_rec
 
             elif self.output_shape == 'Sxo':
@@ -84,6 +91,7 @@ class QueryPipe(Pipe):
                         continue
                     r_list.append(out_rec)
                 q_out['child'] = r_list
+                self.outrecs.increment()
                 yield q_out
 
 
