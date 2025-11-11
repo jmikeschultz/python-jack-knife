@@ -51,7 +51,7 @@ class MapByPipe(Pipe, KeyedSource):
         key_rec = {}
         for field in self.fields:
             key_val = record.pop(field, None) if self.is_group else record.get(field)
-            if not key_val:
+            if key_val is None: # not only false-ish but NONE
                 return None
             
             key_rec[field] = key_val

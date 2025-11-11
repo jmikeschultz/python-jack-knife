@@ -3,10 +3,10 @@
 
 # djk/pipes/remove_field.py
 
-from pjk.components import Pipe
+from pjk.components import DeepCopyPipe
 from pjk.usage import ParsedToken, Usage, UsageError
 
-class RemoveField(Pipe):
+class RemoveField(DeepCopyPipe):
     @classmethod
     def usage(cls):
         usage = Usage(

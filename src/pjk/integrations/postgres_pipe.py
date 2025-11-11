@@ -97,7 +97,8 @@ class PostgresPipe(QueryPipe,Integration):
     examples = [
         ['myquery.sql', 'postgres:mydb', '-'],
         ["{'query': 'SELECT * from MY_TABLE;'}", 'postgres:mydb', '-'],
-        ["{'query': 'SELECT * FROM pg_catalog.pg_tables;'}", 'postgres:mydb']
+        ["{'query': 'SELECT * FROM pg_catalog.pg_tables;'}", 'postgres:mydb'],
+        ["{'query': 'SELECT stored_procedure(%s, ...), batch_params:{...}"]
     ]
 
     # name, type, default
@@ -165,14 +166,32 @@ class PostgresPipe(QueryPipe,Integration):
         try:
             query = record.get(self.query_field)
             if not query:
-                    record['_error'] = 'missing query'
-                    yield record
-            else:        
-                params = record.get(self.params_field)
+                record['_error'] = 'missing query'
+                yield record
+                return
 
-                cur = client.conn.cursor()
-                try:
-                    # execute
+            params = record.get(self.params_field)          # single-exec params
+            batch  = record.get("batch_params", None)       # list[tuple|dict] for batching
+
+            cur = client.conn.cursor()
+            try:
+                did_executemany = False
+
+                # ---------- execute ----------
+                if batch is not None:
+                    # Handle batch sizes explicitly to preserve single-SELECT streaming semantics
+                    if len(batch) == 0:
+                        # No-op batch; execute a lightweight statement so we can still emit a header
+                        cur.execute("SELECT 1")
+                        header_params = {"batch_size": 0}
+                    elif len(batch) == 1:
+                        cur.execute(query, batch[0])
+                        header_params = batch[0]
+                    else:
+                        cur.executemany(query, batch)
+                        did_executemany = True
+                        header_params = {"batch_size": len(batch)}
+                else:
                     if params is None:
                         cur.execute(query)
                     else:
@@ -180,17 +199,20 @@ class PostgresPipe(QueryPipe,Integration):
                             cur.execute(query, params)
                         else:
                             cur.execute(query, (params,))
+                    header_params = params
 
-                    # yield header first
-                    yield self._make_header(cur, query, params)
+                # ---------- header ----------
+                yield self._make_header(cur, query, header_params)
 
-                    # then stream rows if it was a real SELECT with results
-                    if cur.description:
-                        cols = [d[0] for d in cur.description]
-                        if not (len(cols) == 1 and cols[0] == "ingest_event"):
-                            for row in cur:
-                                yield _row_to_dict(cur, row)
-                finally:
-                    cur.close()
+                # ---------- stream rows (only meaningful for single execute that returns rows) ----------
+                # Note: executemany() typically doesn't expose per-execution result sets.
+                if not did_executemany and cur.description:
+                    cols = [d[0] for d in cur.description]
+                    if not (len(cols) == 1 and cols[0] == "ingest_event"):
+                        for row in cur:
+                            yield _row_to_dict(cur, row)
+
+            finally:
+                cur.close()
         finally:
             client.close()
