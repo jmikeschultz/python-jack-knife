@@ -86,23 +86,23 @@ def format_roundtrip(format):
     if not bucket:
         print('need to set PJK_TEST_BUCKET environment variable')
         sys.exit(-1)
-    delete_s3_prefix(bucket, "pjk-test-source")
+    delete_s3_prefix(bucket, "pjk-test-data")
 
     # using records all with same schema because of tsv and csv
     inrecs = [{'hello': 'world', 'num': 42}, {'hello': f'{format}', 'num': 254}]
 
     # Single file
-    s3_path = f"s3://{bucket}/pjk-test-source/test.{format}"
+    s3_path = f"s3://{bucket}/pjk-test-data/test.{format}"
     write_s3_records(s3_path, inrecs, format, is_gz=False)
     source_records_and_verify(s3_path, inrecs)
 
     # single gzipped file
-    s3_path = f"s3://{bucket}/pjk-test-source/test.{format}.gz"
+    s3_path = f"s3://{bucket}/pjk-test-data/test.{format}.gz"
     write_s3_records(s3_path, inrecs, format, is_gz=True)
     source_records_and_verify(s3_path, inrecs)
 
     # Folder prefix
-    s3_path = f"s3://{bucket}/pjk-test-source/folder"
+    s3_path = f"s3://{bucket}/pjk-test-data/folder"
     s3_file1 = f"{s3_path}/file1.{format}"
     s3_file2 = f"{s3_path}/file2.{format}"
     write_s3_records(s3_file1, inrecs, format, is_gz=False)
@@ -111,11 +111,11 @@ def format_roundtrip(format):
     source_records_and_verify(s3_path, inrecs + inrecs2)
 
     # test format override
-    s3_path = f"s3://{bucket}/pjk-test-source/test2.log"
+    s3_path = f"s3://{bucket}/pjk-test-data/test2.log"
     write_s3_records(s3_path, inrecs, format, is_gz=False)
     source_records_and_verify(f'{s3_path}@format={format}', inrecs)
 
-    s3_path = f"s3://{bucket}/pjk-test-source/test3.log"
+    s3_path = f"s3://{bucket}/pjk-test-data/test3.log"
     write_s3_records(s3_path, inrecs, format, is_gz=True)
     source_records_and_verify(f'{s3_path}@format={format}.gz', inrecs)
 

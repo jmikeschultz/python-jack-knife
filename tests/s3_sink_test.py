@@ -88,22 +88,37 @@ def assert_records_match(inrecords, outrecords):
     print('out:', outset)
     assert inset == outset, f"Records differ!\nExpected: {inset}\nGot: {outset}"
 
+import boto3
+
 def delete_s3_prefix(bucket: str, prefix: str):
     """
-    Delete all objects under s3://bucket/prefix
+    Delete current versions of all objects under s3://bucket/prefix.
+    Works for non-versioned buckets (or if you only care about current versions).
     """
     s3 = boto3.client("s3")
     paginator = s3.get_paginator("list_objects_v2")
-    to_delete = []
+
+    batch = []
+
+    def _flush():
+        nonlocal batch
+        if not batch:
+            return
+        resp = s3.delete_objects(Bucket=bucket, Delete={"Objects": batch, "Quiet": True})
+        # If any per-key errors occurred, surface them
+        if "Errors" in resp and resp["Errors"]:
+            msgs = [f'{e.get("Key")}: {e.get("Code")} {e.get("Message")}' for e in resp["Errors"]]
+            raise RuntimeError("S3 delete_objects reported errors:\n  " + "\n  ".join(msgs))
+        batch = []
+
     for page in paginator.paginate(Bucket=bucket, Prefix=prefix):
         for obj in page.get("Contents", []):
-            to_delete.append({"Key": obj["Key"]})
+            batch.append({"Key": obj["Key"]})
+            if len(batch) == 1000:
+                _flush()
 
-        # Batch delete in chunks of 1000 (API limit)
-        if to_delete:
-            for i in range(0, len(to_delete), 1000):
-                chunk = {"Objects": to_delete[i : i + 1000]}
-                s3.delete_objects(Bucket=bucket, Delete=chunk)
+    _flush()  # flush any remainder
+
 
 def format_roundtrip(format):
     """
@@ -116,45 +131,45 @@ def format_roundtrip(format):
     if not bucket:
         print('need to set PJK_TEST_BUCKET environment variable')
         sys.exit(-1)
-    delete_s3_prefix(bucket, 'pjk-test')
+    delete_s3_prefix(bucket, 'pjk-test-data')
 
     # using records all with same schema because of tsv and csv
     inrecs = [{'hello': 'world', 'num': 42}, {'hello': f'{format}', 'num': 254}]
     s = json.dumps(inrecs)
 
-    s3_path = f's3://{bucket}/pjk-test/test.{format}'
+    s3_path = f's3://{bucket}/pjk-test-data/test.{format}'
     execute_tokens([s, s3_path])
     outrecs = read_s3_records(s3_path)
     assert_records_match(inrecs, outrecs)
 
-    s3_path = f's3://{bucket}/pjk-test/test.{format}.gz'
+    s3_path = f's3://{bucket}/pjk-test-data/test.{format}.gz'
     execute_tokens([s, s3_path])
     outrecs = read_s3_records(s3_path)
     assert_records_match(inrecs, outrecs)
 
-    s3_path = f's3://{bucket}/pjk-test/test_folder2'
+    s3_path = f's3://{bucket}/pjk-test-data/test_folder2'
     execute_tokens([s, f'{s3_path}@format={format}'])
     outrecs = read_s3_records(s3_path)
     assert_records_match(inrecs, outrecs)
 
-    s3_path = f's3://{bucket}/pjk-test/test_folder'
+    s3_path = f's3://{bucket}/pjk-test-data/test_folder'
     execute_tokens([s, s3_path])
     outrecs = read_s3_records(s3_path)
     assert_records_match(inrecs, outrecs)
 
-    s3_path = f's3://{bucket}/pjk-test/test_folder_gzipped'
+    s3_path = f's3://{bucket}/pjk-test-data/test_folder_gzipped'
     execute_tokens([s, f'{s3_path}@format={format}.gz'])
     outrecs = read_s3_records(s3_path)
     assert_records_match(inrecs, outrecs)
 
     # fake folder with multiple files
-    s3_path = f's3://{bucket}/pjk-test/test_folder2/file1.{format}'
+    s3_path = f's3://{bucket}/pjk-test-data/test_folder2/file1.{format}'
     execute_tokens([s, s3_path])
     inrecs2 = [{'hello': 'you', 'num': 1}]
     s2 = json.dumps(inrecs2)
-    s3_path = f's3://{bucket}/pjk-test/test_folder2/file2.{format}'
+    s3_path = f's3://{bucket}/pjk-test-data/test_folder2/file2.{format}'
     execute_tokens([s2, s3_path])
-    outrecs = read_s3_records(f's3://{bucket}/pjk-test/test_folder2/')
+    outrecs = read_s3_records(f's3://{bucket}/pjk-test-data/test_folder2/')
     assert_records_match(inrecs + inrecs2, outrecs)
 
 def test_rountrips():
