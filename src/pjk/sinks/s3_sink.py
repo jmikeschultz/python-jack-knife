@@ -26,6 +26,7 @@ class S3Sink(Sink):
     _FILENAME_DIGITS: int = 4
     
     def __init__(self, sink_class: Type[Sink], path_no_ext: str, is_gz: bool, fileno: int):
+        super().__init__(root=None, ptok=None, usage=None)
         self.path_no_ext = path_no_ext if not path_no_ext.startswith('//') else path_no_ext[2:] # strip leading //
         self.sink_class = sink_class
         self.is_gz = is_gz

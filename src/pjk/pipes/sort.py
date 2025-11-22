@@ -21,7 +21,7 @@ class SortPipe(Pipe):
         return usage
 
     def __init__(self, ptok: ParsedToken, usage: Usage):
-        super().__init__(ptok)
+        super().__init__(ptok, usage)
 
         arg_string = usage.get_arg('field')
         if arg_string.startswith("-"):

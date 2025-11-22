@@ -52,7 +52,7 @@ class DenormPipe(Pipe):
         return usage
 
     def __init__(self, ptok: ParsedToken, usage: Usage):
-        super().__init__(ptok)
+        super().__init__(ptok, usage)
 
         self.field = usage.get_arg('field')
         self.recs_in = papi.get_counter(self, None) # don't display

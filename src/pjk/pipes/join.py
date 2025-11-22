@@ -60,7 +60,7 @@ class JoinPipe(Pipe):
         return usage
 
     def __init__(self, ptok: ParsedToken, usage: Usage):
-        super().__init__(ptok)
+        super().__init__(ptok, usage)
 
         self.mode = usage.get_arg('mode')
         self.left = None

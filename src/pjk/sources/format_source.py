@@ -16,6 +16,7 @@ class SourceFormatUsage(NoBindUsage):
         self.def_syntax("") # no syntax for these
         # default = None because for source, format is an OVERRIDE
         self.def_param('format', 'file format', is_num=False, valid_values={'json', 'csv', 'tsv', 'json.gz', 'tsv.gz', 'csv.gz'}, default=None)
+        self.def_param('recursive', 'for local direcories only', is_num=False, valid_values={'true', 'false'}, default=False)
         self.def_example(expr_tokens=[f"myfile.{name}", "-"], expect=None)
         self.def_example(expr_tokens=["mydir", "-"], expect=None)
         self.def_example(expr_tokens=[f"s3://mybucket/myfile.{name}", "-"], expect=None)
@@ -94,7 +95,8 @@ class FormatSource(Source):
                 return S3Source.create(sources, path_no_ext, ext, format_override=format_override)
             
             if os.path.isdir(path_no_ext):
-                return DirSource.create(sources, path_no_ext, format_override=format_override)
+                recursive = usage.get_param('recursive') == 'true'
+                return DirSource.create(sources, path_no_ext, format_override=format_override, recursive=recursive)
 
             return None
 

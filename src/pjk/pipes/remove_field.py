@@ -19,7 +19,7 @@ class RemoveField(DeepCopyPipe):
         return usage
 
     def __init__(self, ptok: ParsedToken, usage: Usage):
-        super().__init__(ptok)
+        super().__init__(ptok, usage)
         arg_string = usage.get_arg('fields')
         self.fields = [f.strip() for f in arg_string.split(',') if f.strip()]
         if not self.fields:

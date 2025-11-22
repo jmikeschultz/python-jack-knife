@@ -33,6 +33,7 @@ class InlineSource(Source):
         return usage
 
     def __init__(self, inline_expr):
+        super().__init__(root=None)
         self.num_recs = 0
         try:
             obj = hjson.loads(inline_expr)

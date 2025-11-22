@@ -3,7 +3,7 @@
 
 # djk/pipes/let_reduce.py
 
-from pjk.components import Pipe
+from pjk.components import DeepCopyPipe
 from pjk.usage import ParsedToken, Usage, UsageError, TokenError, NoBindUsage
 from pjk.common import SafeNamespace, ReducingNamespace
 import re
@@ -78,7 +78,7 @@ def eval_accumulating(expr: str, record: dict, op: str, acc=None):
     return do_eval(expr, env)
 
 # --- LetPipe (simple field assignment) ---
-class LetPipe(Pipe):
+class LetPipe(DeepCopyPipe):
     @classmethod
     def usage(cls):
         usage = NoBindUsage( # can't use bound usage because of complicated parsing
@@ -93,7 +93,7 @@ class LetPipe(Pipe):
         return usage
 
     def __init__(self, ptok: ParsedToken, usage: Usage):
-        super().__init__(ptok)
+        super().__init__(ptok, usage)
         args = parse_args(ptok.whole_token.split(':', 1)[-1])
         self.field = args['field']
         self.op = args['op']
@@ -121,7 +121,7 @@ def is_comprehension(expr: str) -> bool:
     except SyntaxError:
         return False
 
-class ReducePipe(Pipe):
+class ReducePipe(DeepCopyPipe):
     @classmethod
     def usage(cls):
         usage = NoBindUsage( # can't use bound usage because of complicated parsing
@@ -161,7 +161,7 @@ class ReducePipe(Pipe):
         return usage
 
     def __init__(self, ptok: ParsedToken, usage: Usage):
-        super().__init__(ptok)
+        super().__init__(ptok, usage)
         args = parse_args(ptok.whole_token.split(':', 1)[-1])
         self.field = args['field']
         self.op = args['op']

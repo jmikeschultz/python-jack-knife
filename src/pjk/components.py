@@ -35,9 +35,12 @@ class Source(ABC):
             component_class=cls
         )
 
+    def __init__(self, root = None):
+        self.root = root
+
     @abstractmethod
     def __iter__(self):
-        raise NotImplementedError("__iter__ must be implemented by subclasses")
+        pass
 
     def __next__(self):
         # lazily create an internal iterator the first time next() is called
@@ -57,7 +60,8 @@ class Source(ABC):
 class Pipe(Source):
     arity: int = 1
     
-    def __init__(self, ptok: ParsedToken, usage: Usage = None):
+    def __init__(self, ptok: ParsedToken, usage: Usage, root = None):
+        self.root = root
         self.ptok = ptok
         self.usage = usage
         self.left = None  # left source for convience
@@ -95,7 +99,7 @@ class DeepCopyPipe(Pipe):
             return None
 
         # re-instantiate using the actual subclass
-        pipe = type(self)(self.ptok, self.usage)
+        pipe = type(self)(self.ptok, self.usage, self) # this self is the root
         pipe.add_source(source_clone)
         return pipe
 
@@ -108,7 +112,8 @@ class Sink(ABC):
             component_class=cls
         )
     
-    def __init__(self, ptok: ParsedToken, usage: Usage = None):
+    def __init__(self, ptok: ParsedToken, usage: Usage, root = None):
+        self.root = root
         self.ptok = ptok
         self.usage = usage
 
@@ -135,4 +140,3 @@ class Sink(ABC):
 
     def deep_copy(self):
         return None
-

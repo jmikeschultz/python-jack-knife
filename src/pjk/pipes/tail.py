@@ -19,7 +19,7 @@ class TailPipe(Pipe):
         return usage
 
     def __init__(self, ptok: ParsedToken, usage: Usage):
-        super().__init__(ptok)
+        super().__init__(ptok, usage)
         self.limit = usage.get_arg('limit')
 
         self.buffer = []

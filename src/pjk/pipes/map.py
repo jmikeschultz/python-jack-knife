@@ -28,7 +28,7 @@ class MapByPipe(Pipe, KeyedSource):
         return u
 
     def __init__(self, ptok: ParsedToken, usage: Usage):
-        super().__init__(ptok)
+        super().__init__(ptok, usage)
         self.is_group = False
         self.fields = usage.get_arg('key').split(',')
         self.rec_map = {}

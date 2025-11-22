@@ -22,10 +22,11 @@ class WherePipe(DeepCopyPipe):
         u.def_example(expr_tokens=["[{color:'blue'}, {color:'red'}, {color:'black'}]", "where:f.color.startswith('bl')"], expect="[{color:'blue'}, {color:'black'}]")
         return u
 
-    def __init__(self, ptok: ParsedToken, usage: Usage):
-        super().__init__(ptok, usage)
+    def __init__(self, ptok: ParsedToken, usage: Usage, root = None):
+        super().__init__(ptok, usage, root)
         self.expr = ptok.whole_token.split(':', 1)[1]
-        self.inrecs = papi.get_counter(self, var_label=None) # don't display progress
+
+        self.inrecs = papi.get_counter(self, var_label='foo') # don't display progress
         self.outrecs = papi.get_percentage_counter(self, var_label='recs_out', denom_counter=self.inrecs)
         try:
             self.code = compile(self.expr, '<where>', 'eval')
@@ -46,3 +47,4 @@ class WherePipe(DeepCopyPipe):
             except Exception:
                 continue  # ignore eval errors
 
+    

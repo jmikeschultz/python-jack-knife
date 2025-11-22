@@ -187,7 +187,7 @@ class ExpressionParser:
     
 class ReducerAggregatorPipe(Pipe):
     def __init__(self, top_level_reducers: List[Any]):
-        super().__init__(None)
+        super().__init__(None, None)
         self.top_level_reducers = top_level_reducers
         self.reduction = {}
         self.done = False
@@ -275,6 +275,7 @@ class UpstreamSource(Source):
         return u
     
     def __init__(self):
+        super().__init__(root=None)
         self.data = []
         self.inner_source = None
         self.sub_recs_in = papi.get_counter(self, var_label='sub_recs_in')
@@ -338,7 +339,7 @@ class SubExpression(Pipe, ProgressIgnore):
         return None
 
     def __init__(self, ptok: ParsedToken, usage: Usage):
-        super().__init__(ptok)
+        super().__init__(ptok, usage)
         self.subexp_ops = []
         self.stack_helper = StackLoader()
         self.subexp_stack = OperandStack() 

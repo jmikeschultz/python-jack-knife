@@ -13,14 +13,18 @@ class ProgressIgnore:
 
 class Report:
     def __init__(self):
-        self.name_value_tuples = []
+        self._values: dict[str, Any] = {}
         self.parse_level = -1
 
-    def add_value(self, name, value):
-        self.name_value_tuples.append((name, value))
+    def ensure_value(self, name, value):
+        # store once; subsequent calls return the existing object
+        return self._values.setdefault(name, value)
+
+    def get_value(self, name):
+        return self._values.get(name)
 
     def get_name_value_tuples(self):
-        return self.name_value_tuples
+        return self._values.items()
     
     def set_parse_level(self, level: int):
         self.parse_level = level
@@ -58,29 +62,7 @@ class ProgressDisplay:
         while not self._stop_event.is_set():
             snap = self.api.snapshot()
             lines = self._render_lines(snap)
-
-            # Move up to overwrite previous block
-            if self._last_lines:
-                self.stream.write(f"{CSI}{self._last_lines}F")  # move cursor up N lines, to column 1
-
-            # Write fresh lines
-            for line in lines:
-                self.stream.write(line + "\n")
-
-            # Erase extra old lines if the block got shorter
-            if self._last_lines > len(lines):
-                diff = self._last_lines - len(lines)
-                for _ in range(diff):
-                    self.stream.write(" " * 120 + "\n")
-                # move cursor up to top of block again
-                self.stream.write(f"{CSI}{self._last_lines}F")
-
-            try:
-                self.stream.flush()
-            except Exception:
-                pass
-
-            self._last_lines = len(lines)
+            self._write_lines(lines)
 
             if self._stop_event.wait(self.interval):
                 break
@@ -88,18 +70,38 @@ class ProgressDisplay:
         # --- FINAL REFRESH ON SHUTDOWN ---
         reports = self.api.snapshot()
         lines = self._render_lines(reports)
+        self._write_lines(lines, final=True)
 
-        if self._last_lines:
-            self.stream.write(f"{CSI}{self._last_lines}F")
+    def _write_lines(self, lines, final: bool = False):
+        """
+        Render output either by rewriting the previous block (TTY) or by
+        printing a fresh snapshot (non-TTY fall back).
+        """
+        prev_lines = self._last_lines
 
-        for line in lines:
-            self.stream.write(line + "\n")
+        if self._use_ansi:
+            if prev_lines:
+                # Move cursor up to the beginning of the old block
+                self.stream.write(f"{CSI}{prev_lines}F")
 
-        if self._last_lines > len(lines):
-            diff = self._last_lines - len(lines)
-            for _ in range(diff):
-                self.stream.write(" " * 120 + "\n")
-            self.stream.write(f"{CSI}{self._last_lines}F")
+            for line in lines:
+                self.stream.write(line + "\n")
+
+            if prev_lines > len(lines):
+                diff = prev_lines - len(lines)
+                blank = " " * 120
+                for _ in range(diff):
+                    self.stream.write(blank + "\n")
+                # move cursor back to sit just below the freshly written block
+                self.stream.write(f"{CSI}{diff}F")
+        else:
+            # Best-effort fallback when we cannot reposition the cursor.
+            if prev_lines and not final:
+                self.stream.write("\n")
+            for line in lines:
+                self.stream.write(line + "\n")
+            if prev_lines and not final:
+                self.stream.write("-" * 40 + "\n")
 
         try:
             self.stream.flush()
@@ -242,14 +244,18 @@ class ProgressAPI:
         # we can have multiple instances of a component type in an expression so we need to
         # differentiate by id when we put them in the _store.
         component_label = self._get_component_label(component)
-        store_key = (component_label, id(component))
+
+        # create an uniq id for variable that is common across clones
+        comp_id = id(component) if component.root is None else id(component.root)
+
+        store_key = (component_label, comp_id)
         report = self._reports.setdefault(store_key, Report())
-        if not value: # when just registering component
+        if value is None: # when just registering component
             return None
 
         if var_label:
             # only when var_label not None, do we want the stat displayed
-            report.add_value(var_label, value)
+            return report.ensure_value(var_label, value)
         
         return value
     

@@ -96,6 +96,7 @@ class S3Source(Source):
     """
 
     def __init__(self, shared_state: _SharedS3State, reserved: Optional[Source] = None):
+        super().__init__(root=None)
         self._state = shared_state
         self._current: Optional[Source] = reserved
 
