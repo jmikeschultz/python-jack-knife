@@ -55,7 +55,7 @@ class DenormPipe(Pipe):
         super().__init__(ptok, usage)
 
         self.field = usage.get_arg('field')
-        self.recs_in = papi.get_counter(self, None) # don't display
+        self.recs_in = papi.get_counter(self, 'recs_in', display=False)
         self.recs_out = papi.get_percentage_counter(self, 'recs_out', self.recs_in)
 
         self._pending_iter = None

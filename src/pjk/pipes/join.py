@@ -68,7 +68,7 @@ class JoinPipe(Pipe):
         self._pending_right = None
         self._check_right = False
 
-        self.recs_in = papi.get_counter(self, None) # don't display
+        self.recs_in = papi.get_counter(self, 'recs_in', display=False) 
         self.matches = papi.get_percentage_counter(self, 'matches', self.recs_in)
         self.recs_out = papi.get_counter(self, 'recs_out')
 

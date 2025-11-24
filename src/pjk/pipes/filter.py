@@ -43,7 +43,7 @@ class FilterPipe(Pipe):
         self.mode = usage.get_arg('mode')
         self.left = None
         self.right = None
-        self.recs_in = papi.get_counter(self, None) # don't display
+        self.recs_in = papi.get_counter(self, 'recs_in', display=False)
         self.recs_out = papi.get_percentage_counter(self, 'recs_out', self.recs_in)
 
     def reset(self):

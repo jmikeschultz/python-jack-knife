@@ -40,7 +40,7 @@ class QueryPipe(Pipe):
         self.output_shape = usage.get_param('shape')
         self.count = usage.get_param('count')
         self.query_field = 'query' # for all subclasses
-        self.inrecs = papi.get_counter(self, var_label=None) # don't display progress
+        self.inrecs = papi.get_counter(self, var_label='recs_in') 
         self.outrecs = papi.get_percentage_counter(self, var_label='recs_out', denom_counter=self.inrecs)
 
     @abstractmethod

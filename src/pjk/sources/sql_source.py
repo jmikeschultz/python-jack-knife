@@ -13,6 +13,7 @@ class SQLSource(FormatSource):
     desc_override = "SQL source. Emits SQL in single record in 'query' field."
 
     def __init__(self, lazy_file: LazyFile):
+        super().__init__(root=None)
         self.lazy_file = lazy_file
         self.num_recs = 0
 

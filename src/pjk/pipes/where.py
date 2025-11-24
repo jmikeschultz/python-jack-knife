@@ -26,7 +26,7 @@ class WherePipe(DeepCopyPipe):
         super().__init__(ptok, usage, root)
         self.expr = ptok.whole_token.split(':', 1)[1]
 
-        self.inrecs = papi.get_counter(self, var_label='foo') # don't display progress
+        self.inrecs = papi.get_counter(self, var_label='recs_in', display=False)
         self.outrecs = papi.get_percentage_counter(self, var_label='recs_out', denom_counter=self.inrecs)
         try:
             self.code = compile(self.expr, '<where>', 'eval')

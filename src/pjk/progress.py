@@ -15,8 +15,9 @@ class Report:
     def __init__(self):
         self._values: dict[str, Any] = {}
         self.parse_level = -1
+        self.invisibles = set()
 
-    def ensure_value(self, name, value):
+    def set_or_get_value(self, name, value):
         # store once; subsequent calls return the existing object
         return self._values.setdefault(name, value)
 
@@ -28,6 +29,9 @@ class Report:
     
     def set_parse_level(self, level: int):
         self.parse_level = level
+
+    def make_invisible(self, var_label:str):
+        self.invisibles.add(var_label)
 
     def get_parse_level(self):
         return self.parse_level
@@ -127,6 +131,9 @@ class ProgressDisplay:
         label = f'{indent}{key}'
         parts = [f"{label:<{KEY_W}.{KEY_W}}"]           # left col, truncated if too long
         for name, val in report.get_name_value_tuples():
+            if name in report.invisibles:
+                continue
+
             token = f"{name}={val}"                   # __str__ handles formatting
             parts.append(f"{token:<{COL_W}}") # left-justify, hard truncate at COL_W
         return highlight(" ".join(parts), 'bold', key)
@@ -212,8 +219,8 @@ class ProgressAPI:
         self._parse_depth: Dict[int, int] = {} # component id -> level
         self.level = 0
 
-    def get_counter(self, component: Source | Sink, var_label: str) -> SafeCounter:
-        return self._update_storage(component, var_label=var_label, value=SafeCounter())
+    def get_counter(self, component: Source | Sink, var_label: str, display: bool = True) -> SafeCounter:
+        return self._update_storage(component, var_label=var_label, value=SafeCounter(), display=display)
     
     # returns the numerator counter
     def get_percentage_counter(self, component: Source | Sink, var_label: str, denom_counter: SafeCounter):
@@ -231,7 +238,7 @@ class ProgressAPI:
             report.set_parse_level(level)
         return self._reports
     
-    # could happen before or after update storage 
+    # could happen before or after update storage, done in operand stack to get levels right)
     def register_component(self, component: Source | Sink, stack_level: int):
         if isinstance(component, ProgressIgnore):
             return # um, ignore
@@ -240,7 +247,7 @@ class ProgressAPI:
         self._parse_depth[comp_id] = stack_level
         self._update_storage(component, var_label=None, value=None) # just register, no values
 
-    def _update_storage(self, component: Source | Sink, var_label: str, value: Any):
+    def _update_storage(self, component: Source | Sink, var_label: str, value: Any, display:bool = True):
         # we can have multiple instances of a component type in an expression so we need to
         # differentiate by id when we put them in the _store.
         component_label = self._get_component_label(component)
@@ -253,11 +260,13 @@ class ProgressAPI:
         if value is None: # when just registering component
             return None
 
-        if var_label:
-            # only when var_label not None, do we want the stat displayed
-            return report.ensure_value(var_label, value)
+        if not var_label:
+            raise Exception('unique var_label is required')
         
-        return value
+        if not display:
+            report.make_invisible(var_label)
+
+        return report.set_or_get_value(var_label, value)
     
     # some hacking to get at reasonable labels
     def _get_component_label(self, component: Source | Sink):
