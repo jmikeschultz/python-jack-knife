@@ -21,6 +21,7 @@ class GraphSink(Sink):
         usage.def_param(name='x', usage='x-axis field', default='x')
         usage.def_param(name='y', usage='comma separated list of y-axis fields', default='y')
         usage.def_param(name='pause', usage='Seconds to show graph', is_num=True, default='-1')
+        usage.def_param(name='title', usage='A title for the graph', is_num=False)
         return usage
 
     def __init__(self, ptok: ParsedToken, usage: Usage):
@@ -30,6 +31,7 @@ class GraphSink(Sink):
         self.x_field = usage.get_param('x')
         self.y_field = usage.get_param('y')
         self.pause = usage.get_param('pause')
+        self.title = usage.get_param('title')
 
     def process(self):
         import matplotlib.pyplot as plt # lazy import

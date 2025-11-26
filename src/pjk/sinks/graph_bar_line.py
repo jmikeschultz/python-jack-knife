@@ -137,8 +137,8 @@ class SingleYWithSetsAdapter:
 # ----------------------------- Plotter -----------------------------
 class GraphPlotter:
     def __init__(self, params: GraphParams):
-        self.p = params
-        self.y_fields = list(dict.fromkeys(self.p.y_fields))  # dedupe, preserve order
+        self.pms = params
+        self.y_fields = list(dict.fromkeys(self.pms.y_fields))  # dedupe, preserve order
 
     def plot(self, chart_type: str = "line"):
         import matplotlib.pyplot as plt
@@ -149,8 +149,8 @@ class GraphPlotter:
 
         # Multi-Y path (preferred)
         if len(self.y_fields) > 1:
-            df = MultiYAdapter.to_df(self.p.records, self.p.x_field, self.y_fields)
-            is_time = self.p.x_is_time if isinstance(self.p.x_is_time, bool) else TimeDetector.is_time(df["x"])
+            df = MultiYAdapter.to_df(self.pms.records, self.pms.x_field, self.y_fields)
+            is_time = self.pms.x_is_time if isinstance(self.pms.x_is_time, bool) else TimeDetector.is_time(df["x"])
             if is_time:
                 df["ts"] = TimeDetector.parse_times(df["x"])
                 df = df.dropna(subset=["ts"]).sort_values("ts")
@@ -165,12 +165,12 @@ class GraphPlotter:
                 else:
                     self._lines_categorical(ax, df, self.y_fields)
                 self._format_categorical_axis(ax, df)
-            title = self.p.title or ("Line over time" if is_time and chart_type=="line" else
+            title = self.pms.title or ("Line over time" if is_time and chart_type=="line" else
                                      "Bar over time" if is_time else
                                      "Line by category" if chart_type=="line" else
                                      "Bar by category")
             ax.set_title(title)
-            ax.set_xlabel(self.p.x_field)
+            ax.set_xlabel(self.pms.x_field)
             ax.set_ylabel(", ".join(self.y_fields))
             ax.legend(title="Series")
             self._apply_args_dict()
@@ -180,13 +180,13 @@ class GraphPlotter:
 
         # Single-Y legacy path (maybe with set_name)
         y = self.y_fields[0]
-        sdf = SingleYWithSetsAdapter.to_df(self.p.records, self.p.x_field, y)
+        sdf = SingleYWithSetsAdapter.to_df(self.pms.records, self.pms.x_field, y)
         if sdf.empty:
-            print(f"No valid '{self.p.x_field}' and '{y}' records found.")
+            print(f"No valid '{self.pms.x_field}' and '{y}' records found.")
             return fig, ax
 
         # time vs categorical
-        is_time = self.p.x_is_time if isinstance(self.p.x_is_time, bool) else TimeDetector.is_time(sdf["x"])
+        is_time = self.pms.x_is_time if isinstance(self.pms.x_is_time, bool) else TimeDetector.is_time(sdf["x"])
         if is_time:
             sdf["ts"] = TimeDetector.parse_times(sdf["x"])
             sdf = sdf.dropna(subset=["ts"])  # might be empty
@@ -206,8 +206,8 @@ class GraphPlotter:
                 else:
                     ax.plot(s.index, s.values, label=label)
             self._format_time_axis(ax, sdf.rename(columns={"ts":"ts"}))
-            ax.set_title(self.p.title or f"{y} over time")
-            ax.set_xlabel(self.p.x_field)
+            ax.set_title(self.pms.title or f"{y} over time")
+            ax.set_xlabel(self.pms.x_field)
             ax.set_ylabel(y)
             if any(s != "__default__" for s in sdf["set"].unique()):
                 ax.legend(title="data set")
@@ -243,8 +243,8 @@ class GraphPlotter:
                 tick_idx = idx
                 tick_lbl = x_vals
             ax.set_xticks(tick_idx, tick_lbl, rotation=45)
-            ax.set_title(self.p.title or f"{y} by {self.p.x_field}")
-            ax.set_xlabel(self.p.x_field)
+            ax.set_title(self.pms.title or f"{y} by {self.pms.x_field}")
+            ax.set_xlabel(self.pms.x_field)
             ax.set_ylabel(y)
             if len(set_names) > 1 or "__default__" not in set_names:
                 ax.legend(title="data set")
@@ -323,7 +323,7 @@ class GraphPlotter:
     # ---------- Misc ----------
     def _apply_args_dict(self) -> None:
         import matplotlib.pyplot as plt
-        for name, val in getattr(self.p, "args_dict", {}).items():
+        for name, val in getattr(self.pms, "args_dict", {}).items():
             fn = getattr(plt, name, None)
             if callable(fn):
                 try:

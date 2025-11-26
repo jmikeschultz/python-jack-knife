@@ -14,6 +14,7 @@ class CSVSource(FormatSource):
     extension = 'csv'
 
     def __init__(self, lazy_file: LazyFile, delimiter: str = ","):
+        super().__init__(lazy_file)
         self.lazy_file = lazy_file
         self.delimiter = delimiter
         self.num_recs = 0
