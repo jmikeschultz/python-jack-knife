@@ -99,9 +99,9 @@ def display_configs():
         print(f'Component configs defined in {CONFIG_FILE}')
         print()
         for name, body_dict in data.items():
-            print('===================================')
-            print('        ', highlight(name, 'bold', name))
-            print('===================================')
+            print('=========================================')
+            print('   ', highlight(name, 'bold', name))
+            print('=========================================')
 
             if 'password' in body_dict:
                 body_dict['password'] = '*************'

@@ -23,7 +23,7 @@ def build_body_from_string(query_string: str) -> dict:
 
 class OpenSearchQueryPipe(QueryPipe, Integration):
     name = "os_query"
-    desc = ("Opensearch query pipe. Uses record['query'] or record['os_query_object'] for os query\n"
+    desc = ("Opensearch query pipe. Uses record['query'] or record['os_query_object']\n"
     "An instance may define 'default_index' otherwise the query object must include an 'index' field.\n")
     arg0 = ("instance", "instance to query over.")
     examples = [

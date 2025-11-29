@@ -53,7 +53,7 @@ class ComponentRegistry:
         with pager_stdout():
             print('Usage: pjk <source> [<pipe> ...] <sink>')
             print('       pjk man <component> | --all')
-            print('       pjk examples | configs | macros | hist')
+            print('       pjk examples | configs | macros | + (for history)')
             print()
 
             print_core_formats([self.source_factory, self.sink_factory])

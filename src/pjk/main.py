@@ -78,7 +78,7 @@ def execute_non_expression(tokens, registry):
             display_configs()
         case 'macros':
             display_macros()
-        case 'hist':
+        case '+':
             display_history()
         case _:
             return False
@@ -106,7 +106,7 @@ def execute_tokens(tokens: List[str]):
         return
 
     # execute command from .pjk-history.txt
-    if len(tokens) == 1 and re.fullmatch(r'^\d+$', tokens[0]):
+    if len(tokens) == 1 and re.fullmatch(r'^\+\d+$', tokens[0]):
         tokens = get_history_tokens(tokens[0])
         if not tokens:
             print('No such history')

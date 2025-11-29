@@ -80,9 +80,9 @@ def display_history():
 
     with pager_stdout():
         print(f"Local history in '{LOG_FILE}'")
-        print("Use 'pjk <ord>'' to execute command.")
+        print("Use 'pjk +<#>' to execute command.")
         print()
-        o = highlight('ord', 'bold', 'ord')
+        o = highlight('#', 'bold', '#')
         c = highlight('command', 'bold', 'command')
         print(f'{o}\t{c}')
 
