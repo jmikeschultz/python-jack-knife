@@ -7,11 +7,26 @@ from typing import Any, List
 from pjk.components import Source, Pipe, Sink
 from pjk.usage import TokenError, UsageError, ParsedToken, Usage
 from pjk.pipes.let_reduce import ReducePipe
-from pjk.sources.macro_source import MACROS_FILE, MACRO_PREFIX, read_macros
 from pjk.pipes.progress_pipe import ProgressPipe
 from pjk.registry import ComponentRegistry
 from pjk.progress import papi
+from typing import Dict
+from pathlib import Path
 from pjk.progress import ProgressIgnore
+
+MACROS_FILE = '~/.pjk/macros.txt'
+MACRO_PREFIX = 'm'
+def read_macros(file_name: str = MACROS_FILE) -> Dict[str, str]:
+    out: Dict[str, str] = {}
+    path = Path(file_name).expanduser()
+    with path.open(encoding="utf-8") as f:
+        for raw in f:
+            line = raw.split("#", 1)[0].strip()
+            if not line or ":" not in line:
+                continue
+            key, val = line.split(":", 1)
+            out[key.strip()] = val.strip()
+    return out
 
 # macros are of the form MACRO_PREFIX:<instance>
 def handle_macros(token: str, expanded: List[str]):

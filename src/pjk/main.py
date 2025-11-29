@@ -3,39 +3,21 @@
 
 #!/usr/bin/env python
 import sys
-import os
+import os, re
 import shlex
-from typing import List
+from typing import List, Dict
 from pjk.parser import ExpressionParser
 from pjk.usage import UsageError
 from pjk.log import init as init_logging
-from datetime import datetime
 import traceback
 import concurrent.futures
 from pjk.registry import ComponentRegistry
 from pjk.sinks.stdout import StdoutSink
-from pjk.man_page import do_man, do_examples
+from pjk.man_page import do_man, do_examples, display_configs, display_macros
+from pjk.history import write_history, display_history, get_history_tokens
 from pjk.sinks.expect import ExpectSink
 from pjk.progress import ProgressDisplay
 from pjk.version import __version__
-
-def write_history(tokens):
-    if os.environ.get("PJK_NO_HISTORY") == "1":
-        return
-    
-    log_path = ".pjk-history.txt"
-    timestamp = datetime.now().strftime("%Y-%m-%d %H:%M")
-
-    if len(tokens) < 2: 
-        return 
-    
-    command = " ".join(tokens)
-
-    try:
-        with open(log_path, "a") as f:
-            f.write(f"{timestamp}\tpjk {command}\n")
-    except (PermissionError, OSError):
-        pass
 
 def execute_threaded(sinks, stop_progress=None):
     max_workers = min(32, len(sinks))
@@ -77,6 +59,32 @@ def initialize():
     #dst_dir.mkdir(parents=True, exist_ok=True)
     #hutil.copy(src, dst_dir / src.name)
 
+def execute_non_expression(tokens, registry):
+    command = tokens[0]
+
+    if len(tokens) == 2 and command == 'man':
+        do_man(tokens[1], registry)
+        return True
+    
+    if len(tokens) != 1:
+        return False
+
+    match command:
+        case 'examples':
+            do_examples(command, registry)
+        case 'examples+':
+            do_examples(command, registry)
+        case 'configs':
+            display_configs()
+        case 'macros':
+            display_macros()
+        case 'hist':
+            display_history()
+        case _:
+            return False
+
+    return True
+
 def execute(command: str):
     tokens = shlex.split(command, comments=True, posix=True)
     execute_tokens(tokens)
@@ -93,14 +101,16 @@ def execute_tokens(tokens: List[str]):
     if len(tokens) < 1:
         registry.print_usage()
         return
-
-    if len(tokens) == 2 and tokens[0] == 'man':
-        do_man(tokens[1], registry)
+    
+    if execute_non_expression(tokens, registry):
         return
 
-    if len(tokens) == 1 and tokens[0] in ['examples', 'examples+']:
-        do_examples(tokens[0], registry)
-        return
+    # execute command from .pjk-history.txt
+    if len(tokens) == 1 and re.fullmatch(r'^\d+$', tokens[0]):
+        tokens = get_history_tokens(tokens[0])
+        if not tokens:
+            print('No such history')
+            return
 
     parser = ExpressionParser(registry)
 

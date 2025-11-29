@@ -11,7 +11,7 @@ from pjk.sources.format_source import FormatSource
 import importlib.util
 import importlib
 from pjk.components import Pipe, Source, Sink
-from pjk.common import ComponentFactory, highlight, ComponentOrigin
+from pjk.common import ComponentFactory, highlight, ComponentOrigin, pager_stdout
 from typing import List, Type
 
 class ExternalRegistrar:
@@ -50,22 +50,23 @@ class ComponentRegistry:
         return [self.source_factory, self.pipe_factory, self.sink_factory]
 
     def print_usage(self):
-        print('Usage: pjk <source> [<pipe> ...] <sink>')
-        print('       pjk man <component> | --all')
-        print('       pjk examples')
-        print()
+        with pager_stdout():
+            print('Usage: pjk <source> [<pipe> ...] <sink>')
+            print('       pjk man <component> | --all')
+            print('       pjk examples | configs | macros | hist')
+            print()
 
-        print_core_formats([self.source_factory, self.sink_factory])
-        print()
-        print_factory_core(self.source_factory, header='sources')
-        print()
-        print_factory_core(self.pipe_factory, header='pipes')
-        print()
-        print_factory_core(self.sink_factory, header='sinks')
+            print_core_formats([self.source_factory, self.sink_factory])
+            print()
+            print_factory_core(self.source_factory, header='sources')
+            print()
+            print_factory_core(self.pipe_factory, header='pipes')
+            print()
+            print_factory_core(self.sink_factory, header='sinks')
 
-        self.print_non_core([ComponentOrigin.CORE,ComponentOrigin.EXTERNAL], is_integration=True, header='integrations')
-        self.print_non_core([ComponentOrigin.EXTERNAL], is_integration=False, header='apps')
-        self.print_non_core([ComponentOrigin.USER], is_integration=None, header='user components (~/.pjk/plugins)')        
+            self.print_non_core([ComponentOrigin.CORE,ComponentOrigin.EXTERNAL], is_integration=True, header='integrations')
+            self.print_non_core([ComponentOrigin.EXTERNAL], is_integration=False, header='apps')
+            self.print_non_core([ComponentOrigin.USER], is_integration=None, header='user components (~/.pjk/plugins)')        
 
     # is_integration = True|False|None  None=don't care
     def print_non_core(self, origin_list: List[ComponentOrigin], is_integration: bool, header:str):

@@ -1,15 +1,15 @@
 # SPDX-License-Identifier: Apache-2.0
 # Copyright 2024 Mike Schultz
 
-from pjk.pipes.factory import PipeFactory
-from pjk.sources.factory import SourceFactory
-from pjk.sinks.factory import SinkFactory
-from pjk.parser import ExpressionParser
+from pjk.parser import ExpressionParser, MACRO_PREFIX, MACROS_FILE, read_macros
 from pjk.components import Source, Pipe, Sink
-from pjk.usage import Usage, ParsedToken
+from pjk.usage import Usage, CONFIG_FILE
 from pjk.registry import ComponentRegistry
 from pjk.common import pager_stdout, highlight, ComponentOrigin
 from contextlib import nullcontext
+import yaml
+import sys
+from pathlib import Path
 
 def get_base_class(usage: Usage, as_string: bool = False):
         if issubclass(usage.comp_class, Sink):
@@ -86,6 +86,50 @@ def print_man(registry: ComponentRegistry, name: str, usage: Usage):
 
     for expr_tokens, expect in usage.get_examples(): # expect in InlineSource format
         print_example(registry, expr_tokens, expect, name)
+
+def display_configs():
+    path = Path(CONFIG_FILE).expanduser()
+
+    with pager_stdout():
+        with path.open("r", encoding="utf-8") as f:
+            data = yaml.safe_load(f) or {}
+        if not isinstance(data, dict):
+            raise ValueError("Top-level YAML must be a mapping of records")
+        
+        print(f'Component configs defined in {CONFIG_FILE}')
+        print()
+        for name, body_dict in data.items():
+            print('===================================')
+            print('        ', highlight(name, 'bold', name))
+            print('===================================')
+
+            if 'password' in body_dict:
+                body_dict['password'] = '*************'
+
+            try:
+                yaml.dump(
+                    body_dict,
+                    sys.stdout,
+                    sort_keys=False,
+                    explicit_start=False,
+                    allow_unicode=True,
+                    width=10**9,
+                )
+            except BrokenPipeError:
+                break
+            print()
+
+def display_macros():
+    macros = read_macros()
+
+    with pager_stdout():
+        print(f"Macros defined in '{MACROS_FILE}'")
+
+        print(f"Usage: pjk [...] {MACRO_PREFIX}:<macro_name> [...]")
+        print()
+        for name, value in macros.items():
+            print(f'{name}: {value}')
+            print()
 
 def do_examples(token:str, registry: ComponentRegistry):
     no_pager = token.endswith('+')
