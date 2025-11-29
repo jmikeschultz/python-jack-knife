@@ -30,11 +30,6 @@ def read_history(log_path: str) -> List[int]:
                 if not line:
                     continue
 
-                # test for old format
-                parts = line.split('pjk ')
-                if len(parts) == 2:
-                    line = parts[1]
-                
                 # Expected format: <command_string>
                 line = line.strip()
                         
