@@ -4,18 +4,15 @@
 import json
 from typing import Iterator, Dict, Any
 
-import numpy as np
-from pjk.usage import NoBindUsage
-from pjk.components import Source
 from pjk.sources.lazy_file import LazyFile
 from pjk.sources.format_source import FormatSource
 from pjk.log import logger
-
 
 class NpySource(FormatSource):
     extension = 'npy'
 
     def __init__(self, lazy_file: LazyFile):
+        super().__init__(root=None)
         self.lazy_file = lazy_file
         self.num_vecs = 0
 
@@ -32,9 +29,11 @@ class NpySource(FormatSource):
 
         try:
             # Use mmap to avoid loading entire array in RAM at once.
+            import numpy as np #lazy import
             arr = np.load(path, mmap_mode="r", allow_pickle=False)
         except Exception as e:
             logger.error(f"Failed to load .npy file at {path}: {e}")
+            raise Exception(f"Failed to load .npy file at {path}: {e}")
             return
 
         if arr.size == 0:

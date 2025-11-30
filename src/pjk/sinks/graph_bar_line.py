@@ -20,10 +20,6 @@ from typing import Any, Dict, Iterable, List, Optional, Sequence
 from datetime import date, datetime
 from collections import defaultdict
 
-import numpy as np
-import pandas as pd
-
-
 # ----------------------------- Public Params -----------------------------
 @dataclass
 class GraphParams:
@@ -48,6 +44,8 @@ class TimeDetector:
 
     @staticmethod
     def is_time(xs: pd.Series) -> bool:
+        import numpy as np # lazy
+        import pandas as pd # lazy
         # Already datetime dtype?
         if pd.api.types.is_datetime64_any_dtype(xs):
             return True
@@ -74,6 +72,7 @@ class TimeDetector:
 
     @staticmethod
     def parse_times(series: pd.Series) -> pd.Series:
+        import pandas as pd # lazy
         numeric = pd.to_numeric(series, errors="coerce")
         parsed = None
         if numeric.notna().mean() >= 0.9:
@@ -92,6 +91,7 @@ class MultiYAdapter:
     """Builds wide dataframe: columns = ['x'] + y_fields; sums duplicates of x."""
     @staticmethod
     def to_df(records: Iterable[Dict[str, Any]], x_field: str, y_fields: Sequence[str]) -> pd.DataFrame:
+        import pandas as pd # lazy
         rows: List[Dict[str, Any]] = []
         for r in records:
             if x_field not in r:
@@ -137,12 +137,14 @@ class SingleYWithSetsAdapter:
 # ----------------------------- Plotter -----------------------------
 class GraphPlotter:
     def __init__(self, params: GraphParams):
+        import numpy as np
         self.pms = params
         self.y_fields = list(dict.fromkeys(self.pms.y_fields))  # dedupe, preserve order
 
     def plot(self, chart_type: str = "line"):
-        import matplotlib.pyplot as plt
-        import matplotlib.dates as mdates
+        import matplotlib.pyplot as plt # lazy
+        import matplotlib.dates as mdates # lazy
+        import pandas as pd # lazy
 
         fig = plt.figure()
         ax = plt.gca()
@@ -258,7 +260,7 @@ class GraphPlotter:
     # ---------- Formatting helpers ----------
     @staticmethod
     def _format_time_axis(ax, df: pd.DataFrame) -> None:
-        import matplotlib.dates as mdates
+        import matplotlib.dates as mdates # lazy
         fig = ax.get_figure()
         ts = df["ts"]
         if ts.empty:
@@ -322,7 +324,7 @@ class GraphPlotter:
 
     # ---------- Misc ----------
     def _apply_args_dict(self) -> None:
-        import matplotlib.pyplot as plt
+        import matplotlib.pyplot as plt # lazy
         for name, val in getattr(self.pms, "args_dict", {}).items():
             fn = getattr(plt, name, None)
             if callable(fn):
@@ -345,7 +347,7 @@ def graph_bar_line(obj, type):
     Returns (fig, ax) for optional downstream tweaks (safe to ignore).
     """
     # Lazy import (ensures MPL backend)
-    import matplotlib.pyplot as plt  # noqa: F401
+    import matplotlib.pyplot as plt  # noqa: F401 # lazy
 
     # Normalize y_fields from string or list
     raw_y = obj.y_field if isinstance(obj.y_field, str) else str(obj.y_field)

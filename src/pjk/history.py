@@ -30,6 +30,9 @@ def read_history(log_path: str) -> List[int]:
                 if not line:
                     continue
 
+                if 'pjk ' in line: # legacy
+                    line = line.split('pjk ', 1)[1]
+
                 # Expected format: <command_string>
                 line = line.strip()
                         
