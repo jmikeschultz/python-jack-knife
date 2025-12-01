@@ -15,7 +15,7 @@ class SelectFields(DeepCopyPipe):
             component_class=cls
         )
         usage.def_arg(name='fields', usage='Comma-separated list of fields to retain')
-        usage.def_example(expr_tokens=["{id:1, dir:'up', color:'blue'}", 'sel:id,color'], expect="id: 1, color:'blue'")
+        usage.def_example(expr_tokens=["{id:1, dir:'up', color:'blue'}", 'select:id,color'], expect="id: 1, color:'blue'")
         return usage
 
     def __init__(self, ptok: ParsedToken, usage: Usage):
