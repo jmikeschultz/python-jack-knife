@@ -35,9 +35,12 @@ class DBClient:
         self.conn = DBClient._connection
 
     def close(self):
+        import pg8000 # lazy
         if self.conn is not None:
             try:
                 self.conn.close()
+            except pg8000.exceptions.InterfaceError:
+                pass
             finally:
                 DBClient._connection = None
 
@@ -123,9 +126,14 @@ class PostgresPipe(QueryPipe,Integration):
 
         self.params_field = "params"  # optional: list/tuple (positional) or dict (named)
 
+        self.client = None
+
     def reset(self):
         # stateless across reset
         pass
+
+    def close(self):
+        self.client.close()
 
     def _make_header(self, cur, query: str, params=None) -> Dict[str, Any]:
         """
@@ -155,7 +163,7 @@ class PostgresPipe(QueryPipe,Integration):
         return h
 
     def execute_query_returning_S_xO_iterable(self, record):
-        client = DBClient(
+        self.client = DBClient(
             host=self.db_host,
             username=self.db_user,
             password=self.db_pass,
@@ -173,7 +181,7 @@ class PostgresPipe(QueryPipe,Integration):
             params = record.get(self.params_field)          # single-exec params
             batch  = record.get("batch_params", None)       # list[tuple|dict] for batching
 
-            cur = client.conn.cursor()
+            cur = self.client.conn.cursor()
             try:
                 did_executemany = False
 
@@ -215,4 +223,5 @@ class PostgresPipe(QueryPipe,Integration):
             finally:
                 cur.close()
         finally:
-            client.close()
+            pass
+        #    client.close()

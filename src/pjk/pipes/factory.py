@@ -38,7 +38,7 @@ COMPONENTS = {
         'reduce': ReducePipe,        
         'sort': SortPipe,
         'where': WherePipe,
-        'sel': SelectFields,
+        'select': SelectFields,
         'sample': SamplePipe,
         'explode': DenormPipe,
         'postgres': PostgresPipe,

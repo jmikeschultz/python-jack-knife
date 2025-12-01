@@ -10,7 +10,7 @@ class SelectFields(DeepCopyPipe):
     @classmethod
     def usage(cls):
         usage = Usage(
-            name='sel',
+            name='select',
             desc='Select specific fields from each record.',
             component_class=cls
         )
