@@ -15,13 +15,22 @@ class SQLSource(FormatSource):
     def __init__(self, lazy_file: LazyFile):
         super().__init__(root=None)
         self.lazy_file = lazy_file
-        self.num_recs = 0
 
     def __iter__(self):
+        lines = []
         with self.lazy_file.open() as f:
-            sql_text = f.read().strip()
-            sql_text = sql_text.replace("\r", " ").replace("\n", " ").strip()
+            for line in f:
+                line = line.strip()
+                if len(line) == 0:
+                    continue
+
+                if '#' in line:
+                    line = line.split('#')[0]
+                if '--' in line:
+                    line = line.split('--')[0]
+                lines.append(line)
+
+            sql_text = ' '.join(lines)
 
             if sql_text:
-                self.num_recs += 1
                 yield {"query": sql_text}

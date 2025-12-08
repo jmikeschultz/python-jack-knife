@@ -92,6 +92,7 @@ class MultiYAdapter:
     @staticmethod
     def to_df(records: Iterable[Dict[str, Any]], x_field: str, y_fields: Sequence[str]) -> pd.DataFrame:
         import pandas as pd # lazy
+        import numpy as np # lazy
         rows: List[Dict[str, Any]] = []
         for r in records:
             if x_field not in r:
@@ -120,7 +121,8 @@ class MultiYAdapter:
 class SingleYWithSetsAdapter:
     """Legacy: single y_field + optional per-row set_name to create series."""
     @staticmethod
-    def to_df(records: Iterable[Dict[str, Any]], x_field: str, y_field: str) -> pd.DataFrame:
+    def to_df(records: Iterable[Dict[str, Any]], x_field: str, y_field: str):
+        import pandas as pd # lazy
         triplets = []  # (x, y, set_name)
         for r in records:
             if x_field in r and y_field in r:
@@ -137,7 +139,6 @@ class SingleYWithSetsAdapter:
 # ----------------------------- Plotter -----------------------------
 class GraphPlotter:
     def __init__(self, params: GraphParams):
-        import numpy as np
         self.pms = params
         self.y_fields = list(dict.fromkeys(self.pms.y_fields))  # dedupe, preserve order
 
@@ -145,6 +146,7 @@ class GraphPlotter:
         import matplotlib.pyplot as plt # lazy
         import matplotlib.dates as mdates # lazy
         import pandas as pd # lazy
+        import numpy as np # lazy
 
         fig = plt.figure()
         ax = plt.gca()
@@ -291,6 +293,7 @@ class GraphPlotter:
 
     def _bars_time(self, ax, df: pd.DataFrame, y_cols: Sequence[str]) -> None:
         # Grouped bars at each timestamp using index positions
+        import numpy as np # lazy
         x_vals = df["ts"].to_numpy(); idx = np.arange(len(x_vals))
         n = len(y_cols); width = 0.8 / max(n, 1)
         for i, y in enumerate(y_cols):
@@ -300,6 +303,7 @@ class GraphPlotter:
         ax.set_xticks(idx, [pd.to_datetime(t).strftime("%Y-%m-%d %H:%M") for t in x_vals], rotation=45)
 
     def _bars_categorical(self, ax, df: pd.DataFrame, y_cols: Sequence[str]) -> None:
+        import numpy as np # lazy
         seen = set(); ordered_x: List[Any] = []
         for x in df["x"].tolist():
             if x not in seen:
@@ -312,6 +316,7 @@ class GraphPlotter:
         ax.set_xticks(idx, ordered_x, rotation=45)
 
     def _lines_categorical(self, ax, df: pd.DataFrame, y_cols: Sequence[str]) -> None:
+        import numpy as np # lazy
         seen = set(); ordered_x: List[Any] = []
         for x in df["x"].tolist():
             if x not in seen:

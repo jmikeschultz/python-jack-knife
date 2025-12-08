@@ -35,8 +35,8 @@ class QueryPipe(Pipe):
         return u
 
 
-    def __init__(self, ptok: ParsedToken, usage: Usage):
-        super().__init__(ptok, usage)
+    def __init__(self, ptok: ParsedToken, usage: Usage, root = None):
+        super().__init__(ptok, usage, root=root)
         self.output_shape = usage.get_param('shape')
         self.count = usage.get_param('count')
         self.query_field = 'query' # for all subclasses
