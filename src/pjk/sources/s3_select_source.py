@@ -258,7 +258,8 @@ class S3SelectSource(Source):
                 "where <file>.s3s e.g:\n\n"
                 "s3_bucket: my-bucket\n"
                 "prefix: my-prefix\n"
-                "sub_keys: # optional\n"
+                "sub_keys: range(1,20,%2d) # or\n"
+                "sub_keys:                 # both optional\n"
                 "- 01\n"
                 "- 02\n"
                 "format: format.gz # csv, etc\n"
@@ -296,7 +297,7 @@ class S3SelectSource(Source):
 
         key_regex = cfg.get("key_regex")
 
-        prefixes = self._build_prefixes_from_config(prefix, cfg.get("sub_keys"))
+        prefixes = self._build_prefixes(prefix, cfg)
 
         import boto3  # lazy
         s3 = boto3.client("s3")
@@ -355,15 +356,35 @@ class S3SelectSource(Source):
         return cfg
 
     @staticmethod
-    def _build_prefixes_from_config(prefix: str, sub_keys: Optional[List[Any]]) -> List[str]:
+    def _build_prefixes(prefix: str, cfg) -> List[str]:
+        pattern = re.compile(
+            r'range\(\s*(.*?)\s*,\s*(.*?)\s*,\s*%(\d+)d\s*\)'
+        )
+
         """
         If sub_keys present (list of suffix strings), produce prefix+suffix
         for each; otherwise just [prefix].
         """
+        sub_keys = cfg.get("sub_keys")
+
         if not sub_keys:
             return [prefix]
 
+        if not prefix.endswith('/'):
+            prefix += '/'
+
         result: List[str] = []
+        if isinstance(sub_keys, str):
+            m = pattern.search(sub_keys)
+            if m:
+                start, stop, width = m.groups()
+                for i in range(int(start), int(stop)):
+                    suffix = f'{i:0{int(width)}d}'
+                    result.append(f'{prefix}{suffix}')
+                return result
+            else:
+                return [prefix]
+        
         for s in sub_keys:
             # YAML might give ints or strings; normalize to str and strip
             suffix = str(s).strip()

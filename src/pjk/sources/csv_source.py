@@ -17,11 +17,9 @@ class CSVSource(FormatSource):
         super().__init__(lazy_file)
         self.lazy_file = lazy_file
         self.delimiter = delimiter
-        self.num_recs = 0
 
     def __iter__(self):
         with self.lazy_file.open() as f:
             reader = csv.DictReader(f, delimiter=self.delimiter)
             for row in reader:
-                self.num_recs += 1
                 yield row

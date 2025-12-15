@@ -93,6 +93,8 @@ class ParsedToken:
 
         self._all_but_params = at_parts[0]
 
+        self._post_colon = self._all_but_params.split(':', 1)[1] if ':' in self._all_but_params else ''
+
         # args
         colon_parts = at_parts[0].split(':')
         self._pre_colon = colon_parts[0]
@@ -107,6 +109,10 @@ class ParsedToken:
     def pre_colon(self):
         return self._pre_colon
     
+    @property
+    def post_colon(self):
+        return self._post_colon
+
     @property
     def whole_token(self):
         return self.token
