@@ -1,10 +1,10 @@
 from pjk.usage import NoBindUsage
 from pjk.components import Source
-from pjk.usage import ParsedToken
+from pjk.usage import ParsedToken, TokenError
 from pjk.sources.s3_source import S3Source
 from pjk.sources.dir_source import DirSource
 from pjk.sources.lazy_file_local import LazyFileLocal
-import gzip
+from pathlib import Path
 import re
 import os
 
@@ -117,6 +117,10 @@ class FormatSource(Source):
             raise('fix this exception')
         
         file = f'{path_no_ext}.{ext}'
+        p = Path(file)
+        if not p.exists():
+            raise TokenError(f'{file} does not exist')
+
         lazy_file = LazyFileLocal(file, is_gz)
         return source_class(lazy_file)
         

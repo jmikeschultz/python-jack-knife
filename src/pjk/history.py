@@ -91,7 +91,7 @@ def display_history():
 
         ordn = 1
         for command in reversed(clist):
-            print(f'{ordn}\t{command}')
+            print(f'{ordn}\tpjk {command}')
             ordn += 1
 
 def get_history_tokens(ord_str: str):

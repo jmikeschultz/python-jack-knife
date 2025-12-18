@@ -14,7 +14,7 @@ import concurrent.futures
 from pjk.registry import ComponentRegistry
 from pjk.sinks.stdout import StdoutSink
 from pjk.man_page import do_man, do_examples, display_configs, display_macros
-from pjk.history import write_history, display_history, get_history_tokens
+from pjk.history import write_history, display_history, get_history_tokens, printable_command
 from pjk.sinks.expect import ExpectSink
 from pjk.progress import ProgressDisplay
 from pjk.version import __version__
@@ -111,6 +111,8 @@ def execute_tokens(tokens: List[str]):
         if not tokens:
             print('No such history')
             return
+        cmd = printable_command(tokens)
+        print(f"pjk {cmd}")
 
     parser = ExpressionParser(registry)
 

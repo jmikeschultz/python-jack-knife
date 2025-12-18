@@ -1,6 +1,6 @@
 from pjk.usage import NoBindUsage
 from pjk.components import Sink
-from pjk.usage import ParsedToken
+from pjk.usage import ParsedToken, TokenError
 from pjk.sinks.s3_sink import S3Sink
 from pjk.sinks.dir_sink import DirSink
 from typing import IO
@@ -92,7 +92,7 @@ class FormatSink(Sink):
             format, is_gz = cls.get_format_gz(ext)
             sink_class = sinks.get(format)
             if not sink_class:
-                raise Exception('fix this exception message, extension for single file must be recognized format')
+                raise TokenError('extension is unrecognized format')
 
             filename = f'{path_no_ext}.{format}'
 

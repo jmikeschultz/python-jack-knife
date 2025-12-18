@@ -145,7 +145,7 @@ class ExpressionParser:
         sink = self.registry.create_sink(token)
         
         if not sink:
-            raise TokenError.from_list(['expression must end in a sink.',
+            raise TokenError.from_list(['non-sink in final position.',
                             'pjk <source> [<pipe> ...] <sink>'])
         
         # so each sink doesn't have to, maybe make a base class or mixin for sinks
@@ -191,11 +191,10 @@ class ExpressionParser:
 
                 else: # unrecognized token
                     # could be sink in WRONG position, let's see for better error message
-                    sink = self.registry.create_sink(token) 
-                    if sink:
-                        raise TokenError.from_list(['sink may only occur in final position.',
+                    if self.registry.is_sink(token):
+                        raise TokenError.from_list(['sink in non-final position.',
                                             'pjk <source> [<pipe> ...] <sink>'])
-                    raise TokenError.from_list([token, 'unrecognized token'])
+                    raise TokenError.from_list([f"'{token}' unrecognized."])
         
         except TokenError as e:
             raise UsageError(usage_error_message, self.tokens, pos, e)

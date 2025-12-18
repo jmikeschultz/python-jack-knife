@@ -46,6 +46,13 @@ class ComponentRegistry:
     def create_sink(self, token: str):
         return self.sink_factory.create(token)
     
+    def is_sink(self, token: str):
+        try:
+            sink = self.sink_factory.create(token)
+            return sink is not None
+        except:
+            return False
+    
     def get_factories(self):
         return [self.source_factory, self.pipe_factory, self.sink_factory]
 
