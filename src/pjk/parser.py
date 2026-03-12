@@ -13,6 +13,7 @@ from pjk.progress import papi
 from typing import Dict
 from pathlib import Path
 from pjk.progress import ProgressIgnore
+from pjk.parse_pjk_file import handle_pjk_file
 
 MACROS_FILE = '~/.pjk/macros.txt'
 MACRO_PREFIX = 'm'
@@ -45,27 +46,6 @@ def handle_macros(token: str, expanded: List[str]):
     except ValueError as e:
         raise UsageError(f"Error parsing {token}: {e}")
     
-    return True
-
-def handle_pjk_file(token: str, expanded: List[str]):
-    if not token.endswith(".pjk"):
-        return False
-    
-    if not os.path.isfile(token):
-        raise TokenError(f"pjk file not found: {token}")
-    
-    with open(token, "r") as f:
-        lines = f.readlines()
-
-    # Remove comments outside quotes, then split
-    stripped = []
-    for line in lines:
-        try:
-            parts = shlex.split(line, comments=True, posix=True)
-            stripped.extend(parts)
-        except ValueError as e:
-            raise UsageError(f"Error parsing {token}: {e}")
-    expanded.extend(stripped)
     return True
 
 def expand_macros(tokens: List[str]) -> List[str]:

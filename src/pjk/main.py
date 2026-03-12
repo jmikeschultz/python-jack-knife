@@ -52,7 +52,6 @@ def execute_threaded(sinks, stop_progress=None):
 
 def initialize():
     init_logging()
-    write_history(sys.argv[1:])
 
     #src = Path("src/pjk/resources/configs.tmpl")
     #dst_dir = Path.home() / ".pjk"
@@ -119,6 +118,7 @@ def execute_tokens(tokens: List[str]):
     display = None
     try:
         sink = parser.parse(tokens)
+        write_history(sys.argv[1:]) # now that it's parsed sucessfully
         if not isinstance(sink, (StdoutSink | ExpectSink)):
             display = ProgressDisplay(interval=3.0)
             display.start()
