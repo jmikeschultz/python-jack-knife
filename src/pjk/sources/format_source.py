@@ -86,19 +86,25 @@ class FormatSource(Source):
             if pre_colon != 's3' and not source_class:
                 return None # the pipe case
 
-        usage = cls.usage()
-        usage.bind_params(ptok) # just for params
-        format_override = usage.get_param('format') # override what's specified in file extensions
-
         if not ext: # either local dir or s3
             if pre_colon and pre_colon == 's3': # could be single file, thus pass in ext
+                usage = cls.usage()
+                usage.bind_params(ptok)
+                format_override = usage.get_param('format')
                 return S3Source.create(sources, path_no_ext, ext, format_override=format_override)
             
             if os.path.isdir(path_no_ext):
+                usage = cls.usage()
+                usage.bind_params(ptok)
+                format_override = usage.get_param('format')
                 recursive = usage.get_param('recursive') == 'true'
                 return DirSource.create(sources, path_no_ext, format_override=format_override, recursive=recursive)
 
-            return None
+            return None  # bare word, not a dir - e.g. pipe like xbids@ad_spec=foo
+
+        usage = cls.usage()
+        usage.bind_params(ptok) # just for params
+        format_override = usage.get_param('format') # override what's specified in file extensions
 
         # else with ext, either local file or s3
         format, is_gz = cls.get_format_gz(ext)

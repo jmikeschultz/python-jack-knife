@@ -14,6 +14,7 @@ from typing import Dict
 from pathlib import Path
 from pjk.progress import ProgressIgnore
 from pjk.parse_pjk_file import handle_pjk_file
+from pjk.common import SafeNamespace
 
 MACROS_FILE = '~/.pjk/macros.txt'
 MACRO_PREFIX = 'm'
@@ -110,7 +111,7 @@ class ExpressionParser:
 
         source = self.stack.pop()
         if isinstance(source, SubExpression):
-            raise TokenError("Poorly formed sub-expression.  Begin token '[' without matching 'over' keyword." )
+            raise TokenError("Poorly formed sub-expression.  Begin token '[' without matching 'over' or 'if' keyword." )
 
         if not self.stack.empty():
             raise TokenError.from_list(['A sink can only consume one source.',
@@ -164,6 +165,16 @@ class ExpressionParser:
                     stack_helper.add_operator(subexp, self.stack)
                     continue
 
+                if not self.stack.empty() and isinstance(self.stack.peek(), SubExpression):
+                    if token == "else":
+                        self.stack.peek().enter_else_branch()
+                        continue
+                    if token.startswith("if:"):
+                        op = self.stack.peek().finish_conditional(token)
+                        if op:
+                            stack_helper.add_operator(op, self.stack)
+                            continue
+
                 pipe = self.registry.create_pipe(token)
                 if pipe:
                     stack_helper.add_operator(pipe, self.stack)
@@ -216,7 +227,7 @@ class StackLoader:
         if not stack.empty() and isinstance(stack.peek(), SubExpression):
             subexp = stack.peek()
 
-            if isinstance(op, SubExpressionOver) and subexp.recursion_depth() == 0:
+            if isinstance(op, (SubExpressionOver, SubExpressionIf)) and subexp.recursion_depth() == 0:
                 subexp = stack.pop()
                 op.add_source(subexp)
                 stack.push(op)
@@ -322,6 +333,64 @@ class SubExpressionOver(Pipe):
             self.left.subexp_process(record, self.over_arg)
             yield record
 
+
+class IdentityPipe(Pipe):
+    """Pass-through pipe for empty else branch."""
+
+    def __iter__(self):
+        yield from self.left
+
+
+class SubExpressionIf(Pipe):
+    """Closes a conditional block: [ then_ops else else_ops if:expr"""
+
+    @classmethod
+    def usage(cls) -> Usage:
+        u = Usage(name="if", desc="conditional sub-expression.", component_class=cls)
+        return u
+
+    def __init__(self, expr: str, then_chain, else_chain, upstream_source):
+        super().__init__(None, None)
+        self.expr = expr
+        self.then_chain = then_chain
+        self.else_chain = else_chain
+        self.upstream_source = upstream_source
+        self.inrecs = papi.get_counter(self, var_label='recs_in', display=False)
+        self.recs_true = papi.get_percentage_counter(self, var_label='recs_true', denom_counter=self.inrecs)
+        try:
+            self.code = compile(expr, '<if>', 'eval')
+        except Exception as e:
+            raise UsageError(f"Invalid if expression: {expr}") from e
+
+    def reset(self):
+        if self.then_chain:
+            self.then_chain.reset()
+        if self.else_chain:
+            self.else_chain.reset()
+
+    def __iter__(self):
+        for record in self.left:
+            self.inrecs.increment()
+            self.upstream_source.set_list([record])
+            f = SafeNamespace(record)
+            try:
+                cond_true = eval(self.code, {}, {'f': f})
+            except Exception:
+                cond_true = False
+            if cond_true:
+                self.recs_true.increment()
+                chain = self.then_chain
+            else:
+                chain = self.else_chain
+
+            if chain:
+                chain.reset()
+                for r in chain:
+                    yield r
+            else:
+                yield record
+
+
 class SubExpression(Pipe, ProgressIgnore):
     @classmethod
     def create(cls, token: str) -> Pipe:
@@ -336,17 +405,42 @@ class SubExpression(Pipe, ProgressIgnore):
         super().__init__(ptok, usage)
         self.subexp_ops = []
         self.stack_helper = StackLoader()
-        self.subexp_stack = OperandStack() 
+        self.subexp_stack = OperandStack()
         self.upstream_source = UpstreamSource()
         self.subexp_stack.push(self.upstream_source)
-        self.recursions = 0 # number of subexpression within
+        self.recursions = 0
         self.subexp_left = None
+        self.in_else_branch = False
+        self.conditional_then_chain = None
+
+    def enter_else_branch(self):
+        """Switch to collecting else branch; save then chain."""
+        self.conditional_then_chain = self.subexp_stack.pop()
+        self.subexp_stack.push(self.upstream_source)
+        self.in_else_branch = True
+
+    def finish_conditional(self, token: str):
+        """Build SubExpressionIf from collected then/else chains."""
+        expr = token.split(':', 1)[1]
+        if self.in_else_branch:
+            else_chain = self.subexp_stack.pop()
+            then_chain = self.conditional_then_chain
+        else:
+            then_chain = self.subexp_stack.pop()
+            else_chain = None
+        if else_chain is self.upstream_source:
+            else_chain = IdentityPipe(None, None)
+            else_chain.add_source(self.upstream_source)
+        self.in_else_branch = False
+        self.conditional_then_chain = None
+        self.subexp_stack.push(self.upstream_source)
+        return SubExpressionIf(expr, then_chain, else_chain, self.upstream_source)
 
     def add_subop(self, op):
         self.subexp_ops.append(op)
         if isinstance(op, SubExpression):
             self.recursions += 1
-        elif isinstance(op, SubExpressionOver):
+        elif isinstance(op, (SubExpressionOver, SubExpressionIf)):
             self.recursions -= 1
         self.stack_helper.add_operator(op, self.subexp_stack)
 

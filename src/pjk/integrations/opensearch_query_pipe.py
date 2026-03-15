@@ -108,8 +108,7 @@ class OpenSearchQueryPipe(QueryPipe, Integration):
             yield {
                 "took_ms": took,
                 "total_hits": total_hits,
-                "index": self.index,
-                "os_query_object": req_body
+                "index": self.index
             }
 
             # Emit each hit

@@ -6,6 +6,7 @@
 from pjk.components import DeepCopyPipe
 from pjk.usage import ParsedToken, Usage, UsageError, TokenError, NoBindUsage
 from pjk.common import SafeNamespace, ReducingNamespace
+import math
 import re
 import ast
 import json
@@ -117,7 +118,8 @@ class LetPipe(DeepCopyPipe):
 # --- Named aggregations (ave, sum, min, max) ---
 # Match agg:f.field or agg:f.field.subfield (must use f. prefix)
 NAMED_AGG_PATTERN = re.compile(r'^(\w+):f\.([\w.]+)$')
-NAMED_AGGS = frozenset(('ave', 'sum', 'min', 'max'))
+NAMED_AGGS = frozenset(('ave', 'sum', 'min', 'max', 'p50', 'p75', 'p90'))
+PERCENTILE_MAP = {'p50': 50, 'p75': 75, 'p90': 90}
 
 
 def _get_nested(ns, path: str):
@@ -169,13 +171,34 @@ def eval_named_aggregation(agg_name: str, field_path: str, record: dict, acc):
         if acc is None:
             return val
         return max(acc, val)
+    elif agg_name in PERCENTILE_MAP:
+        if val is not None:
+            lst = acc if acc is not None else []
+            lst.append(val)
+            return lst
     return acc
+
+
+def _percentile(sorted_vals: list, p: float):
+    """Nearest-rank: returns the actual element at the percentile position (no interpolation)."""
+    if not sorted_vals:
+        return 0
+    n = len(sorted_vals)
+    rank = math.ceil(p / 100 * n)
+    idx = min(max(0, rank - 1), n - 1)
+    return sorted_vals[idx]
 
 
 def finalize_named_agg(agg_name: str, acc):
     if agg_name == 'ave':
         s, n = acc or (0, 0)
         return s / n if n else 0
+    if agg_name in PERCENTILE_MAP:
+        vals = acc or []
+        if not vals:
+            return 0
+        vals.sort()
+        return _percentile(vals, PERCENTILE_MAP[agg_name])
     return acc
 
 
@@ -194,7 +217,7 @@ class ReducePipe(DeepCopyPipe):
             name='reduce',
             desc="set a new field equal to a reduction over records of a sub or main expression\n" +
             "rhs operators must be accumulating, e.g. +=, -=, *=, /=\n" +
-            "or use list/dict comprehension, or named agg: ave:f.field, sum:f.field, etc. (supports f.field.subfield)",
+            "or use list/dict comprehension, or named agg: ave:f.field, sum:f.field, p50:f.field, etc. (supports f.field.subfield)",
             component_class=cls
         )
         usage.def_arg(name='rhs', usage="accumulating python rhs expression (use f.<field> syntax)")
@@ -244,6 +267,10 @@ class ReducePipe(DeepCopyPipe):
                                        ],
                         expect="{items:[{metrics:{size:10}}, {metrics:{size:3}}], ave_size: 6.5}")
 
+        usage.def_example(expr_tokens=["[{x:1},{x:2},{x:3},{x:4}]",
+                                       'reduce:p75=p75:f.x'
+                                       ],
+                        expect="{p75: 3}")
 
         return usage
 

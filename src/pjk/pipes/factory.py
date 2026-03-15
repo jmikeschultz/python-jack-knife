@@ -24,6 +24,37 @@ from pjk.integrations.snowflake_pipe import SnowflakePipe
 from pjk.integrations.opensearch_query_pipe import OpenSearchQueryPipe
 from pjk.pipes.sample import SamplePipe
 from pjk.pipes.user_pipe_factory import UserPipeFactory
+from pjk.usage import Usage
+
+
+class IfPipeDisplay(Pipe):
+    """Display-only: if is parsed by SubExpression, never created via factory."""
+
+    @classmethod
+    def usage(cls):
+        u = Usage(name="if", desc="A sub-expression to be executed conditionally.", component_class=cls)
+        u.def_syntax("... [ <expression> if:<condition>")
+        u.def_example(
+            expr_tokens=["[{foo: 1},{foo: 2}]", "[", "let:goo:woo", "if:f.foo==1"],
+            expect="[{foo:1, goo:'woo'},{foo:2}]"
+        )
+        return u
+
+
+class OverPipeDisplay(Pipe):
+    """Display-only: over is parsed by SubExpression, never created via factory."""
+
+    @classmethod
+    def usage(cls):
+        u = Usage(name="over", desc="Run a sub-expression over each element of a nested list.", component_class=cls)
+        u.def_syntax("... [ <expression> over:<field>")
+        u.def_example(
+            expr_tokens=["{ferry:'orca', cars:[{make: 'ford', size:9}, {make:'bmw', size:4}]}",
+                         "[", "reduce:total_size+=f.size", "over:cars"],
+            expect="{ferry:'orca', cars:[{make: 'ford', size:9}, {make:'bmw', size:4}], total_size: 13}"
+        )
+        return u
+
 
 COMPONENTS = {
         'head': HeadPipe,
@@ -43,7 +74,9 @@ COMPONENTS = {
         'explode': DenormPipe,
         'postgres': PostgresPipe,
         'snowflake': SnowflakePipe,
-        'os_query': OpenSearchQueryPipe
+        'os_query': OpenSearchQueryPipe,
+        'if': IfPipeDisplay,
+        'over': OverPipeDisplay,
     }
 
 class PipeFactory(ComponentFactory):
@@ -56,6 +89,10 @@ class PipeFactory(ComponentFactory):
     def create(self, token: str) -> Pipe:
 
         ptok = ParsedToken(token)
+        if ptok.pre_colon == 'if':
+            return None  # parsed by SubExpression.finish_conditional, never created here
+        if ptok.pre_colon == 'over':
+            return None  # parsed by SubExpression.create, never created here
         if ptok.pre_colon.endswith('.py'):
             pipe = UserPipeFactory.create(ptok)
             if pipe:
