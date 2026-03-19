@@ -136,7 +136,7 @@ class ExpressionParser:
         sink.add_source(progress_pipe)
         return sink
 
-    def parse(self, tokens: List[str]) -> Sink:
+    def parse(self, tokens: List[str], source_override=None) -> Sink:
         usage_error_message = "You've got a problem here."
         stack_helper = StackLoader()
         self.tokens = tokens
@@ -154,7 +154,9 @@ class ExpressionParser:
                     return self.get_sink(stack_helper, token)
                     
                 source = self.registry.create_source(token)
-                if source:                    
+                if source:
+                    if pos == 0 and source_override is not None:
+                        source = source_override
                     stack_helper.add_operator(source, self.stack)
                     progress_pipe = ProgressPipe(component=source, simple=True)
                     stack_helper.add_operator(progress_pipe, self.stack)

@@ -32,11 +32,15 @@ class IfPipeDisplay(Pipe):
 
     @classmethod
     def usage(cls):
-        u = Usage(name="if", desc="A sub-expression to be executed conditionally.", component_class=cls)
-        u.def_syntax("... [ <expression> if:<condition>")
+        u = Usage(name="if", desc="[ ... if:<condition> A sub-expression to be executed conditionally.", component_class=cls)
+        u.def_syntax("... [ <true_exp> if:<condition> ...\n  ... [ <true_exp> else <false_exp> if:<condition> ...")
         u.def_example(
-            expr_tokens=["[{foo: 1},{foo: 2}]", "[", "let:goo:woo", "if:f.foo==1"],
-            expect="[{foo:1, goo:'woo'},{foo:2}]"
+            expr_tokens=["[{cnt: 1},{cnt: 2}]", "[", "let:even:true", "if:f.cnt%2==0"],
+            expect="[{cnt:2, even:'true'},{cnt:1}]"
+        )
+        u.def_example(
+            expr_tokens=["[{cnt: 1},{cnt: 200}]", "[", "let:big:true", "else", "let:small:true", "if:f.cnt>100"],
+            expect="[{cnt:200, big:'true'},{cnt:1, small:'true'}]"
         )
         return u
 
@@ -46,7 +50,7 @@ class OverPipeDisplay(Pipe):
 
     @classmethod
     def usage(cls):
-        u = Usage(name="over", desc="Run a sub-expression over each element of a nested list.", component_class=cls)
+        u = Usage(name="over", desc="[ ... over:<field> A sub-expression executed over each record of a field.", component_class=cls)
         u.def_syntax("... [ <expression> over:<field>")
         u.def_example(
             expr_tokens=["{ferry:'orca', cars:[{make: 'ford', size:9}, {make:'bmw', size:4}]}",
