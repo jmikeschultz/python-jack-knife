@@ -14,6 +14,7 @@ from pjk.sources.user_source_factory import UserSourceFactory
 from pjk.sources.parquet_source import ParquetSource
 from pjk.sources.format_source import FormatSource
 from pjk.sources.s3_select_source import S3SelectSource
+from pjk.sources.http_source import HttpSource
 
 COMPONENTS = {
         'inline': InlineSource,
@@ -25,6 +26,8 @@ COMPONENTS = {
         'sql': SQLSource,
         'npy': NpySource,
         'parquet': ParquetSource,
+        'http': HttpSource,
+        'https': HttpSource,
     }
 
 class SourceFactory(ComponentFactory):
@@ -59,6 +62,8 @@ class SourceFactory(ComponentFactory):
                 return source
 
         source_cls = self.get_component_class(ptok.pre_colon)
+        if source_cls is None and ptok.pre_colon.lower() in ('http', 'https'):
+            source_cls = HttpSource
         if source_cls and not issubclass(source_cls, FormatSource):
             usage = source_cls.usage()
             usage.bind(ptok)
