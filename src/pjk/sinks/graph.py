@@ -20,6 +20,18 @@ class GraphSink(Sink):
         usage.def_arg(name='kind', usage='hist|scatter|bar|line|cumulative')
         usage.def_param(name='x', usage='x-axis field', default='x')
         usage.def_param(name='y', usage='comma separated list of y-axis fields', default='y')
+        usage.def_param(
+            name='xlog',
+            usage='log scale for x; data on that axis must be strictly positive',
+            valid_values={'true', 'false'},
+            default='false',
+        )
+        usage.def_param(
+            name='ylog',
+            usage='log scale for y; data on that axis must be strictly positive',
+            valid_values={'true', 'false'},
+            default='false',
+        )
         usage.def_param(name='pause', usage='Seconds to show graph', is_num=True, default='-1')
         usage.def_param(name='title', usage='A title for the graph', is_num=False)
         return usage
@@ -30,6 +42,8 @@ class GraphSink(Sink):
         self.kind = usage.get_arg('kind')
         self.x_field = usage.get_param('x')
         self.y_field = usage.get_param('y')
+        self.xlog = usage.get_param('xlog') == 'true'
+        self.ylog = usage.get_param('ylog') == 'true'
         self.pause = usage.get_param('pause')
         self.title = usage.get_param('title')
 

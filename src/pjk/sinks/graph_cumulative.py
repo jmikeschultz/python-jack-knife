@@ -1,6 +1,9 @@
 # SPDX-License-Identifier: Apache-2.0
 # Copyright 2024 Mike Schultz
 
+from pjk.sinks.graph_axis import apply_log_axes
+
+
 def graph_cumulative(obj):
     import matplotlib.pyplot as plt # lazy import
     
@@ -49,6 +52,7 @@ def graph_cumulative(obj):
             ha='right', va='top', fontsize=10, color='gray')
     plt.text(1.0, 0.95, f"{count} data points", transform=plt.gca().transAxes,
             ha='right', va='top', fontsize=10, color='gray')
+    apply_log_axes(plt.gca(), xlog=obj.xlog, ylog=obj.ylog)
     plt.grid(True, linestyle='--', alpha=0.6)
     plt.tight_layout()
 

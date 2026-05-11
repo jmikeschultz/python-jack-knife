@@ -3,6 +3,8 @@
 
 from collections import defaultdict
 
+from pjk.sinks.graph_axis import apply_log_axes
+
 def aggregate_ys(obj):
     agg = defaultdict(float)
     count = 0
@@ -62,6 +64,7 @@ def graph_hist(obj):
 
     plt.xlabel(obj.x_field)
     plt.ylabel(ylabel)
+    apply_log_axes(plt.gca(), xlog=obj.xlog, ylog=obj.ylog)
     plt.text(1.0, 1.0, f"Histogram of {obj.x_field}", transform=plt.gca().transAxes,
             ha='right', va='top', fontsize=10, color='gray')
     plt.text(1.0, 0.95, f"{count} data points", transform=plt.gca().transAxes,

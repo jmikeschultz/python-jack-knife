@@ -1,6 +1,9 @@
 # SPDX-License-Identifier: Apache-2.0
 # Copyright 2024 Mike Schultz
 
+from pjk.sinks.graph_axis import apply_log_axes
+
+
 def graph_scatter(obj):
     import matplotlib.pyplot as plt # lazy imports
     import numpy as np
@@ -24,6 +27,7 @@ def graph_scatter(obj):
     plt.ylabel(obj.y_field)
     plt.title(f"Scatter Plot\nCorrelation: {correlation:.3f}")
     plt.legend()
+    apply_log_axes(plt.gca(), xlog=obj.xlog, ylog=obj.ylog)
     plt.grid(True)
     plt.tight_layout()
 

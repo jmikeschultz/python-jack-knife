@@ -20,6 +20,8 @@ from typing import Any, Dict, Iterable, List, Optional, Sequence
 from datetime import date, datetime
 from collections import defaultdict
 
+from pjk.sinks.graph_axis import apply_log_axes
+
 # ----------------------------- Public Params -----------------------------
 @dataclass
 class GraphParams:
@@ -29,6 +31,8 @@ class GraphParams:
     x_is_time: Optional[bool] = None
     args_dict: Dict[str, Any] = field(default_factory=dict)
     title: Optional[str] = None
+    xlog: bool = False
+    ylog: bool = False
 
 
 # ----------------------------- Time Detection ----------------------------
@@ -179,6 +183,7 @@ class GraphPlotter:
             ax.legend(title="Series")
             self._apply_args_dict()
             ax.grid(True, linestyle='--', alpha=0.6)
+            apply_log_axes(ax, xlog=self.pms.xlog, ylog=self.pms.ylog)
             fig.tight_layout()
             return fig, ax
 
@@ -256,6 +261,7 @@ class GraphPlotter:
         # common finish
         self._apply_args_dict()
         ax.grid(True, linestyle='--', alpha=0.6)
+        apply_log_axes(ax, xlog=self.pms.xlog, ylog=self.pms.ylog)
         fig.tight_layout()
         return fig, ax
 
@@ -378,6 +384,8 @@ def graph_bar_line(obj, type):
         x_is_time=getattr(obj, 'x_is_time', None),
         args_dict=getattr(obj, 'args_dict', {}),
         title=getattr(obj, 'title', None),
+        xlog=getattr(obj, 'xlog', False),
+        ylog=getattr(obj, 'ylog', False),
     )
 
     plotter = GraphPlotter(params)
