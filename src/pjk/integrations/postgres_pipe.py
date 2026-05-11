@@ -5,6 +5,8 @@
 
 import base64
 import datetime as _dt
+import socket
+import sys
 import uuid
 import time
 from decimal import Decimal
@@ -16,6 +18,21 @@ from pjk.pipes.query_pipe import QueryPipe
 
 MAX_RETRIES = 3
 BASE_DELAY = 0.1  # seconds
+
+
+def _print_db_connect_failure(host: str, port: int, exc: BaseException) -> None:
+    print("Failed to connect to DB", file=sys.stderr)
+    cur: Optional[BaseException] = exc
+    while cur is not None:
+        if isinstance(cur, socket.gaierror):
+            print(
+                f"  Could not resolve hostname {host!r} (port {port}). "
+                "Private or corporate DB hosts usually require VPN or split-DNS.",
+                file=sys.stderr,
+            )
+            return
+        cur = cur.__cause__
+
 
 class DBClient:
     """Per-instance pg8000 connection wrapper. No shared state."""
@@ -47,8 +64,8 @@ class DBClient:
             self.conn = pg8000.connect(**kwargs)
             self.conn.autocommit = True
         except Exception as e:
-            print("Failed to connect to DB")
-            raise e
+            _print_db_connect_failure(host, port, e)
+            raise
 
     def close(self):
         if getattr(self, "conn", None) is None:
