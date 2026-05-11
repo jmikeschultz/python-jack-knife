@@ -275,14 +275,30 @@ class Usage:
             usage = self.param_usages.get(name, None)
             if not usage:
                 raise TokenError.from_list([f"unknown param: '{name}'.", '', self.get_usage_text()])
-            if not str_val:
-                raise TokenError.from_list([f"missing value for '{name}' param.", '', self.get_usage_text()])
-
             text, is_num, valid_values, default = usage
+            if not str_val:
+                if self._boolean_flag_default_false(is_num, valid_values, default):
+                    str_val = 'true'
+                else:
+                    raise TokenError.from_list(
+                        [f"missing value for '{name}' param.", '', self.get_usage_text()]
+                    )
+
             try:
                 self.params[name] = self._get_val(str_val, is_num, valid_values)
             except (ValueError, TypeError) as e:
                 raise TokenError.from_list([f"wrong value type for '{name}' param.", '', self.get_usage_text()])
+
+    @staticmethod
+    def _boolean_flag_default_false(
+        is_num: bool, valid_values: Optional[Set[str]], default: Optional[str]
+    ) -> bool:
+        """True if @param with no '=' is shorthand for @param=true (boolean, default false)."""
+        if is_num or valid_values is None or default is None:
+            return False
+        if valid_values != {'true', 'false'}:
+            return False
+        return str(default).lower() == 'false'
 
     def get_config(self, name: str):
         return configs.lookup(self, name)
