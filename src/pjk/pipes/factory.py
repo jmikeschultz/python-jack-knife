@@ -16,6 +16,7 @@ from pjk.pipes.where import WherePipe
 from pjk.pipes.map import MapByPipe
 from pjk.pipes.map import GroupByPipe
 from pjk.pipes.join import JoinPipe
+from pjk.pipes.ddiff import DdiffPipe
 from pjk.pipes.filter import FilterPipe
 from pjk.pipes.select import SelectFields
 from pjk.pipes.denorm import DenormPipe
@@ -64,6 +65,7 @@ COMPONENTS = {
         'head': HeadPipe,
         'tail': TailPipe,
         'join': JoinPipe,
+        'ddiff': DdiffPipe,
         'filter': FilterPipe,
         'mapby': MapByPipe,            
         'groupby': GroupByPipe,
