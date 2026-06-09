@@ -32,7 +32,7 @@ OpenSearchQueryPipe-<instance>:
    os_port: <int>
 
 OpenSearchIndexSink-<instance>:
-   _alias: OpenSearchQueryPipe-<instance>
+   _extends: OpenSearchQueryPipe-<instance>
 
 EmbedSink-<instance>:
    model_name: <str>

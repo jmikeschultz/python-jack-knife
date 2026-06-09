@@ -11,7 +11,7 @@ def print_entry(component_class, config_tuples, alias, out):
     component_name = component_class.__name__
     out.write(f'{get_entry_string(component_class)}:\n')
     if alias:
-        out.write(f'   _alias: {get_entry_string(alias)}\n')
+        out.write(f'   _extends: {get_entry_string(alias)}\n')
 
     else:
         for name, ptype, param_default in config_tuples:

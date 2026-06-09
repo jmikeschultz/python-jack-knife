@@ -3,6 +3,7 @@ import os
 import yaml
 
 CONFIG_FILE = '~/.pjk/configs.yaml'
+EXTENDS_KEY = '_extends'
 
 class Config:
     def __init__(self):
@@ -16,6 +17,43 @@ class Config:
                 self._data = yaml.safe_load(f) or {}
         else:
             self._data = {}
+
+    def _extends_hint(self, instance_key: str) -> str:
+        entry = self._data.get(instance_key) or {}
+        base_key = entry.get(EXTENDS_KEY)
+        if not base_key:
+            return ""
+        return f" ('{instance_key}' {EXTENDS_KEY}: '{base_key}')"
+
+    def _resolve_entry(self, instance_key: str, visiting: Optional[Set[str]] = None) -> dict:
+        entry = self._data.get(instance_key)
+        if entry is None:
+            return None
+
+        base_key = entry.get(EXTENDS_KEY)
+        if not base_key:
+            return entry
+
+        if visiting is None:
+            visiting = set()
+        if instance_key in visiting:
+            raise TokenError(
+                f"Cycle in {CONFIG_FILE} config inheritance involving '{instance_key}'."
+            )
+        visiting.add(instance_key)
+
+        base_entry = self._resolve_entry(base_key, visiting)
+        if base_entry is None:
+            raise TokenError(
+                f"'{instance_key}:{EXTENDS_KEY}' in {CONFIG_FILE} points to a non-existent entry: '{base_key}'. "
+                f"Add '{base_key}' or define params directly on '{instance_key}'."
+            )
+
+        merged = dict(base_entry)
+        for key, value in entry.items():
+            if key != EXTENDS_KEY:
+                merged[key] = value
+        return merged
 
     def lookup(self, usage: "Usage", param: str):
          # this should be advertised as a well-known requirement: usage must define a 'instance' arg
@@ -32,7 +70,7 @@ class Config:
         if not type_default:
             raise TokenError(f"{class_name} does not define '{param}' in config_tuples")
 
-        (param_type, param_default) = type_default
+        (param_type, param_default, optional) = type_default
 
         instance_key = f'{class_name}-{instance}'
         entry = self._data.get(instance_key, None)
@@ -41,15 +79,18 @@ class Config:
                 f"{CONFIG_FILE} does not contain entry for '{instance_key}' with required params."
             )
         
-        _alias = entry.get('_alias', None) # _alias must = another entry instance_key
-        if _alias:
-            entry = self._data.get(_alias, None)
-            if not entry:
+        resolved = self._resolve_entry(instance_key)
+
+        if param not in resolved and not optional and param_default is None:
+            hint = self._extends_hint(instance_key)
+            if hint:
+                base_key = entry.get(EXTENDS_KEY)
                 raise TokenError(
-                    f"'{instance_key}:_alias' in {CONFIG_FILE} points to a non-existent entry: '{_alias}'."
-                )    
-        
-        raw = entry.get(param, param_default)
+                    f"'{param}' missing from '{instance_key}' in {CONFIG_FILE}{hint}. "
+                    f"Set it on '{base_key}' or override it on '{instance_key}'."
+                )
+
+        raw = resolved.get(param, param_default)
 
         if not raw:
             return None
@@ -171,7 +212,15 @@ class Usage:
         self.config_tuples = tuples
 
     def get_config_tuples(self) -> dict:
-        return {n: (t, d) for n, t, d in self.config_tuples}
+        result = {}
+        for t in self.config_tuples:
+            if len(t) == 3:
+                name, param_type, default = t
+                optional = False
+            else:
+                name, param_type, default, optional = t
+            result[name] = (param_type, default, optional)
+        return result
 
     # args and param values default as str
     def def_arg(self, name: str, usage: str, is_num: bool = False, valid_values: Optional[Set[str]] = None):

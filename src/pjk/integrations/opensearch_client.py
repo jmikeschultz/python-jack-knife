@@ -2,20 +2,20 @@ from pjk.usage import Usage
 
  # name, type, default
 OS_CONFIG_TUPLES = [
-    ("default_index", str, None),
+    ("default_index", str, None, True),
     ("os_auth_use_aws", bool, "true"),
     ("os_scheme", str, "https"),
     ("os_verify_certs", bool, "true"),
-    ("os_ca_certs", str, None),
-    ("os_region", str, None),
+    ("os_ca_certs", str, None, True),
+    ("os_region", str, None, True),
     ("os_service", str, "es"),
-    ("os_username", str, None),
-    ("os_password", str, None),
+    ("os_username", str, None, True),
+    ("os_password", str, None, True),
     ("os_timeout", float, 30),
     ("os_ssl_assert_hostname", bool, "true"),
     ("os_ssl_show_warn", bool, "false"),
     ("os_host", str, None),
-    ("os_port", int, None)
+    ("os_port", int, None, True),
 ]
 
 class OpenSearchClient:
