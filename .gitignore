@@ -1,5 +1,6 @@
 __pycache__/
 .pjk-history.txt
+.venv/
 dist/
 build
 *.egg-info
