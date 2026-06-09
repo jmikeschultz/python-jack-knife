@@ -1,4 +1,4 @@
 # SPDX-License-Identifier: Apache-2.0
 # Copyright 2024 Mike Schultz
 
-__version__ = "0.7.6"
+__version__ = "0.7.7"
