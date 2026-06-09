@@ -2,18 +2,27 @@ from typing import Optional, Set, List
 import os
 import yaml
 
-CONFIG_FILE = '~/.pjk/configs.yaml'
+from pjk.paths import config_file_display, config_file_path
+
 EXTENDS_KEY = '_extends'
+
+# Display path for errors; resolved via PJK_HOME or PJK_CONFIG_FILE.
+CONFIG_FILE = config_file_display()
 
 class Config:
     def __init__(self):
-        self.configs_yaml = os.path.expanduser(CONFIG_FILE)
+        self._loaded_path: Optional[str] = None
         self._data = {}
-        self._load()
-        
-    def _load(self):
-        if os.path.exists(self.configs_yaml):
-            with open(self.configs_yaml, 'r') as f:
+
+    def _ensure_loaded(self):
+        path = str(config_file_path())
+        if path != self._loaded_path:
+            self._loaded_path = path
+            self._load(path)
+
+    def _load(self, path: str):
+        if os.path.exists(path):
+            with open(path, 'r') as f:
                 self._data = yaml.safe_load(f) or {}
         else:
             self._data = {}
@@ -38,14 +47,14 @@ class Config:
             visiting = set()
         if instance_key in visiting:
             raise TokenError(
-                f"Cycle in {CONFIG_FILE} config inheritance involving '{instance_key}'."
+                f"Cycle in {config_file_display()} config inheritance involving '{instance_key}'."
             )
         visiting.add(instance_key)
 
         base_entry = self._resolve_entry(base_key, visiting)
         if base_entry is None:
             raise TokenError(
-                f"'{instance_key}:{EXTENDS_KEY}' in {CONFIG_FILE} points to a non-existent entry: '{base_key}'. "
+                f"'{instance_key}:{EXTENDS_KEY}' in {config_file_display()} points to a non-existent entry: '{base_key}'. "
                 f"Add '{base_key}' or define params directly on '{instance_key}'."
             )
 
@@ -56,10 +65,11 @@ class Config:
         return merged
 
     def lookup(self, usage: "Usage", param: str):
+        self._ensure_loaded()
          # this should be advertised as a well-known requirement: usage must define a 'instance' arg
         instance = usage.get_arg("instance")
         if not instance:
-            raise TokenError(f"'instance' arg must be defined when using configs in {CONFIG_FILE}")
+            raise TokenError(f"'instance' arg must be defined when using configs in {config_file_display()}")
 
         component_class = usage.get_component_class()
         class_name = component_class.__name__
@@ -76,7 +86,7 @@ class Config:
         entry = self._data.get(instance_key, None)
         if not entry:
             raise TokenError(
-                f"{CONFIG_FILE} does not contain entry for '{instance_key}' with required params."
+                f"{config_file_display()} does not contain entry for '{instance_key}' with required params."
             )
         
         resolved = self._resolve_entry(instance_key)
@@ -86,7 +96,7 @@ class Config:
             if hint:
                 base_key = entry.get(EXTENDS_KEY)
                 raise TokenError(
-                    f"'{param}' missing from '{instance_key}' in {CONFIG_FILE}{hint}. "
+                    f"'{param}' missing from '{instance_key}' in {config_file_display()}{hint}. "
                     f"Set it on '{base_key}' or override it on '{instance_key}'."
                 )
 

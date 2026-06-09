@@ -11,6 +11,7 @@ from pjk.sources.format_source import FormatSource
 import importlib.util
 import importlib
 from pjk.components import Pipe, Source, Sink
+from pjk.paths import plugins_dir_path
 from pjk.common import ComponentFactory, highlight, ComponentOrigin, pager_stdout
 from typing import List, Type
 
@@ -73,7 +74,7 @@ class ComponentRegistry:
 
             self.print_non_core([ComponentOrigin.CORE,ComponentOrigin.EXTERNAL], is_integration=True, header='integrations')
             self.print_non_core([ComponentOrigin.EXTERNAL], is_integration=False, header='apps')
-            self.print_non_core([ComponentOrigin.USER], is_integration=None, header='user components (~/.pjk/plugins)')        
+            self.print_non_core([ComponentOrigin.USER], is_integration=None, header=f'user components ({plugins_dir_path()})')        
 
     # is_integration = True|False|None  None=don't care
     def print_non_core(self, origin_list: List[ComponentOrigin], is_integration: bool, header:str):
@@ -96,7 +97,9 @@ class ComponentRegistry:
             line = f'  {name:<17} {temp:<15} {lines[0]}'
             print(line)
 
-    def load_user_components(self, path=os.path.expanduser("~/.pjk/plugins")):
+    def load_user_components(self, path=None):
+        if path is None:
+            path = str(plugins_dir_path())
         if not os.path.isdir(path):
             return
 
@@ -113,7 +116,7 @@ class ComponentRegistry:
                 sys.modules[spec.name] = module
                 spec.loader.exec_module(module)
             except Exception as e:
-                print(f"[pjk] Failed to load {fname} from ~/.pjk/plugins: {e}")
+                print(f"[pjk] Failed to load {fname} from {path}: {e}")
                 continue
 
             for obj in vars(module).values():

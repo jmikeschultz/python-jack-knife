@@ -3,6 +3,7 @@ import os
 import shlex
 from typing import List, Set
 from pjk.common import pager_stdout, highlight
+from pjk.runtime import pjk_stream_active
 
 LOG_FILE = '.pjk-history.txt'
 
@@ -50,6 +51,9 @@ def read_history(log_path: str) -> List[int]:
     return clist, cset
 
 def write_history(tokens: list):
+    if pjk_stream_active():
+        return
+
     if os.environ.get("PJK_NO_HISTORY") == "1":
         return
     

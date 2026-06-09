@@ -5,7 +5,7 @@ from pjk.components import Source
 
 
 class DictListSource(Source):
-    """Source that yields records from a list of dicts. Used by PjkEngine."""
+    """Source that yields records from a list of dicts. Used by PjkStream."""
 
     def __init__(self, records: list):
         super().__init__(root=None)

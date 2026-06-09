@@ -22,8 +22,11 @@ class ConfigComponent:
 
 
 def _make_config(yaml_text: str) -> Config:
+    from pjk.paths import config_file_path
+
     cfg = Config()
     cfg._data = __import__("yaml").safe_load(yaml_text) or {}
+    cfg._loaded_path = str(config_file_path())
     return cfg
 
 

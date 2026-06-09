@@ -1,9 +1,10 @@
 # SPDX-License-Identifier: Apache-2.0
 # Copyright 2024 Mike Schultz
 
-from pjk.parser import ExpressionParser, MACRO_PREFIX, MACROS_FILE, read_macros
+from pjk.parser import ExpressionParser, MACRO_PREFIX, read_macros
 from pjk.components import Source, Pipe, Sink
-from pjk.usage import Usage, CONFIG_FILE
+from pjk.paths import config_file_path, macros_file_path
+from pjk.usage import Usage
 from pjk.registry import ComponentRegistry
 from pjk.common import pager_stdout, highlight, ComponentOrigin
 from contextlib import nullcontext
@@ -88,7 +89,7 @@ def print_man(registry: ComponentRegistry, name: str, usage: Usage):
         print_example(registry, expr_tokens, expect, name)
 
 def display_configs():
-    path = Path(CONFIG_FILE).expanduser()
+    path = config_file_path()
 
     with pager_stdout():
         with path.open("r", encoding="utf-8") as f:
@@ -96,7 +97,7 @@ def display_configs():
         if not isinstance(data, dict):
             raise ValueError("Top-level YAML must be a mapping of records")
         
-        print(f'Component configs defined in {CONFIG_FILE}')
+        print(f'Component configs defined in {path}')
         print()
         for name, body_dict in data.items():
             print('=========================================')
@@ -123,7 +124,7 @@ def display_macros():
     macros = read_macros()
 
     with pager_stdout():
-        print(f"Macros defined in '{MACROS_FILE}'")
+        print(f"Macros defined in '{macros_file_path()}'")
 
         print(f"Usage: pjk [...] {MACRO_PREFIX}:<macro_name> [...]")
         print()

@@ -124,7 +124,7 @@ class SnowflakeClient:
 class SnowflakePipe(QueryPipe, Integration):
     """
     Snowflake query pipe; executes SQL found in input record['query'] and streams rows.
-    Connection/session settings are pulled from ~/.pjk/component_configs.yaml under the arg name.
+    Connection/session settings are pulled from configs.yaml under PJK_HOME (or PJK_CONFIG_FILE).
     """
     name = 'snowflake'
     desc = "Snowflake query pipe; executes SQL over input record['query']."

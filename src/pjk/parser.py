@@ -16,11 +16,13 @@ from pjk.progress import ProgressIgnore
 from pjk.parse_pjk_file import handle_pjk_file
 from pjk.common import SafeNamespace
 
-MACROS_FILE = '~/.pjk/macros.txt'
+from pjk.paths import macros_file_path
+
 MACRO_PREFIX = 'm'
-def read_macros(file_name: str = MACROS_FILE) -> Dict[str, str]:
+
+def read_macros(file_name: str | None = None) -> Dict[str, str]:
     out: Dict[str, str] = {}
-    path = Path(file_name).expanduser()
+    path = Path(file_name) if file_name else macros_file_path()
     with path.open(encoding="utf-8") as f:
         for raw in f:
             line = raw.split("#", 1)[0].strip()

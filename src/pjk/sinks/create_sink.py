@@ -2,6 +2,7 @@
 # Copyright 2024 Mike Schultz
 
 from pjk.components import Sink
+from pjk.paths import plugins_dir_path
 from pjk.usage import ParsedToken, Usage
 from importlib.resources import files
 from pathlib import Path
@@ -45,7 +46,7 @@ class CreateSink(Sink):
             desc=(
                 "Write a bare bones source, pipe or sink python file.\n"
                 "Requires input record of the form: \"{<type>: '<name>'}\". E.g. \"{pipe: 'mypipe'}\"\n"
-                "User components can be used inline or deposited in ~/.pjk/plugins"
+                f"User components can be used inline or deposited in {plugins_dir_path()}"
             ),
             component_class=cls
         )
