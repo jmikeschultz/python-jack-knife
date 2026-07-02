@@ -6,6 +6,7 @@ from pjk.components import Source, Sink
 from pjk.common import highlight
 
 CSI = "\x1b["  # ANSI Control Sequence Introducer
+CLEAR_WIDTH = 120
 
 # mixin so progress will ignore
 class ProgressIgnore:
@@ -46,21 +47,26 @@ class ProgressDisplay:
         self._stop_event = threading.Event()
         self._thread = None
         self._last_lines = 0
+        self._clear_on_stop = False
         self._use_ansi = hasattr(stream, "isatty") and stream.isatty()  # <-- only use cursor moves on a TTY
 
     def start(self):
         if self._thread and self._thread.is_alive():
             return
+        self._clear_on_stop = False
         self._thread = threading.Thread(target=self._run, name="ProgressDisplay", daemon=True)
         self._thread.start()
 
-    def stop(self, timeout: float | None = 0.1):
+    def stop(self, timeout: float | None = 0.1, clear: bool = False):
+        self._clear_on_stop = clear
         self._stop_event.set()
         if self._thread and self._thread.is_alive():
             try:
                 self._thread.join(timeout=timeout)  # short join so Ctrl-C isn’t delayed
             except Exception:
                 pass
+        elif clear:
+            self._erase_lines()
 
     def _run(self):
         while not self._stop_event.is_set():
@@ -71,10 +77,35 @@ class ProgressDisplay:
             if self._stop_event.wait(self.interval):
                 break
 
-        # --- FINAL REFRESH ON SHUTDOWN ---
-        reports = self.api.snapshot()
-        lines = self._render_lines(reports)
-        self._write_lines(lines, final=True)
+        if not self._clear_on_stop:
+            # --- FINAL REFRESH ON SHUTDOWN ---
+            reports = self.api.snapshot()
+            lines = self._render_lines(reports)
+            self._write_lines(lines, final=True)
+        else:
+            self._erase_lines()
+
+    def _erase_lines(self):
+        """Remove the last rendered progress block from the terminal."""
+        prev_lines = self._last_lines
+        if not prev_lines:
+            return
+
+        if self._use_ansi:
+            self.stream.write(f"{CSI}{prev_lines}F")
+            blank = " " * CLEAR_WIDTH
+            for _ in range(prev_lines):
+                self.stream.write(blank + "\n")
+            self.stream.write(f"{CSI}{prev_lines}F")
+        else:
+            self.stream.write("\n")
+
+        try:
+            self.stream.flush()
+        except Exception:
+            pass
+
+        self._last_lines = 0
 
     def _write_lines(self, lines, final: bool = False):
         """

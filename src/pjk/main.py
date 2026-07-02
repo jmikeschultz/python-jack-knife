@@ -8,6 +8,7 @@ import shlex
 from typing import List, Dict
 from pjk.parser import ExpressionParser
 from pjk.usage import UsageError
+from pjk.errors import RecordProcessingError, find_token_index
 from pjk.log import init as init_logging
 import traceback
 import concurrent.futures
@@ -37,6 +38,14 @@ def execute_threaded(sinks, stop_progress=None):
         executor.shutdown(wait=False, cancel_futures=True)
         os._exit(130)
 
+    except RecordProcessingError:
+        if stop_progress:
+            try: stop_progress()
+            except Exception: pass
+        for f in futures:
+            f.cancel()
+        executor.shutdown(wait=False, cancel_futures=True)
+        raise
     except Exception as e:
         if stop_progress:
             try: stop_progress()
@@ -116,6 +125,7 @@ def execute_tokens(tokens: List[str]):
     parser = ExpressionParser(registry)
 
     display = None
+    display_cleared = False
     try:
         sink = parser.parse(tokens)
         write_history(sys.argv[1:]) # now that it's parsed sucessfully
@@ -133,17 +143,28 @@ def execute_tokens(tokens: List[str]):
 
         if len(sinks) > 1:
             # pass a stopper so we halt the UI before tracebacks / shutdown
-            execute_threaded(sinks, stop_progress=(display.stop if display else None))
+            execute_threaded(
+                sinks,
+                stop_progress=(lambda: display.stop(clear=True) if display else None),
+            )
         else:
             sink.drain()
 
     except UsageError as e:
         print(e, file=sys.stderr)
         sys.exit(2)
+    except RecordProcessingError as e:
+        if display:
+            display.stop(clear=True, timeout=0.5)
+            display_cleared = True
+        e.tokens = tokens
+        e.token_no = find_token_index(tokens, e.token)
+        print(e, file=sys.stderr)
+        sys.exit(2)
     except KeyboardInterrupt:
         pass
     finally:
-        if display:
+        if display and not display_cleared:
             # short join so Ctrl-C is immediate
             try: display.stop(timeout=0.1)
             except Exception: pass

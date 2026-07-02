@@ -4,6 +4,7 @@
 # djk/pipes/let_reduce.py
 
 from pjk.components import DeepCopyPipe
+from pjk.errors import RecordProcessingError
 from pjk.usage import ParsedToken, Usage, UsageError, TokenError, NoBindUsage
 from pjk.common import SafeNamespace, ReducingNamespace
 import math
@@ -19,22 +20,28 @@ def parse_args(token: str):
         raise ValueError(f"Invalid token syntax: {token!r}")
     return match.groupdict()
 
-def do_eval(expr, env):
+def do_eval(expr, env, *, record: dict, token: str):
     try:
         safe_env = dict(env)
         safe_env['json'] = json
         safe_env['re'] = re
         return eval(expr, {}, safe_env)
-    except Exception:
-        raise Exception(f"Error in expression: {expr}")
+    except RecordProcessingError:
+        raise
+    except Exception as e:
+        raise RecordProcessingError(
+            token=token,
+            record=record,
+            cause=e,
+        ) from e
 
-def eval_regular(expr: str, record: dict):
+def eval_regular(expr: str, record: dict, *, token: str):
     env = {'f': SafeNamespace(record)}
     if re.match(r'[a-zA-Z0-9_]+$', expr):
         return expr
-    return do_eval(expr, env)
+    return do_eval(expr, env, record=record, token=token)
 
-def eval_accumulating(expr: str, record: dict, op: str, acc=None):
+def eval_accumulating(expr: str, record: dict, op: str, acc=None, *, token: str):
     if op in ('-=', '*=', '/=') and 'acc' not in expr:
         expr = f'acc {op[0]} ({expr})'
 
@@ -51,20 +58,33 @@ def eval_accumulating(expr: str, record: dict, op: str, acc=None):
     if isinstance(node, (ast.ListComp, ast.SetComp, ast.DictComp)):
         env['f'] = ReducingNamespace(record)
 
+    def _eval_compiled(node, label: str):
+        try:
+            return eval(compile(ast.Expression(node), label, 'eval'), {}, env)
+        except RecordProcessingError:
+            raise
+        except Exception as e:
+            raise RecordProcessingError(token=token, record=record, cause=e) from e
+
     if isinstance(node, ast.ListComp):
-        values = eval(compile(ast.Expression(node), '<reduce:listcomp>', 'eval'), {}, env)
+        values = _eval_compiled(node, '<reduce:listcomp>')
         return (acc or []) + list(values)
 
     if isinstance(node, ast.SetComp):
-        values = eval(compile(ast.Expression(node), '<reduce:setcomp>', 'eval'), {}, env)
+        values = _eval_compiled(node, '<reduce:setcomp>')
         return (acc or set()).union(values)
 
     if isinstance(node, ast.DictComp):
-        values = eval(compile(ast.Expression(node), '<reduce:dictcomp>', 'eval'), {}, env)
+        values = _eval_compiled(node, '<reduce:dictcomp>')
         return {**(acc or {}), **values}
 
     if op == '+=':
-        value = eval(expr, {}, env)
+        try:
+            value = eval(expr, {}, env)
+        except RecordProcessingError:
+            raise
+        except Exception as e:
+            raise RecordProcessingError(token=token, record=record, cause=e) from e
         if isinstance(value, (int, float)):
             return (acc or 0) + value
         elif isinstance(value, str):
@@ -75,9 +95,9 @@ def eval_accumulating(expr: str, record: dict, op: str, acc=None):
             return (acc or []) + [value]
 
     if op in ('-=', '*=', '/='):
-        return do_eval(expr, env)
+        return do_eval(expr, env, record=record, token=token)
 
-    return do_eval(expr, env)
+    return do_eval(expr, env, record=record, token=token)
 
 # --- LetPipe (simple field assignment) ---
 class LetPipe(DeepCopyPipe):
@@ -108,11 +128,17 @@ class LetPipe(DeepCopyPipe):
         pass  # stateless
 
     def __iter__(self):
+        token = self.ptok.whole_token
         for record in self.left:
-            if self.op == ':':
-                record[self.field] = self.rest
-            else:
-                record[self.field] = eval_regular(self.rest, record)
+            try:
+                if self.op == ':':
+                    record[self.field] = self.rest
+                else:
+                    record[self.field] = eval_regular(self.rest, record, token=token)
+            except RecordProcessingError:
+                raise
+            except Exception as e:
+                raise RecordProcessingError(token=token, record=record, cause=e) from e
             yield record
 
 # --- Named aggregations (ave, sum, min, max) ---
@@ -316,12 +342,20 @@ class ReducePipe(DeepCopyPipe):
         self.accum_value = self.initial_acc_value()
 
     def __iter__(self):
+        token = self.ptok.whole_token
         for record in self.left:
-            if self.named_agg:
-                agg_name, field_name = self.named_agg
-                self.accum_value = eval_named_aggregation(agg_name, field_name, record, self.accum_value)
-            else:
-                self.accum_value = eval_accumulating(self.rest, record, self.op, self.accum_value)
+            try:
+                if self.named_agg:
+                    agg_name, field_name = self.named_agg
+                    self.accum_value = eval_named_aggregation(agg_name, field_name, record, self.accum_value)
+                else:
+                    self.accum_value = eval_accumulating(
+                        self.rest, record, self.op, self.accum_value, token=token
+                    )
+            except RecordProcessingError:
+                raise
+            except Exception as e:
+                raise RecordProcessingError(token=token, record=record, cause=e) from e
             yield record
 
     def get_subexp_result(self):

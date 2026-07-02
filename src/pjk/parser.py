@@ -6,6 +6,7 @@ import shlex
 from typing import Any, List
 from pjk.components import Source, Pipe, Sink
 from pjk.usage import TokenError, UsageError, ParsedToken, Usage
+from pjk.errors import CLI_PROBLEM_HEADER
 from pjk.pipes.let_reduce import ReducePipe
 from pjk.pipes.progress_pipe import ProgressPipe
 from pjk.registry import ComponentRegistry
@@ -139,7 +140,7 @@ class ExpressionParser:
         return sink
 
     def parse(self, tokens: List[str], source_override=None) -> Sink:
-        usage_error_message = "You've got a problem here."
+        usage_error_message = CLI_PROBLEM_HEADER
         stack_helper = StackLoader()
         self.tokens = tokens
         pos = 0
