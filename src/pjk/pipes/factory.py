@@ -20,6 +20,7 @@ from pjk.pipes.ddiff import DdiffPipe
 from pjk.pipes.filter import FilterPipe
 from pjk.pipes.select import SelectFields
 from pjk.pipes.denorm import DenormPipe
+from pjk.pipes.grab import GrabPipe
 from pjk.integrations.postgres_pipe import PostgresPipe
 from pjk.integrations.snowflake_pipe import SnowflakePipe
 from pjk.integrations.opensearch_query_pipe import OpenSearchQueryPipe
@@ -78,6 +79,7 @@ COMPONENTS = {
         'select': SelectFields,
         'sample': SamplePipe,
         'explode': DenormPipe,
+        'grab': GrabPipe,
         'postgres': PostgresPipe,
         'snowflake': SnowflakePipe,
         'os_query': OpenSearchQueryPipe,
