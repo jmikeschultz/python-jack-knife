@@ -7,12 +7,142 @@ from pjk.components import DeepCopyPipe
 from pjk.errors import RecordProcessingError
 from pjk.usage import ParsedToken, Usage, UsageError, TokenError, NoBindUsage
 from pjk.common import SafeNamespace, ReducingNamespace
+from collections.abc import Sequence
 import math
 import re
 import ast
 import json
 
 # --- Shared Utilities ---
+def _record_path(record, path):
+    value = record
+    for part in path:
+        if isinstance(value, dict):
+            value = value.get(part)
+        else:
+            value = getattr(value, part, None)
+        if value is None:
+            return None
+    return value
+
+
+def _lazy_expression_value(value):
+    if isinstance(value, dict):
+        return ExpressionNamespace(value)
+    if isinstance(value, list):
+        return ExpressionSequence(value)
+    return value
+
+
+def _materialize_expression_value(value):
+    """Convert lazy expression views in an evaluated result to builtins."""
+    if isinstance(value, ExpressionNamespace):
+        return value._record
+    if isinstance(value, ExpressionSequence):
+        return value._values
+    if isinstance(value, dict):
+        return {
+            _materialize_expression_value(key): _materialize_expression_value(item)
+            for key, item in value.items()
+        }
+    if isinstance(value, list):
+        return [_materialize_expression_value(item) for item in value]
+    if isinstance(value, tuple):
+        return tuple(_materialize_expression_value(item) for item in value)
+    if isinstance(value, set):
+        return {_materialize_expression_value(item) for item in value}
+    return value
+
+
+class ExpressionNamespace:
+    """Expose record fields lazily to avoid walking unused nested values."""
+
+    __slots__ = ('_record',)
+
+    def __init__(self, record):
+        self._record = record
+
+    def __getattr__(self, name):
+        return _lazy_expression_value(self._record.get(name))
+
+
+class ExpressionSequence(Sequence):
+    """Wrap list elements only when an expression actually reads them."""
+
+    __slots__ = ('_values',)
+
+    def __init__(self, values):
+        self._values = values
+
+    def __len__(self):
+        return len(self._values)
+
+    def __getitem__(self, index):
+        value = self._values[index]
+        if isinstance(index, slice):
+            return [_lazy_expression_value(item) for item in value]
+        return _lazy_expression_value(value)
+
+    def __iter__(self):
+        return (_lazy_expression_value(value) for value in self._values)
+
+    def __repr__(self):
+        return repr(list(self))
+
+    def __eq__(self, other):
+        if isinstance(other, ExpressionSequence):
+            other = other._values
+        return self._values == other
+
+    def __add__(self, other):
+        return list(self) + list(other)
+
+    def __radd__(self, other):
+        return list(other) + list(self)
+
+
+class PreparedExpression:
+    """Parse once and cheaply evaluate common record expressions."""
+
+    def __init__(self, expr: str, label: str, reducing: bool | None = False):
+        self.expr = expr
+        self.label = label
+        try:
+            self.node = ast.parse(expr, mode='eval').body
+            self.code = compile(ast.Expression(self.node), label, 'eval')
+        except SyntaxError as e:
+            raise UsageError(f"Invalid expression: {expr}") from e
+
+        self.reducing = (
+            isinstance(self.node, (ast.ListComp, ast.SetComp, ast.DictComp))
+            if reducing is None
+            else reducing
+        )
+
+        self.constant = self.node.value if isinstance(self.node, ast.Constant) else None
+        self.is_constant = isinstance(self.node, ast.Constant)
+        self.uses_f = any(
+            isinstance(child, ast.Name) and child.id == 'f'
+            for child in ast.walk(self.node)
+        )
+
+    def evaluate(self, record: dict, *, token: str, acc=None):
+        try:
+            if self.is_constant:
+                return self.constant
+
+            env = {'acc': acc}
+            if self.uses_f:
+                namespace = ReducingNamespace if self.reducing else ExpressionNamespace
+                env['f'] = namespace(record)
+            value = do_eval(self.code, env, record=record, token=token)
+            return _materialize_expression_value(value)
+        except RecordProcessingError:
+            raise
+        except Exception as e:
+            raise RecordProcessingError(token=token, record=record, cause=e) from e
+
+
 def parse_args(token: str):
     pattern = re.compile(r'(?P<field>\w+)(?P<op>[:=\+\-\*/]+)(?P<rest>.+)$')
     match = pattern.fullmatch(token)
@@ -41,50 +171,21 @@ def eval_regular(expr: str, record: dict, *, token: str):
         return expr
     return do_eval(expr, env, record=record, token=token)
 
-def eval_accumulating(expr: str, record: dict, op: str, acc=None, *, token: str):
-    if op in ('-=', '*=', '/=') and 'acc' not in expr:
-        expr = f'acc {op[0]} ({expr})'
-
-    env = {
-        'f': SafeNamespace(record),
-        'acc': acc
-    }
-
-    try:
-        node = ast.parse(expr, mode='eval').body
-    except SyntaxError:
-        raise UsageError(f"Invalid expression: {expr}")
-
-    if isinstance(node, (ast.ListComp, ast.SetComp, ast.DictComp)):
-        env['f'] = ReducingNamespace(record)
-
-    def _eval_compiled(node, label: str):
-        try:
-            return eval(compile(ast.Expression(node), label, 'eval'), {}, env)
-        except RecordProcessingError:
-            raise
-        except Exception as e:
-            raise RecordProcessingError(token=token, record=record, cause=e) from e
+def accumulate_value(value, node, op: str, acc=None):
 
     if isinstance(node, ast.ListComp):
-        values = _eval_compiled(node, '<reduce:listcomp>')
+        values = value
         return (acc or []) + list(values)
 
     if isinstance(node, ast.SetComp):
-        values = _eval_compiled(node, '<reduce:setcomp>')
+        values = value
         return (acc or set()).union(values)
 
     if isinstance(node, ast.DictComp):
-        values = _eval_compiled(node, '<reduce:dictcomp>')
+        values = value
         return {**(acc or {}), **values}
 
     if op == '+=':
-        try:
-            value = eval(expr, {}, env)
-        except RecordProcessingError:
-            raise
-        except Exception as e:
-            raise RecordProcessingError(token=token, record=record, cause=e) from e
         if isinstance(value, (int, float)):
             return (acc or 0) + value
         elif isinstance(value, str):
@@ -94,10 +195,7 @@ def eval_accumulating(expr: str, record: dict, op: str, acc=None, *, token: str)
         else:
             return (acc or []) + [value]
 
-    if op in ('-=', '*=', '/='):
-        return do_eval(expr, env, record=record, token=token)
-
-    return do_eval(expr, env, record=record, token=token)
+    return value
 
 # --- LetPipe (simple field assignment) ---
 class LetPipe(DeepCopyPipe):
@@ -120,9 +218,15 @@ class LetPipe(DeepCopyPipe):
         self.field = args['field']
         self.op = args['op']
         self.rest = args['rest']
+        self.prepared = None
+        self.literal_value = None
 
         if self.op in ('+=', '-=', '*=', '/='):
             raise TokenError("Aggregation operator not allowed in let, use reduce:")
+        if self.op != ':' and re.fullmatch(r'[a-zA-Z0-9_]+', self.rest):
+            self.literal_value = self.rest
+        elif self.op != ':':
+            self.prepared = PreparedExpression(self.rest, '<let>')
 
     def reset(self):
         pass  # stateless
@@ -133,8 +237,10 @@ class LetPipe(DeepCopyPipe):
             try:
                 if self.op == ':':
                     record[self.field] = self.rest
+                elif self.literal_value is not None:
+                    record[self.field] = self.literal_value
                 else:
-                    record[self.field] = eval_regular(self.rest, record, token=token)
+                    record[self.field] = self.prepared.evaluate(record, token=token)
             except RecordProcessingError:
                 raise
             except Exception as e:
@@ -146,15 +252,6 @@ class LetPipe(DeepCopyPipe):
 NAMED_AGG_PATTERN = re.compile(r'^(\w+):f\.([\w.]+)$')
 NAMED_AGGS = frozenset(('ave', 'sum', 'min', 'max', 'p50', 'p75', 'p90'))
 PERCENTILE_MAP = {'p50': 50, 'p75': 75, 'p90': 90}
-
-
-def _get_nested(ns, path: str):
-    """Resolve dot path (e.g. 'size' or 'address.zip') against SafeNamespace."""
-    for part in path.split('.'):
-        ns = getattr(ns, part, None)
-        if ns is None:
-            return None
-    return ns
 
 
 def _to_number(val):
@@ -172,8 +269,9 @@ def _to_number(val):
 
 
 def eval_named_aggregation(agg_name: str, field_path: str, record: dict, acc):
-    ns = SafeNamespace(record)
-    val = _to_number(_get_nested(ns, field_path))
+    raw_val = _record_path(record, field_path.split('.'))
+
+    val = _to_number(raw_val)
 
     if agg_name == 'ave':
         s, n = acc or (0, 0)
@@ -307,6 +405,8 @@ class ReducePipe(DeepCopyPipe):
         self.op = args['op']
         self.rest = args['rest']
         self.named_agg = None
+        self.prepared = None
+        self.prepared_node = None
 
         if self.op == '=':
             m = NAMED_AGG_PATTERN.match(self.rest)
@@ -321,6 +421,17 @@ class ReducePipe(DeepCopyPipe):
                 self.op = '+='
             else:
                 raise TokenError("Reduce pipe requires an accumulating operator (+=, -=, etc.), unless RHS is a comprehension or named agg (ave:f.field, sum:f.field, etc.)")
+
+        if not self.named_agg:
+            expr = self.rest
+            if self.op in ('-=', '*=', '/=') and 'acc' not in expr:
+                expr = f'acc {self.op[0]} ({expr})'
+            self.prepared = PreparedExpression(
+                expr,
+                '<reduce>',
+                reducing=None,
+            )
+            self.prepared_node = self.prepared.node
 
         self.accum_value = self.initial_acc_value()
 
@@ -349,8 +460,16 @@ class ReducePipe(DeepCopyPipe):
                     agg_name, field_name = self.named_agg
                     self.accum_value = eval_named_aggregation(agg_name, field_name, record, self.accum_value)
                 else:
-                    self.accum_value = eval_accumulating(
-                        self.rest, record, self.op, self.accum_value, token=token
+                    value = self.prepared.evaluate(
+                        record,
+                        token=token,
+                        acc=self.accum_value,
+                    )
+                    self.accum_value = accumulate_value(
+                        value,
+                        self.prepared_node,
+                        self.op,
+                        self.accum_value,
                     )
             except RecordProcessingError:
                 raise
