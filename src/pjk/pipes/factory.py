@@ -24,6 +24,7 @@ from pjk.pipes.grab import GrabPipe
 from pjk.integrations.postgres_pipe import PostgresPipe
 from pjk.integrations.snowflake_pipe import SnowflakePipe
 from pjk.integrations.opensearch_query_pipe import OpenSearchQueryPipe
+from pjk.integrations.rest_pipe import RestPipe
 from pjk.pipes.sample import SamplePipe
 from pjk.pipes.user_pipe_factory import UserPipeFactory
 from pjk.usage import Usage
@@ -95,6 +96,7 @@ COMPONENTS = {
         'postgres': PostgresPipe,
         'snowflake': SnowflakePipe,
         'os_query': OpenSearchQueryPipe,
+        'rest': RestPipe,
         'if': IfPipeDisplay,
         'over': OverPipeDisplay,
     }

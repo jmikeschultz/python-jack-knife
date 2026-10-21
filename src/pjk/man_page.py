@@ -104,8 +104,9 @@ def display_configs():
             print('   ', highlight(name, 'bold', name))
             print('=========================================')
 
-            if 'password' in body_dict:
-                body_dict['password'] = '*************'
+            for secret_key in ('password', 'token', 'auth_client_secret'):
+                if secret_key in body_dict:
+                    body_dict[secret_key] = '*************'
 
             try:
                 yaml.dump(
