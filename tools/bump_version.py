@@ -6,13 +6,24 @@ Usage:
     python tools/bump_version.py 0.6.0
 """
 
+import argparse
 import re
-import sys
 import pathlib
 import subprocess
 
 VERSION_FILE = pathlib.Path(__file__).parent.parent / "src/pjk/version.py"
 TAG_PREFIX = "v"  # so tags look like v0.6.0
+
+
+def release_version(value: str) -> str:
+    if not re.fullmatch(
+        r"\d+\.\d+\.\d+(?:(?:a|b|rc)\d+)?(?:\.post\d+)?(?:\.dev\d+)?",
+        value,
+    ):
+        raise argparse.ArgumentTypeError(
+            "expected a version such as 0.8.0, 0.8.0rc1, or 0.8.0.dev1"
+        )
+    return value
 
 
 def set_version(new_version: str):
@@ -32,11 +43,11 @@ def git(*args):
 
 
 def main():
-    if len(sys.argv) != 2:
-        print("Usage: bump_version.py NEW_VERSION")
-        sys.exit(1)
-
-    new_version = sys.argv[1]
+    parser = argparse.ArgumentParser(
+        description="Update src/pjk/version.py, commit the change, and create a local version tag."
+    )
+    parser.add_argument("new_version", type=release_version, metavar="NEW_VERSION")
+    new_version = parser.parse_args().new_version
 
     set_version(new_version)
     print(f"✅ Updated {VERSION_FILE} to {new_version}")
