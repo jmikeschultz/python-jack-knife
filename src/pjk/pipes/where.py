@@ -7,6 +7,7 @@ from pjk.usage import NoBindUsage
 from pjk.components import Pipe, DeepCopyPipe
 from pjk.usage import ParsedToken, Usage, UsageError
 from pjk.common import SafeNamespace
+from pjk.errors import RecordProcessingError
 from pjk.progress import papi
 
 class WherePipe(DeepCopyPipe):
@@ -44,7 +45,9 @@ class WherePipe(DeepCopyPipe):
                 if eval(self.code, {}, {'f': f}):
                     self.outrecs.increment()
                     yield record
-            except Exception:
-                continue  # ignore eval errors
-
-    
+            except Exception as e:
+                raise RecordProcessingError(
+                    token=self.ptok.whole_token,
+                    record=record,
+                    cause=e,
+                ) from e
