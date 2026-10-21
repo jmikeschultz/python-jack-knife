@@ -4,7 +4,7 @@
 import os
 import shlex
 from typing import Any, List
-from pjk.components import Source, Pipe, Sink
+from pjk.components import KeyedSource, Source, Pipe, Sink
 from pjk.usage import TokenError, UsageError, ParsedToken, Usage
 from pjk.errors import CLI_PROBLEM_HEADER, RecordProcessingError
 from pjk.pipes.let_reduce import ReducePipe
@@ -435,6 +435,7 @@ class SubExpression(Pipe, ProgressIgnore):
         self.in_else_branch = False
         self.conditional_then_chain = None
         self.injected_parent_fields = set()
+        self.per_record_ops = None
 
     def enter_else_branch(self):
         """Switch to collecting else branch; save then chain."""
@@ -474,6 +475,51 @@ class SubExpression(Pipe, ProgressIgnore):
         for op in self.subexp_ops:
             if isinstance(op, Pipe):
                 op.reset()
+
+    def depends_on_upstream(self, op, memo):
+        if op is self.upstream_source:
+            return True
+
+        op_id = id(op)
+        if op_id in memo:
+            return memo[op_id]
+
+        # Break any accidental graph cycle before walking inputs.
+        memo[op_id] = False
+        depends = any(
+            self.depends_on_upstream(source, memo)
+            for source in getattr(op, 'inputs', [])
+        )
+        memo[op_id] = depends
+        return depends
+
+    def collect_pipe_graph(self, op, pipes):
+        if op in pipes:
+            return
+        if isinstance(op, Pipe):
+            pipes.add(op)
+        for source in getattr(op, 'inputs', []):
+            self.collect_pipe_graph(source, pipes)
+
+    def get_per_record_ops(self):
+        memo = {}
+        persistent_lookup_ops = set()
+
+        # A keyed source used as a right-side lookup is reusable when it does
+        # not depend on this parent's subrecords. Other independent iterators
+        # must still reset because they may have been exhausted.
+        for op in self.subexp_ops:
+            right = getattr(op, 'right', None)
+            if (
+                isinstance(right, KeyedSource)
+                and not self.depends_on_upstream(right, memo)
+            ):
+                self.collect_pipe_graph(right, persistent_lookup_ops)
+
+        return [
+            op for op in self.subexp_ops
+            if isinstance(op, Pipe) and op not in persistent_lookup_ops
+        ]
 
     def __iter__(self):
         yield from self.left # pass thru to subexp_over which then calls process
@@ -569,6 +615,7 @@ class SubExpression(Pipe, ProgressIgnore):
     ):
         if not self.subexp_left:
             self.subexp_left = self.subexp_stack.pop()
+            self.per_record_ops = self.get_per_record_ops()
 
         requested_parent_fields = requested_parent_fields or []
         over_token = over_token or f'over:{over_arg}'
@@ -581,7 +628,7 @@ class SubExpression(Pipe, ProgressIgnore):
             return # couldn't set, no processing
 
         # Reset sub-pipe stack
-        for op in self.subexp_ops:
+        for op in self.per_record_ops:
             op.reset()
 
         out_recs = []

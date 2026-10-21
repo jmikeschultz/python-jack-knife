@@ -2,7 +2,7 @@
 # Copyright 2024 Mike Schultz
 
 from abc import ABC, abstractmethod
-from typing import Any, Optional, List
+from typing import Any, Iterable, Optional, List
 from pjk.usage import Usage, NoBindUsage, ParsedToken
     
 # mixin
@@ -19,9 +19,16 @@ class KeyedSource(ABC):
         """Return the record associated with the given key, or None."""
         pass
 
-    def get_unlookedup_records(self) -> List[Any]:
-        # for outer join
-        pass
+    def lookup_item(self, left_rec):
+        """Return ``(key, record)`` for consumers that need match identity."""
+        record = self.lookup(left_rec)
+        if record is None:
+            return None
+        return id(record), record
+
+    def keyed_items(self) -> Iterable[tuple[Any, dict]]:
+        """Iterate ``(key, record)`` pairs without changing lookup state."""
+        return ((id(record), record) for record in self)
 
     def deep_copy(self):
         return None

@@ -65,16 +65,13 @@ class JoinPipe(Pipe):
         self.mode = usage.get_arg('mode')
         self.left = None
         self.right = None
-        self._pending_right = None
-        self._check_right = False
 
         self.recs_in = papi.get_counter(self, 'recs_in', display=False) 
         self.matches = papi.get_percentage_counter(self, 'matches', self.recs_in)
         self.recs_out = papi.get_counter(self, 'recs_out')
 
     def reset(self):
-        self._pending_right = None
-        self._check_right = False
+        pass
 
     def concat_iter(self):
         for rec in self.left:
@@ -92,9 +89,19 @@ class JoinPipe(Pipe):
         if not isinstance(self.right, KeyedSource):
             raise UsageError("right source must be a KeyedSource")
 
+        matched_right_keys = set() if self.mode == "outer" else None
+
         for left_rec in self.left:
             self.recs_in.increment()
-            match = self.right.lookup(left_rec)
+            if matched_right_keys is not None:
+                item = self.right.lookup_item(left_rec)
+                if item is None:
+                    match = None
+                else:
+                    match_key, match = item
+                    matched_right_keys.add(match_key)
+            else:
+                match = self.right.lookup(left_rec)
 
             if match is not None:
                 self.matches.increment()
@@ -112,6 +119,8 @@ class JoinPipe(Pipe):
                 continue
 
         if self.mode == "outer":
-            for right_rec in self.right.get_unlookedup_records():
+            for key, right_rec in self.right.keyed_items():
+                if key in matched_right_keys:
+                    continue
                 self.recs_out.increment()
                 yield right_rec

@@ -32,7 +32,6 @@ class MapByPipe(Pipe, KeyedSource):
         self.is_group = False
         self.fields = usage.get_arg('key').split(',')
         self.rec_map = {}
-        self.matched_map = {}
         self.is_loaded = False
         self.do_count = usage.get_param(name='count').lower() == 'true'
         self.counts = {}
@@ -43,7 +42,6 @@ class MapByPipe(Pipe, KeyedSource):
 
     def reset(self):
         self.rec_map.clear()
-        self.matched_map.clear()
         self._rec_list = None
         self.is_loaded = False
 
@@ -105,20 +103,23 @@ class MapByPipe(Pipe, KeyedSource):
             yield v
 
     def lookup(self, left_rec) -> Optional[dict]:
+        item = self.lookup_item(left_rec)
+        return item[1] if item is not None else None
+
+    def lookup_item(self, left_rec):
         if not self.is_loaded:
             self.load()
 
         key = tuple(left_rec.get(f) for f in self.fields)
-        rec = self.rec_map.pop(key, None)
-        if rec is not None:
-            self.matched_map[key] = rec
-            return rec
-        return self.matched_map.get(key)
+        record = self.rec_map.get(key)
+        if record is None:
+            return None
+        return key, record
 
-    def get_unlookedup_records(self):
+    def keyed_items(self):
         if not self.is_loaded:
             self.load()
-        return list(self.rec_map.values())
+        return self.rec_map.items()
 
 class GroupByPipe(MapByPipe):
     @classmethod
