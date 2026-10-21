@@ -26,6 +26,7 @@ from pjk.integrations.snowflake_pipe import SnowflakePipe
 from pjk.integrations.opensearch_query_pipe import OpenSearchQueryPipe
 from pjk.integrations.rest_pipe import RestPipe
 from pjk.pipes.sample import SamplePipe
+from pjk.pipes.stats import StatsPipe
 from pjk.pipes.user_pipe_factory import UserPipeFactory
 from pjk.usage import Usage
 
@@ -91,6 +92,7 @@ COMPONENTS = {
         'where': WherePipe,
         'select': SelectFields,
         'sample': SamplePipe,
+        'stats': StatsPipe,
         'explode': DenormPipe,
         'grab': GrabPipe,
         'postgres': PostgresPipe,
