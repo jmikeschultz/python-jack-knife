@@ -26,6 +26,58 @@ def test_one():
                     "over:ferry",
                     "sort:-foo",
                     f"expect:{ONE_ANSWER}"])
+
+def test_over_exposes_only_requested_parent_fields_temporarily():
+    expected = """{"parent":"P","color":"outer","items":[{"child":"C","seen":"P","parent_color":"outer","copied":"P"}]}"""
+    execute_tokens([
+        "{parent:'P', color:'outer', items:[{child:'C'}]}",
+        "[",
+        "let:seen=f.parent",
+        "let:parent_color=f.color",
+        "as:parent:copied",
+        "over:items@parents=parent,color",
+        f"expect:{expected}",
+    ])
+
+def test_over_without_parents_does_not_expose_parent_fields():
+    expected = """{"parent":"P","items":[{"child":"C","seen":null}]}"""
+    execute_tokens([
+        "{parent:'P', items:[{child:'C'}]}",
+        "[",
+        "let:seen=f.parent",
+        "over:items",
+        f"expect:{expected}",
+    ])
+
+def test_over_rejects_parent_field_collision(capsys):
+    with pytest.raises(SystemExit) as exc_info:
+        execute_tokens([
+            "{parent:'P', items:[{child:'C', parent:'existing'}]}",
+            "[",
+            "let:seen=f.parent",
+            "over:items@parents=parent",
+            "devnull",
+        ])
+
+    assert exc_info.value.code == 2
+    error = capsys.readouterr().err
+    assert "parent-field collision" in error
+    assert "parent" in error
+
+def test_over_rejects_missing_requested_parent_field(capsys):
+    with pytest.raises(SystemExit) as exc_info:
+        execute_tokens([
+            "{parent:'P', items:[{child:'C'}]}",
+            "[",
+            "let:seen=f.missing",
+            "over:items@parents=missing",
+            "devnull",
+        ])
+
+    assert exc_info.value.code == 2
+    error = capsys.readouterr().err
+    assert "@parents field not found" in error
+    assert "missing" in error
     
 def test_syntax_error():
     with pytest.raises(SystemExit) as e:

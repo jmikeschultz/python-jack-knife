@@ -52,12 +52,24 @@ class OverPipeDisplay(Pipe):
 
     @classmethod
     def usage(cls):
-        u = Usage(name="over", desc="[ ... over:<field> A sub-expression executed over each record of a field.", component_class=cls)
-        u.def_syntax("... [ <expression> over:<field>")
+        u = Usage(
+            name="over",
+            desc=(
+                "[ ... over:<field> Run a sub-expression over a field. "
+                "Use @parents=<field,...> to make selected parent fields temporarily "
+                "available by their original names; a child-field collision is an error."
+            ),
+            component_class=cls,
+        )
+        u.def_param(
+            "parents",
+            "comma-separated parent fields to expose temporarily to each child",
+        )
+        u.def_syntax("... [ <expression> over:<field>[@parents=<field,...>]")
         u.def_example(
             expr_tokens=["{ferry:'orca', cars:[{make: 'ford', size:9}, {make:'bmw', size:4}]}",
-                         "[", "reduce:total_size+=f.size", "over:cars"],
-            expect="{ferry:'orca', cars:[{make: 'ford', size:9}, {make:'bmw', size:4}], total_size: 13}"
+                         "[", "let:vessel=f.ferry", "reduce:total_size+=f.size", "over:cars@parents=ferry"],
+            expect="{ferry:'orca', cars:[{make:'ford', size:9, vessel:'orca'}, {make:'bmw', size:4, vessel:'orca'}], total_size:13}"
         )
         return u
 

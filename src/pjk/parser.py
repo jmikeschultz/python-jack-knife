@@ -6,7 +6,7 @@ import shlex
 from typing import Any, List
 from pjk.components import Source, Pipe, Sink
 from pjk.usage import TokenError, UsageError, ParsedToken, Usage
-from pjk.errors import CLI_PROBLEM_HEADER
+from pjk.errors import CLI_PROBLEM_HEADER, RecordProcessingError
 from pjk.pipes.let_reduce import ReducePipe
 from pjk.pipes.progress_pipe import ProgressPipe
 from pjk.registry import ComponentRegistry
@@ -326,6 +326,18 @@ class SubExpressionOver(Pipe):
     def __init__(self, ptok: ParsedToken, usage: Usage):
         super().__init__(ptok, usage)
         self.over_arg = ptok.get_arg(0)
+        parents_arg = ptok.get_params().get('parents')
+        self.parent_fields = []
+        if parents_arg is not None:
+            self.parent_fields = list(dict.fromkeys(
+                field.strip()
+                for field in parents_arg.split(',')
+                if field.strip()
+            ))
+            if not self.parent_fields:
+                raise UsageError("over: @parents requires at least one field name")
+        if self.over_arg == '+' and self.parent_fields:
+            raise UsageError("over:+ does not support @parents")
 
     def reset(self):
         pass  # stateless
@@ -335,7 +347,12 @@ class SubExpressionOver(Pipe):
             raise Exception('this actually cannot happen, but did')
 
         for record in self.left:
-            self.left.subexp_process(record, self.over_arg)
+            self.left.subexp_process(
+                record,
+                self.over_arg,
+                self.parent_fields,
+                self.ptok.whole_token,
+            )
             yield record
 
 
@@ -417,6 +434,7 @@ class SubExpression(Pipe, ProgressIgnore):
         self.subexp_left = None
         self.in_else_branch = False
         self.conditional_then_chain = None
+        self.injected_parent_fields = set()
 
     def enter_else_branch(self):
         """Switch to collecting else branch; save then chain."""
@@ -460,27 +478,106 @@ class SubExpression(Pipe, ProgressIgnore):
     def __iter__(self):
         yield from self.left # pass thru to subexp_over which then calls process
 
-    def set_upstream(self, over_arg: str, record: dict):
+    def set_upstream(
+        self,
+        over_arg: str,
+        record: dict,
+        requested_parent_fields: list[str],
+        over_token: str,
+    ):
         if over_arg == '+':
+            self.injected_parent_fields = set()
             self.upstream_source.set_list([record])
             return True
 
-        field_data = record.pop(over_arg, None)
+        field_data = record.get(over_arg)
         if not field_data:
+            record.pop(over_arg, None)
             return False
-        
-        if isinstance(field_data, list):
-            self.upstream_source.set_list(field_data)
-        else:
-            self.upstream_source.set_list([field_data])
+
+        items = field_data if isinstance(field_data, list) else [field_data]
+        self.injected_parent_fields = set(requested_parent_fields)
+
+        if not requested_parent_fields:
+            record.pop(over_arg, None)
+            self.upstream_source.set_list(items)
+            return True
+
+        if over_arg in self.injected_parent_fields:
+            cause = ValueError(
+                f"over field {over_arg!r} cannot also be requested in @parents"
+            )
+            raise RecordProcessingError(
+                token=over_token,
+                record=record,
+                cause=cause,
+            )
+
+        missing = [
+            field for field in requested_parent_fields
+            if field not in record
+        ]
+        if missing:
+            names = ', '.join(repr(name) for name in missing)
+            cause = ValueError(f"@parents field not found in parent record: {names}")
+            raise RecordProcessingError(
+                token=over_token,
+                record=record,
+                cause=cause,
+            )
+
+        selected_parent_fields = {
+            field: record[field]
+            for field in requested_parent_fields
+        }
+
+        # Validate every child before modifying the parent or creating copies.
+        for item in items:
+            if not isinstance(item, dict):
+                cause = ValueError(
+                    "@parents can only be used when every over item is a record"
+                )
+                raise RecordProcessingError(
+                    token=over_token,
+                    record=record,
+                    cause=cause,
+                )
+            collisions = sorted(self.injected_parent_fields.intersection(item))
+            if collisions:
+                names = ', '.join(repr(name) for name in collisions)
+                cause = ValueError(
+                    f"parent-field collision: child already contains {names}"
+                )
+                raise RecordProcessingError(
+                    token=over_token,
+                    record=record,
+                    cause=cause,
+                )
+
+        record.pop(over_arg, None)
+        subrecords = [item | selected_parent_fields for item in items]
+        self.upstream_source.set_list(subrecords)
 
         return True
 
-    def subexp_process(self, record: dict, over_arg: str):
+    def subexp_process(
+        self,
+        record: dict,
+        over_arg: str,
+        requested_parent_fields: list[str] | None = None,
+        over_token: str | None = None,
+    ):
         if not self.subexp_left:
             self.subexp_left = self.subexp_stack.pop()
 
-        if not self.set_upstream(over_arg, record):
+        requested_parent_fields = requested_parent_fields or []
+        over_token = over_token or f'over:{over_arg}'
+        if not self.set_upstream(
+            over_arg,
+            record,
+            requested_parent_fields,
+            over_token,
+        ):
             return # couldn't set, no processing
 
         # Reset sub-pipe stack
@@ -490,6 +587,9 @@ class SubExpression(Pipe, ProgressIgnore):
         out_recs = []
 
         for rec in self.subexp_left:
+            if over_arg != '+' and isinstance(rec, dict):
+                for field in self.injected_parent_fields:
+                    rec.pop(field, None)
             out_recs.append(rec)
 
         field = over_arg if over_arg != '+' else 'child'
