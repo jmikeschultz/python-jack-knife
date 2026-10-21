@@ -28,7 +28,6 @@ from pjk.integrations.rest_pipe import RestPipe
 from pjk.pipes.sample import SamplePipe
 from pjk.pipes.stats import StatsPipe
 from pjk.pipes.user_pipe_factory import UserPipeFactory
-from pjk.usage import Usage
 
 
 class IfPipeDisplay(Pipe):
@@ -132,4 +131,3 @@ class PipeFactory(ComponentFactory):
         
         pipe = pipe_cls(ptok, usage)
         return pipe
-
