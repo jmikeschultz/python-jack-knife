@@ -62,14 +62,13 @@ def graph_hist(obj):
     #    if fn and callable(fn):
     #       fn(val)
 
+    ax = plt.gca()
     plt.xlabel(obj.x_field)
     plt.ylabel(ylabel)
-    apply_log_axes(plt.gca(), xlog=obj.xlog, ylog=obj.ylog)
-    plt.text(1.0, 1.0, f"Histogram of {obj.x_field}", transform=plt.gca().transAxes,
-            ha='right', va='top', fontsize=10, color='gray')
-    plt.text(1.0, 0.95, f"{count} data points", transform=plt.gca().transAxes,
+    ax.set_title(obj.title or f"Histogram of {obj.x_field}")
+    apply_log_axes(ax, xlog=obj.xlog, ylog=obj.ylog)
+    plt.text(1.0, 0.95, f"{count} data points", transform=ax.transAxes,
             ha='right', va='top', fontsize=10, color='gray')
     plt.grid(True, linestyle='--', alpha=0.6)
     plt.tight_layout()
     #plt.show()
-
