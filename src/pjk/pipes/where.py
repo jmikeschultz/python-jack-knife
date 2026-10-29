@@ -4,10 +4,9 @@
 # djk/pipes/where.py
 
 from pjk.usage import NoBindUsage
-from pjk.components import Pipe, DeepCopyPipe
-from pjk.usage import ParsedToken, Usage, UsageError
-from pjk.common import SafeNamespace
-from pjk.errors import RecordProcessingError
+from pjk.components import DeepCopyPipe
+from pjk.expression import CompiledExpression
+from pjk.usage import ParsedToken, Usage
 from pjk.progress import papi
 
 class WherePipe(DeepCopyPipe):
@@ -29,10 +28,11 @@ class WherePipe(DeepCopyPipe):
 
         self.inrecs = papi.get_counter(self, var_label='recs_in', display=False)
         self.outrecs = papi.get_percentage_counter(self, var_label='recs_out', denom_counter=self.inrecs)
-        try:
-            self.code = compile(self.expr, '<where>', 'eval')
-        except Exception as e:
-            raise UsageError(f"Invalid where expression: {self.expr}") from e
+        self.expression = CompiledExpression(
+            self.expr,
+            '<where>',
+            syntax_error_prefix='Invalid where expression',
+        )
 
     def reset(self):
         pass  # stateless
@@ -40,14 +40,9 @@ class WherePipe(DeepCopyPipe):
     def __iter__(self):
         for record in self.left:
             self.inrecs.increment()
-            f = SafeNamespace(record)
-            try:
-                if eval(self.code, {}, {'f': f}):
-                    self.outrecs.increment()
-                    yield record
-            except Exception as e:
-                raise RecordProcessingError(
-                    token=self.ptok.whole_token,
-                    record=record,
-                    cause=e,
-                ) from e
+            if self.expression.evaluate(
+                record,
+                token=self.ptok.whole_token,
+            ):
+                self.outrecs.increment()
+                yield record

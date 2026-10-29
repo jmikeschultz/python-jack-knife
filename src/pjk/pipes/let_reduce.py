@@ -4,172 +4,31 @@
 # djk/pipes/let_reduce.py
 
 from pjk.components import DeepCopyPipe
+from pjk.dot_path import dot_path_get
 from pjk.errors import RecordProcessingError
-from pjk.usage import ParsedToken, Usage, UsageError, TokenError, NoBindUsage
-from pjk.common import SafeNamespace, ReducingNamespace
-from collections.abc import Sequence
+from pjk.expression import (
+    CompiledExpression,
+    eval_regular,
+    evaluate_code as do_eval,
+)
+from pjk.usage import ParsedToken, Usage, TokenError, NoBindUsage
 import math
 import re
 import ast
-import json
-
-# --- Shared Utilities ---
-def _record_path(record, path):
-    value = record
-    for part in path:
-        if isinstance(value, dict):
-            value = value.get(part)
-        else:
-            value = getattr(value, part, None)
-        if value is None:
-            return None
-    return value
 
 
-def _lazy_expression_value(value):
-    if isinstance(value, dict):
-        return ExpressionNamespace(value)
-    if isinstance(value, list):
-        return ExpressionSequence(value)
-    return value
-
-
-def _materialize_expression_value(value):
-    """Convert lazy expression views in an evaluated result to builtins."""
-    if isinstance(value, ExpressionNamespace):
-        return value._record
-    if isinstance(value, ExpressionSequence):
-        return value._values
-    if isinstance(value, dict):
-        return {
-            _materialize_expression_value(key): _materialize_expression_value(item)
-            for key, item in value.items()
-        }
-    if isinstance(value, list):
-        return [_materialize_expression_value(item) for item in value]
-    if isinstance(value, tuple):
-        return tuple(_materialize_expression_value(item) for item in value)
-    if isinstance(value, set):
-        return {_materialize_expression_value(item) for item in value}
-    return value
-
-
-class ExpressionNamespace:
-    """Expose record fields lazily to avoid walking unused nested values."""
-
-    __slots__ = ('_record',)
-
-    def __init__(self, record):
-        self._record = record
-
-    def __getattr__(self, name):
-        return _lazy_expression_value(self._record.get(name))
-
-
-class ExpressionSequence(Sequence):
-    """Wrap list elements only when an expression actually reads them."""
-
-    __slots__ = ('_values',)
-
-    def __init__(self, values):
-        self._values = values
-
-    def __len__(self):
-        return len(self._values)
-
-    def __getitem__(self, index):
-        value = self._values[index]
-        if isinstance(index, slice):
-            return [_lazy_expression_value(item) for item in value]
-        return _lazy_expression_value(value)
-
-    def __iter__(self):
-        return (_lazy_expression_value(value) for value in self._values)
-
-    def __repr__(self):
-        return repr(list(self))
-
-    def __eq__(self, other):
-        if isinstance(other, ExpressionSequence):
-            other = other._values
-        return self._values == other
-
-    def __add__(self, other):
-        return list(self) + list(other)
-
-    def __radd__(self, other):
-        return list(other) + list(self)
-
-
-class PreparedExpression:
-    """Parse once and cheaply evaluate common record expressions."""
-
-    def __init__(self, expr: str, label: str, reducing: bool | None = False):
-        self.expr = expr
-        self.label = label
-        try:
-            self.node = ast.parse(expr, mode='eval').body
-            self.code = compile(ast.Expression(self.node), label, 'eval')
-        except SyntaxError as e:
-            raise UsageError(f"Invalid expression: {expr}") from e
-
-        self.reducing = (
-            isinstance(self.node, (ast.ListComp, ast.SetComp, ast.DictComp))
-            if reducing is None
-            else reducing
-        )
-
-        self.constant = self.node.value if isinstance(self.node, ast.Constant) else None
-        self.is_constant = isinstance(self.node, ast.Constant)
-        self.uses_f = any(
-            isinstance(child, ast.Name) and child.id == 'f'
-            for child in ast.walk(self.node)
-        )
-
-    def evaluate(self, record: dict, *, token: str, acc=None):
-        try:
-            if self.is_constant:
-                return self.constant
-
-            env = {'acc': acc}
-            if self.uses_f:
-                namespace = ReducingNamespace if self.reducing else ExpressionNamespace
-                env['f'] = namespace(record)
-            value = do_eval(self.code, env, record=record, token=token)
-            return _materialize_expression_value(value)
-        except RecordProcessingError:
-            raise
-        except Exception as e:
-            raise RecordProcessingError(token=token, record=record, cause=e) from e
+ASSIGNMENT_PATTERN = re.compile(
+    r'(?P<field>[A-Za-z_][A-Za-z0-9_]*)'
+    r'(?P<op>\+=|-=|\*=|/=|=|:)'
+    r'(?P<rest>.+)\Z'
+)
 
 
 def parse_args(token: str):
-    pattern = re.compile(r'(?P<field>\w+)(?P<op>[:=\+\-\*/]+)(?P<rest>.+)$')
-    match = pattern.fullmatch(token)
+    match = ASSIGNMENT_PATTERN.fullmatch(token)
     if not match:
-        raise ValueError(f"Invalid token syntax: {token!r}")
+        raise TokenError(f"Invalid assignment syntax: {token!r}")
     return match.groupdict()
-
-def do_eval(expr, env, *, record: dict, token: str):
-    try:
-        safe_env = dict(env)
-        safe_env['json'] = json
-        safe_env['re'] = re
-        return eval(expr, {}, safe_env)
-    except RecordProcessingError:
-        raise
-    except Exception as e:
-        raise RecordProcessingError(
-            token=token,
-            record=record,
-            cause=e,
-        ) from e
-
-def eval_regular(expr: str, record: dict, *, token: str):
-    env = {'f': SafeNamespace(record)}
-    if re.match(r'[a-zA-Z0-9_]+$', expr):
-        return expr
-    return do_eval(expr, env, record=record, token=token)
 
 def accumulate_value(value, node, op: str, acc=None):
 
@@ -221,12 +80,12 @@ class LetPipe(DeepCopyPipe):
         self.prepared = None
         self.literal_value = None
 
-        if self.op in ('+=', '-=', '*=', '/='):
+        if self.op not in ('=', ':'):
             raise TokenError("Aggregation operator not allowed in let, use reduce:")
         if self.op != ':' and re.fullmatch(r'[a-zA-Z0-9_]+', self.rest):
             self.literal_value = self.rest
         elif self.op != ':':
-            self.prepared = PreparedExpression(self.rest, '<let>')
+            self.prepared = CompiledExpression(self.rest, '<let>')
 
     def reset(self):
         pass  # stateless
@@ -269,7 +128,7 @@ def _to_number(val):
 
 
 def eval_named_aggregation(agg_name: str, field_path: str, record: dict, acc):
-    raw_val = _record_path(record, field_path.split('.'))
+    raw_val = dot_path_get(record, field_path)
 
     val = _to_number(raw_val)
 
@@ -341,7 +200,8 @@ class ReducePipe(DeepCopyPipe):
             name='reduce',
             desc="set a new field equal to a reduction over records of a sub or main expression\n" +
             "rhs operators must be accumulating, e.g. +=, -=, *=, /=\n" +
-            "or use list/dict comprehension, or named agg: ave:f.field, sum:f.field, p50:f.field, etc. (supports f.field.subfield)",
+            "or use list/dict comprehension, or named agg: ave:f.field, sum:f.field, p50:f.field, etc. "
+            "(supports dictionary paths f.field.subfield; literal keys take precedence)",
             component_class=cls
         )
         usage.def_arg(name='rhs', usage="accumulating python rhs expression (use f.<field> syntax)")
@@ -426,7 +286,7 @@ class ReducePipe(DeepCopyPipe):
             expr = self.rest
             if self.op in ('-=', '*=', '/=') and 'acc' not in expr:
                 expr = f'acc {self.op[0]} ({expr})'
-            self.prepared = PreparedExpression(
+            self.prepared = CompiledExpression(
                 expr,
                 '<reduce>',
                 reducing=None,

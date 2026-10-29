@@ -1,4 +1,3 @@
-import re
 import os
 import shlex
 from typing import List, Set
@@ -8,12 +7,20 @@ from pjk.runtime import pjk_stream_active
 LOG_FILE = '.pjk-history.txt'
 
 def printable_command(tokens: list) -> str:
-    pattern = re.compile(r"[({]")
-
-    return ' '.join(
-        f'"{s}"' if pattern.search(s) else s
-        for s in tokens
-    )
+    """Quote arguments so shell parsing restores their original contents."""
+    quoted = []
+    for token in tokens:
+        value = shlex.quote(token)
+        # Double quotes avoid noisy single-quote splicing for SQL and expressions.
+        # Keep shell expansion characters single-quoted: shlex and shells differ
+        # in how they unescape dollar signs and backticks inside double quotes.
+        if "'" in token and not any(char in token for char in '$`!\n\r'):
+            escaped = token.replace('\\', '\\\\').replace('"', '\\"')
+            double_quoted = f'"{escaped}"'
+            if len(double_quoted) < len(value):
+                value = double_quoted
+        quoted.append(value)
+    return ' '.join(quoted)
 
 def read_history(log_path: str) -> List[int]:
     """
@@ -31,8 +38,8 @@ def read_history(log_path: str) -> List[int]:
                 if not line:
                     continue
 
-                if 'pjk ' in line: # legacy
-                    line = line.split('pjk ', 1)[1]
+                if line.startswith('pjk '): # legacy command prefix only
+                    line = line[len('pjk '):]
 
                 # Expected format: <command_string>
                 line = line.strip()

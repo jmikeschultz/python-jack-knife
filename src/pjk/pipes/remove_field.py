@@ -4,6 +4,7 @@
 # djk/pipes/remove_field.py
 
 from pjk.components import DeepCopyPipe
+from pjk.dot_path import dot_path_delete
 from pjk.usage import ParsedToken, Usage, UsageError
 
 class RemoveField(DeepCopyPipe):
@@ -14,8 +15,9 @@ class RemoveField(DeepCopyPipe):
             desc='Remove one or more fields from each record',
             component_class=cls
         )
-        usage.def_arg(name='fields', usage='Comma-separated list of field names to drop')
+        usage.def_arg(name='fields', usage='Comma-separated field names or dotted paths to drop; literal keys take precedence')
         usage.def_example(expr_tokens=["{id:1, dir:'up', color:'blue'}", 'drop:id,color'], expect="dir: 'up'")
+        usage.def_example(expr_tokens=["{id:1, old_data:{bid:1, keyword_bids:[2]}}", 'drop:old_data.keyword_bids'], expect="{id:1, old_data:{bid:1}}")
         return usage
 
     def __init__(self, ptok: ParsedToken, usage: Usage):
@@ -33,5 +35,5 @@ class RemoveField(DeepCopyPipe):
         for record in self.left:
             self.count += 1
             for field in self.fields:
-                record.pop(field, None)
+                dot_path_delete(record, field)
             yield record

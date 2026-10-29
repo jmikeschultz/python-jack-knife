@@ -7,6 +7,7 @@ from typing import Any, List
 from pjk.components import KeyedSource, Source, Pipe, Sink
 from pjk.usage import TokenError, UsageError, ParsedToken, Usage
 from pjk.errors import CLI_PROBLEM_HEADER, RecordProcessingError
+from pjk.expression import CompiledExpression
 from pjk.pipes.let_reduce import ReducePipe
 from pjk.pipes.progress_pipe import ProgressPipe
 from pjk.registry import ComponentRegistry
@@ -15,7 +16,6 @@ from typing import Dict
 from pathlib import Path
 from pjk.progress import ProgressIgnore
 from pjk.parse_pjk_file import handle_pjk_file
-from pjk.common import SafeNamespace
 
 from pjk.paths import macros_file_path
 
@@ -371,18 +371,27 @@ class SubExpressionIf(Pipe):
         u = Usage(name="if", desc="conditional sub-expression.", component_class=cls)
         return u
 
-    def __init__(self, expr: str, then_chain, else_chain, upstream_source):
+    def __init__(
+        self,
+        token: str,
+        expr: str,
+        then_chain,
+        else_chain,
+        upstream_source,
+    ):
         super().__init__(None, None)
+        self.token = token
         self.expr = expr
         self.then_chain = then_chain
         self.else_chain = else_chain
         self.upstream_source = upstream_source
         self.inrecs = papi.get_counter(self, var_label='recs_in', display=False)
         self.recs_true = papi.get_percentage_counter(self, var_label='recs_true', denom_counter=self.inrecs)
-        try:
-            self.code = compile(expr, '<if>', 'eval')
-        except Exception as e:
-            raise UsageError(f"Invalid if expression: {expr}") from e
+        self.expression = CompiledExpression(
+            expr,
+            '<if>',
+            syntax_error_prefix='Invalid if expression',
+        )
 
     def reset(self):
         if self.then_chain:
@@ -394,11 +403,10 @@ class SubExpressionIf(Pipe):
         for record in self.left:
             self.inrecs.increment()
             self.upstream_source.set_list([record])
-            f = SafeNamespace(record)
-            try:
-                cond_true = eval(self.code, {}, {'f': f})
-            except Exception:
-                cond_true = False
+            cond_true = self.expression.evaluate(
+                record,
+                token=self.token,
+            )
             if cond_true:
                 self.recs_true.increment()
                 chain = self.then_chain
@@ -458,7 +466,13 @@ class SubExpression(Pipe, ProgressIgnore):
         self.in_else_branch = False
         self.conditional_then_chain = None
         self.subexp_stack.push(self.upstream_source)
-        return SubExpressionIf(expr, then_chain, else_chain, self.upstream_source)
+        return SubExpressionIf(
+            token,
+            expr,
+            then_chain,
+            else_chain,
+            self.upstream_source,
+        )
 
     def add_subop(self, op):
         self.subexp_ops.append(op)

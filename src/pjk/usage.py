@@ -399,12 +399,14 @@ class UsageError(ValueError):
 
     def __str__(self):
         lines = []
-        token_copies = [self._quote(t) for t in self.tokens]
-        lines.append('pjk ' + ' '.join(token_copies))
-        lines.append(self._get_underline(token_copies))
+        if self.tokens:
+            token_copies = [self._quote(t) for t in self.tokens]
+            lines.append('pjk ' + ' '.join(token_copies))
+            lines.append(self._get_underline(token_copies))
         lines.append(self.message)
-        lines.append('')
-        lines.append(self.token_error.get_text())
+        if self.token_error:
+            lines.append('')
+            lines.append(self.token_error.get_text())
         return '\n'.join(lines)
     
     # quote json inline 

@@ -1,5 +1,7 @@
-from pjk.pipes.let_reduce import LetPipe, ReducePipe
-from pjk.usage import ParsedToken
+import pytest
+
+from pjk.pipes.let_reduce import LetPipe, ReducePipe, parse_args
+from pjk.usage import ParsedToken, TokenError, UsageError
 
 
 def make_pipe(pipe_class, token_text, records):
@@ -86,3 +88,55 @@ def test_reduce_materializes_nested_list_results():
     list(pipe)
 
     assert pipe.get_subexp_result() == ("groups", [[1, 2], [3]])
+
+
+def test_let_preserves_unary_minus_on_rhs():
+    pipe = make_pipe(
+        LetPipe,
+        "let:result=-3.0*f.value",
+        [{"value": 2}],
+    )
+
+    assert list(pipe)[0]["result"] == -6.0
+
+
+def test_reduce_preserves_unary_minus_after_accumulation_operator():
+    pipe = make_pipe(
+        ReducePipe,
+        "reduce:total+=-f.value",
+        [{"value": 2}, {"value": 3}],
+    )
+
+    list(pipe)
+
+    assert pipe.get_subexp_result() == ("total", -5)
+
+
+@pytest.mark.parametrize(
+    ("token", "expected"),
+    [
+        ("result=-f.value", {"field": "result", "op": "=", "rest": "-f.value"}),
+        ("result=+f.value", {"field": "result", "op": "=", "rest": "+f.value"}),
+        ("total+=-f.value", {"field": "total", "op": "+=", "rest": "-f.value"}),
+    ],
+)
+def test_parse_args_preserves_unary_sign(token, expected):
+    assert parse_args(token) == expected
+
+
+@pytest.mark.parametrize(
+    "token",
+    [
+        "1result=f.value",
+        "result++=f.value",
+        "result=",
+    ],
+)
+def test_parse_args_rejects_malformed_assignment(token):
+    with pytest.raises(TokenError):
+        parse_args(token)
+
+
+def test_let_rejects_double_equals_as_invalid_expression():
+    with pytest.raises(UsageError):
+        make_pipe(LetPipe, "let:result==f.value", [{"value": 1}])

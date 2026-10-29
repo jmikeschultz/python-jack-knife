@@ -14,3 +14,10 @@ Until 1.0 is reached, you can install directly from GitHub:
 
 ```bash
 pip install git+https://github.com/jmikeschultz/python-jack-knife.git@v0.5.0
+```
+
+## Dot paths
+
+`drop`, `select`, and named `reduce` aggregations support dictionary dot paths. See
+[dot-path behavior and implementation notes](docs/dot_paths.md) for examples,
+literal-key precedence, and possible future consolidation.

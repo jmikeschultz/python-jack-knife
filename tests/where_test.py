@@ -45,3 +45,24 @@ def test_where_accepts_null_as_a_string_and_field_name():
         "where:f.foo == 'null' and f.null == 1",
         "expect:[{foo:'null', null:1}]",
     ])
+
+
+def test_where_uses_shared_nested_sequence_and_module_environment():
+    execute_tokens([
+        (
+            "["
+            "{details:{enabled:true},items:[1,2],payload:'{\"keep\":true}'},"
+            "{details:{enabled:false},items:[1],payload:'{\"keep\":true}'}"
+            "]"
+        ),
+        (
+            "where:f.details.enabled and len(f.items) == 2 "
+            "and json.loads(f.payload)['keep'] "
+            "and re.match('^2$', str(len(f.items)))"
+        ),
+        (
+            "expect:["
+            "{details:{enabled:true},items:[1,2],payload:'{\"keep\":true}'}"
+            "]"
+        ),
+    ])

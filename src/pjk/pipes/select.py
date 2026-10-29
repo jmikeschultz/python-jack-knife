@@ -4,6 +4,7 @@
 # djk/select_pipe.py
 
 from pjk.components import DeepCopyPipe
+from pjk.dot_path import dot_path_select
 from pjk.usage import Usage, ParsedToken, UsageError
 
 class SelectFields(DeepCopyPipe):
@@ -14,8 +15,9 @@ class SelectFields(DeepCopyPipe):
             desc='Select specific fields from each record.',
             component_class=cls
         )
-        usage.def_arg(name='fields', usage='Comma-separated list of fields to retain')
+        usage.def_arg(name='fields', usage='Comma-separated field names or dotted paths to retain; preserves nested structure; literal keys take precedence')
         usage.def_example(expr_tokens=["{id:1, dir:'up', color:'blue'}", 'select:id,color'], expect="id: 1, color:'blue'")
+        usage.def_example(expr_tokens=["{id:1, old_data:{bid:2, status:'PAUSED'}}", 'select:id,old_data.bid'], expect="{id:1, old_data:{bid:2}}")
         return usage
 
     def __init__(self, ptok: ParsedToken, usage: Usage):
@@ -34,8 +36,4 @@ class SelectFields(DeepCopyPipe):
 
     def __iter__(self):
         for record in self.left:
-            keys = list(record.keys())
-            for k in keys:
-                if k not in self.keep_fields:
-                    record.pop(k)
-            yield record
+            yield dot_path_select(record, self.keep_fields)

@@ -99,3 +99,38 @@ def test_syntax_error2():
                     "sort:-foo",
                     "devnull"])
         assert e.value == 2
+
+
+def test_if_expression_uses_nested_record_fields():
+    execute_tokens([
+        "{details:{enabled:true}}",
+        "[",
+        "let:branch:then",
+        "else",
+        "let:branch:else",
+        "if:f.details.enabled",
+        "expect:{details:{enabled:true},branch:'then'}",
+    ])
+
+
+def test_if_expression_reports_runtime_error(capsys):
+    token = "if:1 / f.value"
+
+    with pytest.raises(SystemExit) as exc_info:
+        execute_tokens([
+            "{value:0}",
+            "[",
+            "let:branch:then",
+            "else",
+            "let:branch:else",
+            token,
+            "devnull",
+        ])
+
+    assert exc_info.value.code == 2
+    error = capsys.readouterr().err
+    assert "division by zero" in error
+    assert token in error
+    assert "On this record:" in error
+    assert "value: 0" in error
+    assert "Traceback" not in error
